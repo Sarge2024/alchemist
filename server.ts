@@ -26,8 +26,14 @@ const firecrawl = (firecrawlKey && firecrawlKey !== "" && firecrawlKey !== "your
 
 // Ensure upload directory exists
 const uploadDir = path.join(process.cwd(), "public", "uploads");
-if (!fs.existsSync(uploadDir)) {
-  fs.mkdirSync(uploadDir, { recursive: true });
+if (process.env.VERCEL !== "1") {
+  if (!fs.existsSync(uploadDir)) {
+    try {
+      fs.mkdirSync(uploadDir, { recursive: true });
+    } catch (e) {
+      console.warn("Could not create uploads directory:", e);
+    }
+  }
 }
 
 // Initialize Firebase Admin
@@ -62,7 +68,7 @@ const identityService = new IdentityAccessService();
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir);
+    cb(null, process.env.VERCEL === "1" ? "/tmp" : uploadDir);
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
