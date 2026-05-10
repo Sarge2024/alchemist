@@ -13,6 +13,9 @@ export default defineConfig(({mode}) => {
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.png', 'apple-touch-icon.png'],
+        workbox: {
+          maximumFileSizeToCacheInBytes: 4000000,
+        },
         manifest: {
           name: 'Alchemist Lounge Gastronômico',
           short_name: 'Alchemist',
