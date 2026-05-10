@@ -37,11 +37,20 @@ if (process.env.VERCEL !== "1") {
 }
 
 // Initialize Firebase Admin
-const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
-const firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+const configPath = path.resolve(__dirname, 'firebase-applet-config.json');
+let firebaseConfig: any = {};
+try {
+  if (fs.existsSync(configPath)) {
+    firebaseConfig = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+  } else {
+    console.warn(`[Admin] Aviso: Config file não encontrado em ${configPath}. Firebase Admin pode falhar.`);
+  }
+} catch (e) {
+  console.warn(`[Admin] Erro lendo firebase-applet-config.json:`, e);
+}
 
 // Tenta carregar o Service Account se disponível (necessário para rodar localmente sem emuladores)
-const serviceAccountPath = path.resolve(process.cwd(), 'sagacitas-financeiro-firebase-adminsdk-fbsvc-1298d3f890.json');
+const serviceAccountPath = path.resolve(__dirname, 'sagacitas-financeiro-firebase-adminsdk-fbsvc-1298d3f890.json');
 let credential;
 try {
   if (fs.existsSync(serviceAccountPath)) {
