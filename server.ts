@@ -14,8 +14,7 @@ import { ModerationService } from "./src/infra/services/ModerationService";
 import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Removed __filename and __dirname to prevent import.meta.url SyntaxError
 
 // Initialize Firecrawl if key is available
 const firecrawlKey = process.env.FIRECRAWL_API_KEY;
@@ -36,7 +35,7 @@ if (process.env.VERCEL !== "1") {
 }
 
 // Initialize Firebase Admin
-const configPath = path.resolve(__dirname, 'firebase-applet-config.json');
+const configPath = path.resolve(process.cwd(), 'firebase-applet-config.json');
 let firebaseConfig: any = {};
 try {
   if (fs.existsSync(configPath)) {
@@ -49,7 +48,7 @@ try {
 }
 
 // Tenta carregar o Service Account se disponível (necessário para rodar localmente sem emuladores)
-const serviceAccountPath = path.resolve(__dirname, 'sagacitas-financeiro-firebase-adminsdk-fbsvc-1298d3f890.json');
+const serviceAccountPath = path.resolve(process.cwd(), 'sagacitas-financeiro-firebase-adminsdk-fbsvc-1298d3f890.json');
 let credential;
 try {
   if (fs.existsSync(serviceAccountPath)) {
