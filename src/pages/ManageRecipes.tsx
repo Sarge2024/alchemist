@@ -126,7 +126,7 @@ export default function ManageRecipes() {
               value={scrapeUrl}
               onChange={(e) => setScrapeUrl(e.target.value)}
               placeholder="https://panelinha.com.br/..."
-              className="flex-1 md:w-80 p-3 rounded-xl bg-white border border-stone-200 outline-none focus:ring-2 focus:ring-primary text-sm"
+              className="flex-1 md:w-80 p-3 rounded-xl bg-surface-container-low text-on-surface border border-stone-200 outline-none focus:ring-2 focus:ring-primary text-sm placeholder:text-on-surface-variant/50 shadow-inner"
             />
             <button 
               onClick={handleScrape}

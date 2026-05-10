@@ -76,14 +76,32 @@ export const geminiService = {
       - dietType (string): TIPO DE DIETA (USE EXATAMENTE UMA DESTAS: 'Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Fit'). Se não houver restrição clara, use 'Convencional'.
       - difficulty (Fácil, Médio, Difícil), servings.
       - isClassic (boolean): Determine se esta é uma receita CLÁSSICA ou TRADICIONAL. Receitas clássicas são aquelas amplamente conhecidas, com origem histórica clara, herança cultural ou pratos icônicos (ex: Feijoada, Carbonara, Ratatouille). Se o texto descrever uma história de família ou herança, também marque como true.
-      - ingredients (objeto[] com name, quantity e group). O campo 'group' deve ser usado para separar partes da receita (ex: 'Massa', 'Recheio', 'Cobertura', 'Calda'). Se a receita não tiver partes distintas, deixe 'group' como null ou vazio. Quantidade nunca vazia (use "a gosto" se necessário).
-      - instructions (string[]).
-      - image, imageOptions (string[]).
+      - ingredients (objeto[] com name, quantity e group). 
+        REGRAS DE INGREDIENTES:
+        - SEPARE OBRIGATORIAMENTE a quantidade (número + unidade) do nome (ex: "500g de Farinha" -> name: "Farinha", quantity: "500g").
+        - EXTRAIA A QUANTIDADE EXATA DO TEXTO. Se o texto diz "2 ovos" ou "4 copos", use quantity: "2" e quantity: "4 copos".
+        - NUNCA use "a gosto" a menos que esteja explicitamente escrito no texto.
+        - Mantenha frações legíveis (ex: "1/2" em vez de "0.5") para facilitar a leitura.
+        - NÃO repita a quantidade no nome.
+        - REMOVA preposições conectoras (ex: "de", "do", "da") do início do nome quando possível.
+        - O campo 'group' deve ser usado para separar partes da receita (ex: 'Massa', 'Recheio', 'Cobertura').
+        - EXEMPLOS:
+          - "4 copos de farinha" -> { quantity: "4 copos", name: "farinha" }
+          - "2 ovos" -> { quantity: "2", name: "ovos" }
+          - "1/2 copo de água" -> { quantity: "1/2 copo", name: "água" }
+          - "sal a gosto" -> { quantity: "a gosto", name: "sal" }
+        - instructions (string[]).
+        - image, imageOptions (string[]).
     `;
 
     const contentPrompt = isUrlOnly 
-      ? `Acesse e pesquise os detalhes da receita no seguinte link: ${options.url}. Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'. Use ferramentas de busca se necessário para encontrar o conteúdo completo.`
-      : `Extraia do seguinte HTML: ${html.substring(0, 12000)}. Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.`;
+      ? `Acesse e pesquise PROFUNDAMENTE os detalhes da receita no seguinte link: ${options.url}. 
+         O site pode estar bloqueando acessos diretos, então use sua ferramenta de busca (Google Search) para encontrar o conteúdo desta URL exata ou de fontes que repliquem esta receita específica.
+         Procure por: Título, Ingredientes, Modo de Preparo, Tempo e Imagens.
+         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.`
+      : `Extraia os dados da receita do seguinte HTML: ${html.substring(0, 30000)}. 
+         Ignore anúncios e navegação. Foque no conteúdo central da receita.
+         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.`;
 
     const prompt = `
       ${basePrompt}
@@ -108,7 +126,7 @@ export const geminiService = {
           const client = new GoogleGenAI({ apiKey });
           
           response = await client.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-3-flash-preview",
             contents: prompt,
             config: isUrlOnly ? { tools: [{ googleSearch: {} }] } : undefined
           });
@@ -270,7 +288,7 @@ export const geminiService = {
             try {
               const client = new GoogleGenAI({ apiKey: apiKeys[i] });
               searchResponse = await client.models.generateContent({
-                model: "gemini-1.5-flash",
+                model: "gemini-3-flash-preview",
                 contents: searchPrompt,
                 config: { tools: [{ googleSearch: {} }] }
               });

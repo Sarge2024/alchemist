@@ -12,16 +12,16 @@ initializeApp({
 
 const db = getFirestore();
 
-async function checkRecipes() {
-  const snapshot = await db.collection('recipes').get();
-  console.log(`Total recipes found: ${snapshot.size}`);
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    console.log(`- ID: ${doc.id}, Title: ${data.title}, Owner: ${data.ownerId}`);
-  });
+async function listCollections() {
+  const collections = await db.listCollections();
+  console.log('Collections in database:');
+  for (const collection of collections) {
+    const snapshot = await collection.limit(1).get();
+    console.log(`- ${collection.id} (Documents: ${snapshot.size > 0 ? 'at least 1' : '0'})`);
+  }
 }
 
-checkRecipes()
+listCollections()
   .then(() => process.exit(0))
   .catch(err => {
     console.error(err);
