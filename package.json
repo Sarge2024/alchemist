@@ -1,7 +1,7 @@
 {
   "name": "alchemist",
   "private": true,
-  "version": "2.1.0",
+  "version": "2.1.0a",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -15,7 +15,8 @@
     "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "sync": "tsx src/infra/scripts/sync-version.ts && git add . && git commit -m \"chore(deploy): sync repository and bump version\" && git push"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
