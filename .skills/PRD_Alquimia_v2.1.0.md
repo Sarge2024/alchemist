@@ -1,4 +1,4 @@
-# PRD - Alquimia do Prato v2.1.0 (Antigravity Edition)
+# PRD - alchemist v2.1.0 (Antigravity Edition)
 
 ## 1. Visão Geral
 O projeto evolui de um portal de receitas para um ecossistema social e cultural. O foco agora é a retenção através de comunidade, autoridade técnica e inteligência artificial.
