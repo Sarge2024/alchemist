@@ -306,9 +306,9 @@ export default function Layout({ children }: LayoutProps) {
               <button className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
                 <Share2 className="w-4 h-4" />
               </button>
-              <button className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
+              <a href="mailto:alchemist.master1998@gmail.com" className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
                 <Mail className="w-4 h-4" />
-              </button>
+              </a>
             </div>
           </div>
         </div>

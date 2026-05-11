@@ -15,6 +15,10 @@ export default defineConfig(({mode}) => {
         includeAssets: ['favicon.png', 'apple-touch-icon.png'],
         workbox: {
           maximumFileSizeToCacheInBytes: 4000000,
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+          cleanupOutdatedCaches: true,
+          skipWaiting: true,
+          clientsClaim: true,
         },
         manifest: {
           name: 'Alchemist Lounge Gastronômico',
