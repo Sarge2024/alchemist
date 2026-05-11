@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Heart, Star, Clock, Filter, ChevronDown, Loader2, X, LayoutGrid, List, Utensils } from 'lucide-react';
+import { Heart, Star, Clock, Filter, ChevronDown, Loader2, X, LayoutGrid, List, Utensils, AlertTriangle } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { recipeService, Recipe } from '../infra/services/recipeService';
@@ -17,6 +17,7 @@ export default function Explore() {
   const [filteredRecipes, setFilteredRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
     loadRecipes();
@@ -60,11 +61,17 @@ export default function Explore() {
   }, [searchParams, recipes]);
 
   const loadRecipes = async () => {
+    setLoading(true);
+    setFetchError(null);
     try {
       const data = await recipeService.getAllRecipes();
+      if (data.length === 0) {
+        console.warn('Firestore retornou 0 receitas.');
+      }
       setRecipes(data);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading recipes:', error);
+      setFetchError(error.message || 'Erro desconhecido ao conectar com o banco de dados.');
       setRecipes([]);
     } finally {
       setLoading(false);
@@ -109,6 +116,21 @@ export default function Explore() {
             <h1 className="text-4xl font-bold text-on-surface mb-2">Explorar Receitas</h1>
             <p className="text-on-surface-variant text-lg">Navegue por nossa coleção completa de receitas artesanais.</p>
           </div>
+
+          {fetchError && (
+            <div className="w-full mt-4 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 flex flex-col gap-2 shadow-sm">
+              <div className="flex items-center gap-2 font-bold">
+                <AlertTriangle className="w-5 h-5" /> Erro de Conexão Firebase
+              </div>
+              <p className="text-sm">{fetchError}</p>
+              <button 
+                onClick={loadRecipes}
+                className="w-fit px-4 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors mt-1"
+              >
+                Tentar Novamente
+              </button>
+            </div>
+          )}
           
           <div className="flex items-center bg-surface-container rounded-xl p-1 shadow-inner">
             <button 
