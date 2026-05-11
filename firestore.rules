@@ -3,32 +3,19 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. RECEITAS: LEITURA PÚBLICA E NAVEGAÇÃO LIVRE
+    // Regra específica para a coleção de receitas (em inglês para bater com o código)
     match /recipes/{recipeId} {
+      // Permite a leitura para *todos* os usuários, autenticados ou não.
       allow read: if true;
       
-      // Escrita: Apenas membros verificados e colaboradores
-      allow create: if request.auth != null && request.auth.token.email_verified == true;
-      allow update, delete: if request.auth != null && (
-        request.auth.token.email == 'sagacitas.sistemas@gmail.com' || 
-        request.auth.uid == resource.data.ownerId
-      );
+      // Permite a escrita (criação, atualização e exclusão) *apenas* para usuários autenticados.
+      allow write: if request.auth != null;
     }
 
-    // 2. USUÁRIOS E PERFIS
-    match /users/{userId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // 3. COMUNIDADE (LOUNGE)
-    match /lounge_messages/{messageId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null && request.auth.token.email_verified == true;
-      allow update, delete: if request.auth != null && (
-        request.auth.token.email == 'sagacitas.sistemas@gmail.com' || 
-        request.auth.uid == resource.data.senderId
-      );
+    // Regra geral para todas as outras coleções e documentos que não são 'recipes'.
+    match /{document=**} {
+      // Permite leitura e escrita apenas para usuários autenticados.
+      allow read, write: if request.auth != null;
     }
   }
 }
