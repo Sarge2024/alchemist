@@ -3,19 +3,22 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Regra específica para a coleção de receitas (em inglês para bater com o código)
+    // 1. RECEITAS - TOTALMENTE ABERTO PARA LEITURA (SEM EXCEÇÃO)
     match /recipes/{recipeId} {
-      // Permite a leitura para *todos* os usuários, autenticados ou não.
-      allow read: if true;
-      
-      // Permite a escrita (criação, atualização e exclusão) *apenas* para usuários autenticados.
+      allow read, get, list: if true;
       allow write: if request.auth != null;
     }
 
-    // Regra geral para todas as outras coleções e documentos que não são 'recipes'.
-    match /{document=**} {
-      // Permite leitura e escrita apenas para usuários autenticados.
+    // 2. LOUNGE E MENSAGENS - APENAS LOGADOS
+    match /lounge_messages/{messageId} {
       allow read, write: if request.auth != null;
     }
+
+    // 3. USUÁRIOS - APENAS O PRÓPRIO OU ADMIN
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // REMOVIDO O BLOQUEIO GLOBAL QUE PODIA ESTAR SOBRESCREVENDO AS REGRAS ACIMA
   }
 }
