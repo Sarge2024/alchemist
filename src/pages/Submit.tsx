@@ -470,6 +470,7 @@ export default function Submit() {
                 <option>Low Carb</option>
                 <option>Keto</option>
                 <option>Sem Glúten</option>
+                <option>Sem Lactose</option>
                 <option>Fit</option>
               </select>
             </div>

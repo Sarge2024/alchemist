@@ -161,6 +161,7 @@ export default function Explore() {
       case 'Low Carb': return 'bg-blue-100 text-blue-700';
       case 'Fit': return 'bg-cyan-100 text-cyan-700';
       case 'Sem Glúten': return 'bg-amber-100 text-amber-700';
+      case 'Sem Lactose': return 'bg-orange-100 text-orange-700';
       case 'Keto': return 'bg-indigo-100 text-indigo-700';
       default: return 'bg-stone-50 text-stone-500 border border-stone-200';
     }
@@ -344,7 +345,7 @@ export default function Explore() {
                   Dieta <ChevronDown className="w-4 h-4" />
                 </button>
                 <div className="mt-3 space-y-2 text-sm text-on-surface-variant">
-                  {['Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Fit'].map(diet => (
+                  {['Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Sem Lactose', 'Fit'].map(diet => (
                     <label key={diet} className="flex items-center gap-2 cursor-pointer">
                       <input 
                         type="checkbox" 

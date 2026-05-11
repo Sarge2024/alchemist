@@ -73,7 +73,7 @@ export const geminiService = {
       - custo_estimado (string): USE: '$', '$$', '$$$', '$$$$'.
       - time (string): TEMPO TOTAL (ex: '45 min').
       - prepTime (string): TEMPO DE PREPARAÇÃO (ex: '15 min').
-      - dietType (string): TIPO DE DIETA (USE EXATAMENTE UMA DESTAS: 'Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Fit'). Se não houver restrição clara, use 'Convencional'.
+      - dietType (string): TIPO DE DIETA (USE EXATAMENTE UMA DESTAS: 'Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Sem Lactose', 'Fit'). Se não houver restrição clara, use 'Convencional'.
       - difficulty (Fácil, Médio, Difícil), servings.
       - isClassic (boolean): Determine se esta é uma receita CLÁSSICA ou TRADICIONAL. Receitas clássicas são aquelas amplamente conhecidas, com origem histórica clara, herança cultural ou pratos icônicos (ex: Feijoada, Carbonara, Ratatouille). Se o texto descrever uma história de família ou herança, também marque como true.
       - ingredients (objeto[] com name, quantity e group). 
@@ -219,7 +219,7 @@ export const geminiService = {
       recipeData.origem = String(recipeData.origem || "Brasileira");
       recipeData.custo_estimado = ["$", "$$", "$$$", "$$$$"].includes(recipeData.custo_estimado) ? recipeData.custo_estimado : "$$";
       
-      const dietTypes = ['Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Fit'];
+      const dietTypes = ['Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Glúten', 'Sem Lactose', 'Fit'];
       if (!dietTypes.includes(recipeData.dietType)) {
         recipeData.dietType = "Convencional";
       }
@@ -357,8 +357,20 @@ export const geminiService = {
 
 
       return finalResult;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Gemini extraction error:", error);
+      
+      const status = error?.status || error?.response?.status;
+      const isQuotaError = Number(status) === 429 || 
+                           status === "RESOURCE_EXHAUSTED" || 
+                           error?.message?.includes("429") || 
+                           error?.message?.includes("quota") ||
+                           error?.response?.data?.error?.status === "RESOURCE_EXHAUSTED";
+                           
+      if (isQuotaError) {
+        throw new Error("Falha na Extração: O limite da cota gratuita da Inteligência Artificial (Gemini) foi atingido. Verifique o plano de faturamento no Google AI Studio.");
+      }
+      
       throw new Error("Falha ao extrair dados da receita via AI.");
     }
   }

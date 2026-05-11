@@ -140,6 +140,63 @@ export const recipeService = {
         }
       }
 
+      // Notificação de Nova Receita (Post no Lounge e E-mail para membros)
+      try {
+        const usersSnapshot = await getDocs(collection(db, 'users'));
+        const memberEmails = usersSnapshot.docs
+          .map(userDoc => userDoc.data().email)
+          .filter(email => !!email);
+          
+        let authorName = 'Um Alquimista';
+        if (recipe.ownerId) {
+          const userSnap = await getDoc(doc(db, 'users', recipe.ownerId));
+          if (userSnap.exists()) {
+            authorName = userSnap.data().displayName || userSnap.data().name || authorName;
+          }
+        }
+
+        // Post no Lounge
+        await addDoc(collection(db, 'lounge_messages'), {
+          text: `👨‍🍳 **Nova Receita Publicada!**\n\nO alquimista **${authorName}** acabou de compartilhar a receita: **${sanitizedRecipe.title}**.\n\nConfira na aba Explorar para ver os ingredientes e o modo de preparo!`,
+          senderId: 'system',
+          senderName: 'Alquimia do Prato',
+          senderRole: 'admin',
+          status: 'approved',
+          timestamp: serverTimestamp(),
+          reactions: {},
+          metadata: {
+            type: 'new_recipe',
+            recipeId: docRef.id
+          }
+        });
+
+        // Email via Trigger Email Extension (collection 'mail')
+        if (memberEmails.length > 0) {
+          await addDoc(collection(db, 'mail'), {
+            to: memberEmails,
+            message: {
+              from: '"Mestre Alquemista" <alchemist.master1998@gmail.com>',
+              subject: `Nova Receita no Alquimia: ${sanitizedRecipe.title}`,
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
+                  <h2 style="color: #d97706;">Olá Alquimista!</h2>
+                  <p>Uma nova receita acabou de ser publicada em nossa comunidade pelo alquimista <strong>${authorName}</strong>:</p>
+                  <div style="background-color: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                    <h3 style="margin-top: 0; color: #9a3412;">${sanitizedRecipe.title}</h3>
+                    <p>${sanitizedRecipe.description || 'Uma deliciosa nova criação culinária aguarda por você.'}</p>
+                  </div>
+                  <p>Acesse o <strong>Alquimia do Prato</strong> para conferir os detalhes, ingredientes e modo de preparo.</p>
+                  <br/>
+                  <p>Abraços,<br/><strong>Equipe Alquimia do Prato</strong></p>
+                </div>
+              `
+            }
+          });
+        }
+      } catch (notifyError) {
+        console.error('Falha ao enviar notificações de nova receita:', notifyError);
+      }
+
       return docRef.id;
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, RECIPES_COLLECTION);
