@@ -15,9 +15,8 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -8 }}
       className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-stone-100 flex flex-col h-full group"
     >
