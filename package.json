@@ -1,7 +1,7 @@
 {
   "name": "alchemist",
   "private": true,
-  "version": "2.1.0w",
+  "version": "2.1.0x",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
