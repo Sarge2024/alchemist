@@ -114,7 +114,7 @@ export interface Recipe {
 const RECIPES_COLLECTION = 'recipes';
 
 export const recipeService = {
-  async createRecipe(recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>) {
+  async createRecipe(recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>, options: { notifyEmail: boolean } = { notifyEmail: true }) {
     try {
       const sanitizedRecipe = deepSanitize(recipe);
       const docRef = await addDoc(collection(db, RECIPES_COLLECTION), {
@@ -155,7 +155,7 @@ export const recipeService = {
           }
         }
 
-        // Post no Lounge
+        // Post no Lounge (Sempre envia ao publicar)
         await addDoc(collection(db, 'lounge_messages'), {
           text: `👨‍🍳 **Nova Receita Publicada!**\n\nO alquimista **${authorName}** acabou de compartilhar a receita: **${sanitizedRecipe.title}**.\n\nConfira na aba Explorar para ver os ingredientes e o modo de preparo!`,
           senderId: 'system',
@@ -170,8 +170,8 @@ export const recipeService = {
           }
         });
 
-        // Email via Trigger Email Extension (collection 'mail')
-        if (memberEmails.length > 0) {
+        // Email via Trigger Email Extension (collection 'mail') - OPCIONAL
+        if (options.notifyEmail && memberEmails.length > 0) {
           await addDoc(collection(db, 'mail'), {
             to: memberEmails,
             message: {

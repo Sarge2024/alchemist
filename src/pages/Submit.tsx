@@ -22,6 +22,7 @@ export default function Submit() {
   const [imageOptions, setImageOptions] = useState<string[]>([]);
   const [hasProfile, setHasProfile] = useState(false);
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
+  const [shouldNotifyEmail, setShouldNotifyEmail] = useState(true);
 
   const [formData, setFormData] = useState<Omit<Recipe, 'id' | 'ownerId' | 'createdAt' | 'updatedAt'>>({
     title: '',
@@ -71,6 +72,7 @@ export default function Submit() {
     if (isEditing && auth.currentUser) {
       loadRecipe(id!);
     } else if (!isEditing && location.state?.scrapedData) {
+      setShouldNotifyEmail(false); // Desativa notificação por e-mail por padrão para receitas via scrap
       setImageOptions(location.state.scrapedData.imageOptions || []);
       setFormData(prev => ({
         ...prev,
@@ -246,7 +248,7 @@ export default function Submit() {
         const newId = await recipeService.createRecipe({
           ...formData,
           ownerId: user.uid,
-        });
+        }, { notifyEmail: shouldNotifyEmail });
         console.log('createRecipe concluído com sucesso, novo ID:', newId);
         alert('Receita publicada com sucesso!');
       }
@@ -419,18 +421,35 @@ export default function Submit() {
           </div>
 
           {/* Receita Clássica Checkbox */}
-          <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl border-2 border-primary/20">
-            <input 
-              type="checkbox" 
-              id="isClassic"
-              name="isClassic"
-              checked={formData.isClassic || false}
-              onChange={(e) => setFormData(prev => ({ ...prev, isClassic: e.target.checked }))}
-              className="w-5 h-5 accent-primary cursor-pointer"
-            />
-            <label htmlFor="isClassic" className="font-bold text-on-surface cursor-pointer select-none">
-              Receita Clássica <span className="text-xs font-normal block text-on-surface-variant">Esta receita possui uma história tradicional por trás dela.</span>
-            </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl border-2 border-primary/20">
+              <input 
+                type="checkbox" 
+                id="isClassic"
+                name="isClassic"
+                checked={formData.isClassic || false}
+                onChange={(e) => setFormData(prev => ({ ...prev, isClassic: e.target.checked }))}
+                className="w-5 h-5 accent-primary cursor-pointer"
+              />
+              <label htmlFor="isClassic" className="font-bold text-on-surface cursor-pointer select-none">
+                Receita Clássica <span className="text-xs font-normal block text-on-surface-variant">Esta receita possui uma história tradicional por trás dela.</span>
+              </label>
+            </div>
+
+            {/* Notificação por E-mail Checkbox */}
+            <div className="flex items-center gap-3 p-4 bg-orange-50/50 rounded-xl border-2 border-orange-200/50">
+              <input 
+                type="checkbox" 
+                id="shouldNotifyEmail"
+                name="shouldNotifyEmail"
+                checked={shouldNotifyEmail}
+                onChange={(e) => setShouldNotifyEmail(e.target.checked)}
+                className="w-5 h-5 accent-orange-500 cursor-pointer"
+              />
+              <label htmlFor="shouldNotifyEmail" className="font-bold text-on-surface cursor-pointer select-none text-orange-900/80">
+                Notificar por E-mail <span className="text-xs font-normal block text-on-surface-variant">Enviar aviso para toda a comunidade sobre esta publicação.</span>
+              </label>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
