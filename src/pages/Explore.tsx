@@ -125,6 +125,11 @@ export default function Explore() {
               </div>
               <p className="text-sm font-medium">{fetchError}</p>
               
+              <div className="mt-2 pt-2 border-t border-red-100 text-[10px] font-mono opacity-70">
+                <p>Project: {(db as any)._appId || (db as any).app?.options?.projectId || 'Unknown'}</p>
+                <p>Database: {(db as any).databaseId?.database || '(default)'}</p>
+              </div>
+
               <button 
                 onClick={loadRecipes}
                 className="w-fit px-4 py-1.5 bg-red-600 text-white rounded-lg text-xs font-bold hover:bg-red-700 transition-colors mt-1"

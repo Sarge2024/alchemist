@@ -12,6 +12,7 @@ import RegisterCollaborator from './pages/RegisterCollaborator';
 import UserManagement from './pages/UserManagement';
 import Profile from './pages/Profile';
 import Lounge from './pages/Lounge';
+import FirebaseDebug from './pages/FirebaseDebug';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -42,6 +43,7 @@ export default function App() {
             
             <Route path="/recipe/:id" element={<RecipeDetail />} />
             <Route path="/manifesto" element={<Manifesto />} />
+            <Route path="/debug-firebase" element={<FirebaseDebug />} />
             
             <Route path="*" element={<Home />} />
           </Routes>

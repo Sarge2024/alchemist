@@ -3,33 +3,16 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // 1. RECEITAS - LEITURA TOTALMENTE ABERTA
-    // Visitantes e membros podem ver o catálogo de receitas sem restrições.
-    match /recipes/{recipeId} {
-      allow read, get, list: if true;
-      
-      // Escrita exige que o usuário esteja autenticado.
+    // TESTE DE EMERGÊNCIA: ABRIR TUDO PARA LEITURA
+    match /{document=**} {
+      allow read: if true;
       allow write: if request.auth != null;
     }
-
-    // 2. USUÁRIOS - LEITURA PÚBLICA DE PERFIS
-    // Necessário para que visitantes vejam quem criou a receita (Nome/Foto).
-    match /users/{userId} {
+    
+    // Regra específica para recipes (redundante para garantir)
+    match /recipes/{recipeId} {
       allow read: if true;
-      
-      // Apenas o próprio usuário pode editar seus dados (Perfil, Preferências).
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
-
-    // 3. LOUNGE E MENSAGENS - APENAS LOGADOS
-    // Conversas da comunidade são protegidas e exigem autenticação.
-    match /lounge_messages/{messageId} {
-      allow read, write: if request.auth != null;
-    }
-
-    // Bloqueio padrão para qualquer outra coleção futura não especificada.
-    match /{document=**} {
-      allow read, write: if false;
+      allow write: if request.auth != null;
     }
   }
 }
