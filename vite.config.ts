@@ -52,20 +52,6 @@ export default defineConfig(({mode}) => {
       'process.env.GEMINI_API_KEY_4': JSON.stringify(env.GEMINI_API_KEY_4 || null),
       'process.env.GEMINI_API_KEY_5': JSON.stringify(env.GEMINI_API_KEY_5 || null),
     },
-    build: {
-      outDir: 'dist',
-      emptyOutDir: true,
-      chunkSizeWarningLimit: 1000,
-      rollupOptions: {
-        output: {
-          manualChunks: {
-            'vendor-react': ['react', 'react-dom', 'react-router-dom'],
-            'vendor-firebase': ['firebase/app', 'firebase/auth', 'firebase/firestore'],
-            'vendor-ui': ['lucide-react', 'motion'],
-          }
-        }
-      }
-    },
     resolve: {
       alias: {
         '@domain': path.resolve(__dirname, './src/domain'),
