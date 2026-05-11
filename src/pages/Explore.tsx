@@ -7,72 +7,7 @@ import { recipeService, Recipe } from '../infra/services/recipeService';
 import { RecipeCard } from '../components/RecipeCard';
 import { ASSETS, getAssetUrl } from '../lib/assets';
 
-const MOCK_RECIPES: Recipe[] = [
-  {
-    id: 'tapioca-rendada',
-    title: 'Tapioca Rendada com Queijo Coalho',
-    momento: ['Café da Manhã'],
-    tipo_prato: ['Grelhados'],
-    base_alimento: ['Ovos e Laticínios'],
-    origem: 'Brasileira',
-    time: '12 min',
-    rating: 4.9,
-    reviewsCount: 45,
-    difficulty: 'Fácil',
-    image: ASSETS.MOCKS.TAPIOCA,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  },
-  {
-    id: 'feijoada-completa',
-    title: 'Feijoada Completa Tradicional',
-    momento: ['Almoço'],
-    tipo_prato: ['Cozidos / Guisados'],
-    base_alimento: ['Carnes'],
-    origem: 'Brasileira',
-    time: '3h 00min',
-    rating: 5.0,
-    reviewsCount: 128,
-    difficulty: 'Médio',
-    image: ASSETS.MOCKS.FEIJOADA,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  },
-  {
-    id: 'salmao-ervas',
-    title: 'Salmão com Crosta de Ervas',
-    momento: ['Jantar'],
-    tipo_prato: ['Assados'],
-    base_alimento: ['Frutos do Mar'],
-    origem: 'Europeia',
-    time: '25 min',
-    rating: 4.8,
-    reviewsCount: 67,
-    difficulty: 'Fácil',
-    image: ASSETS.MOCKS.SALMON,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  },
-  {
-    id: 'pudim-leite',
-    title: 'Pudim de Leite Condensado',
-    momento: ['Lanche / Chá da Tarde'],
-    tipo_prato: ['Doces e Sobremesas'],
-    base_alimento: ['Ovos e Laticínios'],
-    origem: 'Brasileira',
-    time: '1h 30min',
-    rating: 4.9,
-    reviewsCount: 210,
-    difficulty: 'Médio',
-    image: ASSETS.MOCKS.BRUNCH,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  }
-];
+const MOCK_RECIPES: Recipe[] = [];
 
 export default function Explore() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -127,11 +62,10 @@ export default function Explore() {
   const loadRecipes = async () => {
     try {
       const data = await recipeService.getAllRecipes();
-      const allRecipes = data.length > 0 ? data : MOCK_RECIPES;
-      setRecipes(allRecipes);
+      setRecipes(data);
     } catch (error) {
       console.error('Error loading recipes:', error);
-      setRecipes(MOCK_RECIPES);
+      setRecipes([]);
     } finally {
       setLoading(false);
     }

@@ -14,53 +14,7 @@ const CATEGORIES = [
   { name: 'Sobremesas', icon: Cake, img: ASSETS.CATEGORIES.DESSERTS },
 ];
 
-const MOCK_RECIPES: Recipe[] = [
-  {
-    id: 'tapioca-rendada',
-    title: 'Tapioca Rendada com Queijo Coalho',
-    momento: ['Café da Manhã'],
-    tipo_prato: ['Grelhados'],
-    base_alimento: ['Ovos e Laticínios'],
-    time: '12 min',
-    rating: 4.9,
-    reviewsCount: 45,
-    difficulty: 'Fácil',
-    image: ASSETS.MOCKS.TAPIOCA,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  },
-  {
-    id: 'feijoada-completa',
-    title: 'Feijoada Completa Tradicional',
-    momento: ['Almoço'],
-    tipo_prato: ['Cozidos / Guisados'],
-    base_alimento: ['Carnes'],
-    time: '3h 00min',
-    rating: 5.0,
-    reviewsCount: 128,
-    difficulty: 'Médio',
-    image: ASSETS.MOCKS.FEIJOADA,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  },
-  {
-    id: 'salmao-ervas',
-    title: 'Salmão com Crosta de Ervas',
-    momento: ['Jantar'],
-    tipo_prato: ['Assados'],
-    base_alimento: ['Frutos do Mar'],
-    time: '25 min',
-    rating: 4.8,
-    reviewsCount: 67,
-    difficulty: 'Fácil',
-    image: ASSETS.MOCKS.SALMON,
-    ownerId: 'system',
-    ingredients: [],
-    instructions: []
-  }
-];
+const MOCK_RECIPES: Recipe[] = [];
 
 export default function Home() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
@@ -75,30 +29,18 @@ export default function Home() {
     try {
       const data = await recipeService.getAllRecipes();
       
-      // Combine Firestore data with MOCK_RECIPES, prioritizing real data
-      const combined = [...data, ...MOCK_RECIPES];
-      
-      // Filter out duplicates by id (preferring real data version if ID overlaps)
-      const seen = new Set();
-      const uniqueRecipes = combined.filter(recipe => {
-        const id = recipe.id;
-        if (id && seen.has(id)) return false;
-        seen.add(id);
-        return true;
-      });
-
-      // Calculate category counts based on all unique recipes
+      // Calculate category counts based on real data
       const counts: Record<string, number> = {};
       CATEGORIES.forEach(cat => {
-        counts[cat.name] = uniqueRecipes.filter(r => r.momento && r.momento.includes(cat.name)).length;
+        counts[cat.name] = data.filter(r => r.momento && r.momento.includes(cat.name)).length;
       });
       setCategoryCounts(counts);
       
-      // Display up to 6 recipes (mix of real and mocks)
-      setRecipes(uniqueRecipes.slice(0, 6));
+      // Display up to 6 real recipes
+      setRecipes(data.slice(0, 6));
     } catch (error) {
       console.error('Error loading recent recipes:', error);
-      setRecipes(MOCK_RECIPES);
+      setRecipes([]);
     } finally {
       setLoading(false);
     }
