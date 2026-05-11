@@ -61,7 +61,8 @@ service cloud.firestore {
 
     // --- Coleção de Receitas ---
     match /recipes/{recipeId} {
-      allow read: if true;
+      // Leitura pública total (necessário para visitantes verem o catálogo)
+      allow read, get, list: if true;
       
       // Colaboradores ou superiores podem criar receitas
       allow create: if isVerified() && (hasRole('colaborador') || isEditor());
