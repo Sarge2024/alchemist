@@ -1,18 +1,9 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // TESTE DE EMERGÊNCIA: ABRIR TUDO PARA LEITURA
+    // TESTE DE EMERGÊNCIA ABSOLUTO: ABRIR TUDO PARA TUDO
     match /{document=**} {
-      allow read: if true;
-      allow write: if request.auth != null;
-    }
-    
-    // Regra específica para recipes (redundante para garantir)
-    match /recipes/{recipeId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read, write: if true;
     }
   }
 }
