@@ -241,25 +241,19 @@ export const recipeService = {
 
   async getAllRecipes(): Promise<Recipe[]> {
     try {
-      // Try with ordering first
-      const q = query(collection(db, RECIPES_COLLECTION), orderBy('createdAt', 'desc'));
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+      // Fetch everything without ordering to avoid index/permission issues
+      const querySnapshot = await getDocs(collection(db, RECIPES_COLLECTION));
+      const recipes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+      
+      // Sort in memory by createdAt desc
+      return recipes.sort((a, b) => {
+        const dateA = a.createdAt?.toDate?.() ? a.createdAt.toDate() : new Date(a.createdAt || 0);
+        const dateB = b.createdAt?.toDate?.() ? b.createdAt.toDate() : new Date(b.createdAt || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
     } catch (error) {
-      console.warn('Query with orderBy failed, falling back to unordered fetch:', error);
-      try {
-        // Fallback to unordered fetch and sort in memory
-        const querySnapshot = await getDocs(collection(db, RECIPES_COLLECTION));
-        const recipes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
-        return recipes.sort((a, b) => {
-          const dateA = a.createdAt?.toDate?.() ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-          const dateB = b.createdAt?.toDate?.() ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-          return dateB.getTime() - dateA.getTime();
-        });
-      } catch (innerError) {
-        handleFirestoreError(innerError, OperationType.LIST, RECIPES_COLLECTION);
-        return [];
-      }
+      handleFirestoreError(error, OperationType.LIST, RECIPES_COLLECTION);
+      return [];
     }
   },
 
