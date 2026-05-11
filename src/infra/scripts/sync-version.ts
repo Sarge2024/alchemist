@@ -55,4 +55,4 @@ if (fs.existsSync(constantsPath)) {
   fs.writeFileSync(constantsPath, constantsContent);
 }
 
-console.log(`[Alquimia do Prato] Sincronismo concluído! Versão atualizada: ${currentVersion} -> ${newVersion}`);
+console.log(`[Alchemist] Sincronismo concluído! Versão atualizada: ${currentVersion} -> ${newVersion}`);
