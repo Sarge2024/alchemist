@@ -1,7 +1,6 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { GoogleGenAI } from "@google/genai";
-
-
+import { getAvailableGeminiKeys, isQuotaExhaustedError } from "./geminiKeyManager";
 
 /**
  * AtaGeneratorService
@@ -21,9 +20,9 @@ export const AtaGeneratorService = {
    */
   async generateDailyAta(): Promise<any> {
     // Verificação de ambiente
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey || apiKey === "" || apiKey === "your_gemini_api_key_here") {
-      throw new Error("[AtaGenerator] GEMINI_API_KEY não configurada.");
+    const apiKeys = getAvailableGeminiKeys();
+    if (apiKeys.length === 0) {
+      throw new Error("[AtaGenerator] Nenhuma GEMINI_API_KEY configurada.");
     }
 
     const db = getFirestore();
@@ -31,7 +30,7 @@ export const AtaGeneratorService = {
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
     try {
-      // ... (existing code for message retrieval) ...
+      // 1. Recupera mensagens aprovadas nas últimas 24h
       const messagesSnapshot = await db.collection('lounge_messages')
         .where('status', '==', 'approved')
         .where('timestamp', '>=', last24h)
@@ -104,17 +103,35 @@ export const AtaGeneratorService = {
         }
       `;
 
+      let response;
+      let lastError;
 
-      const client = new GoogleGenAI({ apiKey });
-      
-      const response = await client.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt
-      });
+      for (let i = 0; i < apiKeys.length; i++) {
+        const apiKey = apiKeys[i];
+        try {
+          const client = new GoogleGenAI({ apiKey });
+          
+          response = await client.models.generateContent({
+            model: "gemini-3-flash-preview",
+            contents: prompt
+          });
+          
+          break; // Sucesso
+        } catch (error: any) {
+          lastError = error;
+          if (isQuotaExhaustedError(error) && i < apiKeys.length - 1) {
+            console.warn(`[AtaGenerator] Cota da chave ${i + 1} atingida. Rotacionando para chave ${i + 2}...`);
+            continue;
+          }
+          throw error;
+        }
+      }
+
+      if (!response) {
+        throw lastError || new Error("Falha ao gerar Ata Diária após tentar todas as chaves.");
+      }
       
       const rawText = response.text || "";
-
-
       
       // Extração robusta do JSON caso a IA inclua blocos de markdown
       const jsonMatch = rawText.match(/\{[\s\S]*\}/);
@@ -134,10 +151,8 @@ export const AtaGeneratorService = {
       console.log(`[AtaGenerator] Ata Diária gerada seguindo novo modelo. ID: ${ataRef.id}`);
       return { id: ataRef.id, ...ataData };
 
-
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-      console.error("[AtaGenerator Error] Falha no processo de geração:", errorMessage);
+    } catch (error: any) {
+      console.error("[AtaGenerator Error] Falha no processo de geração:", error.message || error);
       throw error;
     }
   }

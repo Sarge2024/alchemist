@@ -1,34 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Recipe } from "./recipeService";
-
-/**
- * Obtém todas as chaves de API do Gemini cadastradas nas variáveis de ambiente.
- * Suporta listas separadas por vírgula (GEMINI_API_KEYS) ou sequenciais (GEMINI_API_KEY_1, _2, etc).
- */
-function getAvailableApiKeys(): string[] {
-  const keys: string[] = [];
-  
-  // 1. Chaves separadas por vírgula
-  if (process.env.GEMINI_API_KEYS) {
-    keys.push(...process.env.GEMINI_API_KEYS.split(',').map(k => k.trim()).filter(k => k.length > 0));
-  }
-  
-  // 2. Chaves sequenciais (ex: GEMINI_API_KEY_1, GEMINI_API_KEY_2...)
-  for (let i = 1; i <= 10; i++) {
-    const key = process.env[`GEMINI_API_KEY_${i}`];
-    if (key && key.trim().length > 0 && !keys.includes(key.trim())) {
-      keys.push(key.trim());
-    }
-  }
-
-  // 3. Chave padrão
-  const defaultKey = process.env.GEMINI_API_KEY;
-  if (defaultKey && defaultKey.trim().length > 0 && !keys.includes(defaultKey.trim())) {
-    keys.push(defaultKey.trim());
-  }
-
-  return keys;
-}
+import { getAvailableGeminiKeys, isQuotaExhaustedError } from "./geminiKeyManager";
 
 /**
  * geminiService
@@ -112,7 +84,7 @@ export const geminiService = {
     `;
 
     try {
-      const apiKeys = getAvailableApiKeys();
+      const apiKeys = getAvailableGeminiKeys();
       if (apiKeys.length === 0) {
         throw new Error("Nenhuma GEMINI_API_KEY configurada");
       }
@@ -135,14 +107,8 @@ export const geminiService = {
           break;
         } catch (error: any) {
           lastError = error;
-          const status = error?.status || error?.response?.status;
-          const isQuotaError = Number(status) === 429 || 
-                               status === "RESOURCE_EXHAUSTED" || 
-                               error?.message?.includes("429") || 
-                               error?.message?.includes("quota") ||
-                               error?.response?.data?.error?.status === "RESOURCE_EXHAUSTED";
           
-          if (isQuotaError && i < apiKeys.length - 1) {
+          if (isQuotaExhaustedError(error) && i < apiKeys.length - 1) {
             console.warn(`[Alquimia do Prato] Transmutando limites: a cota da chave ${i + 1} foi atingida. Ativando reserva ${i + 2} de ${apiKeys.length}...`);
             continue;
           }
@@ -280,7 +246,7 @@ export const geminiService = {
           const searchPrompt = `Encontre até 5 URLs de imagens de alta qualidade para a receita: "${recipeData.title}". 
           Retorne APENAS um array JSON de strings com as URLs.`;
           
-          const apiKeys = getAvailableApiKeys();
+          const apiKeys = getAvailableGeminiKeys();
           let searchResponse;
           let lastSearchError;
 
@@ -295,14 +261,8 @@ export const geminiService = {
               break; // Sucesso
             } catch (err: any) {
               lastSearchError = err;
-              const status = err?.status || err?.response?.status;
-              const isQuotaError = Number(status) === 429 || 
-                                   status === "RESOURCE_EXHAUSTED" || 
-                                   err?.message?.includes("429") || 
-                                   err?.message?.includes("quota") ||
-                                   err?.response?.data?.error?.status === "RESOURCE_EXHAUSTED";
               
-              if (isQuotaError && i < apiKeys.length - 1) {
+              if (isQuotaExhaustedError(err) && i < apiKeys.length - 1) {
                 console.warn(`[Alquimia do Prato] Transmutando limites (Busca): cota da chave ${i + 1} atingida. Ativando reserva ${i + 2}...`);
                 continue;
               }
@@ -360,14 +320,7 @@ export const geminiService = {
     } catch (error: any) {
       console.error("Gemini extraction error:", error);
       
-      const status = error?.status || error?.response?.status;
-      const isQuotaError = Number(status) === 429 || 
-                           status === "RESOURCE_EXHAUSTED" || 
-                           error?.message?.includes("429") || 
-                           error?.message?.includes("quota") ||
-                           error?.response?.data?.error?.status === "RESOURCE_EXHAUSTED";
-                           
-      if (isQuotaError) {
+      if (isQuotaExhaustedError(error)) {
         throw new Error("Falha na Extração: O limite da cota gratuita da Inteligência Artificial (Gemini) foi atingido. Verifique o plano de faturamento no Google AI Studio.");
       }
       
