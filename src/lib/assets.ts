@@ -61,11 +61,11 @@ export const getAssetUrl = (path: string | undefined | null) => {
     finalPath = '/' + finalPath.replace('public/', '');
   }
 
-  // Handle case where path is just the filename 'recipe-...' or '/recipe-...'
+  // Handle case where path is a local filename 'recipe-...' or 'downloaded-...'
   // without the '/uploads/' prefix
-  const recipeMatch = finalPath.match(/^\/?(recipe-.*)$/);
-  if (recipeMatch && !finalPath.includes('uploads')) {
-    finalPath = '/uploads/' + recipeMatch[1];
+  const uploadMatch = finalPath.match(/^\/?((?:recipe|downloaded|upload)-.*)$/);
+  if (uploadMatch && !finalPath.includes('uploads')) {
+    finalPath = '/uploads/' + uploadMatch[1];
   }
 
   // Ensure it starts with a /
