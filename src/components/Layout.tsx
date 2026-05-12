@@ -6,6 +6,7 @@ import { APP_VERSION } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield } from 'lucide-react';
+import { userService } from '../infra/services/userService';
 
 interface LayoutProps {
   children: ReactNode;
@@ -35,7 +36,24 @@ export default function Layout({ children }: LayoutProps) {
 
     try {
       // Use browserPopupRedirectResolver to improve compatibility in iframe/popup environments
-      await signInWithPopup(auth, provider, browserPopupRedirectResolver);
+      const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
+      
+      // Sincroniza o perfil do usuário com o Firestore se for um novo login
+      if (result.user) {
+        const profile = await userService.getUserProfile(result.user.uid);
+        if (!profile) {
+          console.log('[Auth] Novo alquimista detectado. Criando perfil...');
+          await userService.createUserProfile({
+            uid: result.user.uid,
+            displayName: result.user.displayName || 'Alquimista',
+            email: result.user.email || '',
+            photoURL: result.user.photoURL || undefined,
+            role: 'member',
+            state: '',
+            country: 'Brasil'
+          });
+        }
+      }
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.code === 'auth/popup-blocked') {

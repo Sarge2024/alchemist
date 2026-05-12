@@ -97,11 +97,13 @@ export const geminiService = {
         try {
           const client = new GoogleGenAI({ apiKey });
           
-          response = await client.models.generateContent({
+          const result = await client.models.generateContent({
             model: "gemini-3-flash-preview",
-            contents: prompt,
-            config: isUrlOnly ? { tools: [{ googleSearch: {} }] } : undefined
+            contents: [{ role: "user", parts: [{ text: prompt }] }],
+            tools: isUrlOnly ? [{ googleSearch: {} }] : undefined as any
           });
+          
+          response = result;
           
           // Sucesso: sai do loop de tentativas
           break;
@@ -253,11 +255,13 @@ export const geminiService = {
           for (let i = 0; i < apiKeys.length; i++) {
             try {
               const client = new GoogleGenAI({ apiKey: apiKeys[i] });
-              searchResponse = await client.models.generateContent({
+              const result = await client.models.generateContent({
                 model: "gemini-3-flash-preview",
-                contents: searchPrompt,
-                config: { tools: [{ googleSearch: {} }] }
+                contents: [{ role: "user", parts: [{ text: searchPrompt }] }],
+                tools: [{ googleSearch: {} }] as any
               });
+              
+              searchResponse = result;
               break; // Sucesso
             } catch (err: any) {
               lastSearchError = err;
@@ -325,6 +329,32 @@ export const geminiService = {
       }
       
       throw new Error("Falha ao extrair dados da receita via AI.");
+    }
+  },
+
+  /**
+   * Verifica o status de uma chave específica.
+   */
+  async checkApiKeyStatus(apiKey: string): Promise<{ status: 'active' | 'exhausted' | 'invalid' | 'error', message?: string }> {
+    try {
+      const client = new GoogleGenAI({ apiKey });
+      const result = await client.models.generateContent({
+        model: 'gemini-3-flash-preview',
+        contents: [{ role: 'user', parts: [{ text: 'hi' }] }]
+      });
+      
+      if (result) {
+        return { status: 'active' };
+      }
+      return { status: 'error', message: 'Resposta vazia' };
+    } catch (error: any) {
+      if (isQuotaExhaustedError(error)) {
+        return { status: 'exhausted', message: 'Cota esgotada (429)' };
+      }
+      if (error?.message?.includes('API_KEY_INVALID') || error?.message?.includes('invalid')) {
+        return { status: 'invalid', message: 'Chave Inválida' };
+      }
+      return { status: 'error', message: error.message || 'Erro desconhecido' };
     }
   }
 };

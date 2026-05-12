@@ -12,7 +12,10 @@ import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { IdentityAccessService } from "./src/infra/auth/IdentityAccessService";
 import { ModerationService } from "./src/infra/services/ModerationService";
 import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
+import { geminiService } from "./src/infra/services/geminiService";
+import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import cron from "node-cron";
 
 // Removed __filename and __dirname to prevent import.meta.url SyntaxError
 
@@ -144,6 +147,30 @@ app.post("/api/upload", authenticateAPI, upload.single("image"), (req, res) => {
   res.json({ success: true, imageUrl });
 });
 
+// API Route for Checking Gemini API Keys Status
+app.post("/api/admin/check-keys", authenticateAPI, async (req, res) => {
+  try {
+    const keys = getAvailableGeminiKeys();
+    console.log(`[Admin API] Diagnóstico: Verificando ${keys.length} chaves...`);
+    
+    const results = [];
+    for (let i = 0; i < keys.length; i++) {
+      const key = keys[i];
+      const statusResult = await geminiService.checkApiKeyStatus(key);
+      results.push({
+        key: `API Key #${i + 1}`,
+        keyRaw: key,
+        ...statusResult
+      });
+    }
+    
+    res.json({ success: true, keys: results });
+  } catch (error: any) {
+    console.error("[Admin API] Erro no diagnóstico:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // API Route for Admin Role Management
 app.post("/api/admin/set-role", async (req, res) => {
   const { uid, role } = req.body;
@@ -159,6 +186,7 @@ app.post("/api/admin/set-role", async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // API Route for Fetching HTML (proxy to avoid CORS)
 app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
@@ -343,6 +371,22 @@ async function startServer() {
 // Only start the server automatically if not running in Vercel
 if (process.env.VERCEL !== "1") {
   startServer();
+  
+  // Agendamento da Ata Diária: Todo dia às 23:59
+  // Garante que as conversas do dia sejam consolidadas no Mural
+  cron.schedule("59 23 * * *", async () => {
+    console.log("[Cron] Iniciando transmutação: Gerando Ata Diária do Lounge...");
+    try {
+      const ata = await AtaGeneratorService.generateDailyAta();
+      if (ata) {
+        console.log("[Cron] Sucesso: Ata Diária gerada e persistida.");
+      } else {
+        console.log("[Cron] Silêncio no Lounge: Nenhuma mensagem para resumir hoje.");
+      }
+    } catch (error) {
+      console.error("[Cron] Falha na transmutação da Ata:", error);
+    }
+  });
 }
 
 export default app;

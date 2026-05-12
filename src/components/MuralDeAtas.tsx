@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, Calendar, Star, ChevronRight, Hash, CheckCircle2, Quote, Flame, Users, Award, ShieldCheck } from 'lucide-react';
+import { BookOpen, Calendar, Star, ChevronRight, Hash, CheckCircle2, Quote, Flame, Users, Award, ShieldCheck, MessageSquare } from 'lucide-react';
 import { loungeService, DailyAta } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
 
@@ -83,36 +83,58 @@ export const MuralDeAtas: React.FC = () => {
           <div className="px-4 py-2 bg-stone-100 rounded-xl text-[10px] font-black uppercase tracking-widest text-stone-500">
             Histórico Recente
           </div>
-          <div className="space-y-3">
-            <AnimatePresence>
-              {atas.map((ata) => (
-                <motion.button
-                  key={ata.id}
-                  onClick={() => setSelectedAta(ata)}
-                  whileHover={{ x: 4 }}
-                  className={`
-                    w-full p-5 rounded-3xl text-left transition-all border
-                    ${selectedAta?.id === ata.id 
-                      ? 'bg-stone-900 border-stone-900 text-white shadow-2xl shadow-stone-200' 
-                      : 'bg-white border-stone-100 text-stone-600 hover:border-primary/40'}
-                  `}
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2 opacity-60">
-                      <Calendar className="w-3.5 h-3.5" />
-                      <span className="text-[10px] font-black uppercase tracking-widest font-body">{ata.date}</span>
-                    </div>
-                  </div>
-                  <h4 className={`font-bold text-base mb-2 line-clamp-1 ${selectedAta?.id === ata.id ? 'text-white' : 'text-stone-800'}`}>
-                    {ata.topics?.[0]?.title || "Ata Sem Tópicos"}
-                  </h4>
-                  <div className="flex items-center gap-4 text-[9px] font-black uppercase tracking-tighter opacity-50">
-                    <span className="flex items-center gap-1"><Hash className="w-3 h-3" /> {ata.topics?.length || 0} tópicos</span>
-                    <span className="flex items-center gap-1"><Star className="w-3 h-3" /> {ata.stats?.totalMessages || 0} msgs</span>
-                  </div>
-                </motion.button>
-              ))}
-            </AnimatePresence>
+          <div className="space-y-6">
+            {Object.entries(
+              atas.reduce((acc, ata) => {
+                const dateParts = (ata.date || "").split('/');
+                if (dateParts.length < 3) return acc;
+                const month = dateParts[1] + '/' + dateParts[2];
+                if (!acc[month]) acc[month] = [];
+                acc[month].push(ata);
+                return acc;
+              }, {} as Record<string, DailyAta[]>)
+            ).map(([month, monthAtas]) => (
+              <div key={month} className="space-y-3">
+                <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
+                  <div className="h-px flex-1 bg-stone-100"></div>
+                  <span>{month}</span>
+                  <div className="h-px flex-1 bg-stone-100"></div>
+                </div>
+                <div className="space-y-2">
+                  <AnimatePresence>
+                    {monthAtas.map((ata) => (
+                      <motion.button
+                        key={ata.id}
+                        onClick={() => setSelectedAta(ata)}
+                        whileHover={{ x: 4 }}
+                        className={`
+                          w-full p-4 rounded-2xl text-left transition-all border group
+                          ${selectedAta?.id === ata.id 
+                            ? 'bg-stone-900 border-stone-900 text-white shadow-xl' 
+                            : 'bg-white border-stone-100 text-stone-600 hover:border-primary/40'}
+                        `}
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <span className={`text-[10px] font-black uppercase tracking-widest ${selectedAta?.id === ata.id ? 'text-amber-400' : 'text-stone-400'}`}>
+                            {ata.date}
+                          </span>
+                          <div className="flex items-center gap-1.5 text-[9px] font-bold opacity-60">
+                            <MessageSquare className="w-3 h-3" />
+                            {ata.stats?.totalMessages || 0}
+                          </div>
+                        </div>
+                        <h4 className={`font-bold text-sm mb-1 line-clamp-1 ${selectedAta?.id === ata.id ? 'text-white' : 'text-stone-800'}`}>
+                          {ata.topics?.[0]?.title || "Ata Sem Tópicos"}
+                        </h4>
+                        <p className={`text-[10px] font-medium opacity-60 line-clamp-1 italic ${selectedAta?.id === ata.id ? 'text-stone-300' : 'text-stone-500'}`}>
+                          Assunto: {ata.topics?.[0]?.summary || "Nenhum resumo disponível"}
+                        </p>
+                      </motion.button>
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </div>
+            ))}
           </div>
 
           {atas.length === 0 && (

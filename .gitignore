@@ -4,3 +4,4 @@ dist
 *.log
 public/uploads
 *-firebase-adminsdk-*.json
+scratch/

@@ -141,7 +141,7 @@ export const loungeService = {
   /**
    * Envia uma mensagem via API para disparar a moderação automática por IA.
    */
-  async sendMessage(text: string, senderId: string, senderRole: string, senderName?: string) {
+  async sendMessage(text: string, senderId: string, senderRole: string, senderName?: string, metadata?: any) {
     const apiKey = import.meta.env.VITE_APP_API_KEY;
     
     const response = await fetch('/api/lounge/messages', {
@@ -154,7 +154,8 @@ export const loungeService = {
         text,
         senderId,
         senderRole,
-        senderName
+        senderName,
+        metadata
       })
     });
 

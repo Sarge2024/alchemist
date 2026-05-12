@@ -23,23 +23,28 @@ export function getAvailableGeminiKeys(): string[] {
     process.env.GEMINI_API_KEY_8,
     process.env.GEMINI_API_KEY_9,
     process.env.GEMINI_API_KEY_10,
+    // Fallback para import.meta.env caso o bundler suporte mas o define falhe
+    // @ts-ignore
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY_1),
+    // @ts-ignore
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY_2),
   ];
 
   for (const k of rawKeys) {
-    if (k && k.trim().length > 0 && k !== "null" && !keys.includes(k.trim())) {
+    if (k && typeof k === 'string' && k.trim().length > 0 && k !== "null" && k !== "undefined" && !keys.includes(k.trim())) {
       keys.push(k.trim());
     }
   }
 
   // 2. Chaves separadas por vírgula (formato flexível)
   const envKeysList = process.env.GEMINI_API_KEYS || "";
-  if (envKeysList && envKeysList !== "null") {
+  if (envKeysList && envKeysList !== "null" && envKeysList !== "undefined") {
     keys.push(...envKeysList.split(',').map(k => k.trim()).filter(k => k.length > 0 && !keys.includes(k)));
   }
 
   // 3. Chave padrão (fallback)
   const defaultKey = process.env.GEMINI_API_KEY;
-  if (defaultKey && defaultKey.trim().length > 0 && defaultKey !== "null" && !keys.includes(defaultKey.trim())) {
+  if (defaultKey && defaultKey.trim().length > 0 && defaultKey !== "null" && defaultKey !== "undefined" && !keys.includes(defaultKey.trim())) {
     keys.push(defaultKey.trim());
   }
 

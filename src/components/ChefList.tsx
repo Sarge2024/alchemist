@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChefHat, Star, Award, Circle } from 'lucide-react';
+import { ChefHat, Star, Award, Circle, MessageSquare } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { UserProfile } from '../infra/services/userService';
@@ -109,7 +109,19 @@ export const ChefList: React.FC = () => {
                 </div>
               </div>
 
-              <Circle className="w-2 h-2 text-emerald-500 fill-emerald-500 animate-pulse" />
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const event = new CustomEvent('directed-message', { detail: chef });
+                    window.dispatchEvent(event);
+                  }}
+                  className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 hover:bg-amber-600 hover:text-white transition-all shadow-sm"
+                  title={`Enviar mensagem para Chef ${chef.displayName}`}
+                >
+                  <MessageSquare className="w-4 h-4" />
+                </button>
+                <Circle className="w-2 h-2 text-emerald-500 fill-emerald-500 animate-pulse" />
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>

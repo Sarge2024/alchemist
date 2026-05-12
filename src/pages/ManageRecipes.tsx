@@ -1,8 +1,10 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Edit3, Trash2, ChevronRight, Loader2, Plus, Clock, Star, AlertTriangle, User } from 'lucide-react';
+import { Edit3, Trash2, ChevronRight, Loader2, Plus, Clock, Star, AlertTriangle, User, ShieldCheck, Activity, CheckCircle2, XCircle, AlertCircle, Key, Info } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { recipeService, Recipe } from '../infra/services/recipeService';
+import { geminiService } from '../infra/services/geminiService';
+import { getAvailableGeminiKeys } from '../infra/services/geminiKeyManager';
 import { useAuth } from '../context/AuthContext';
 import { getAssetUrl } from '../lib/assets';
 
@@ -14,6 +16,9 @@ export default function ManageRecipes() {
   const [scrapeUrl, setScrapeUrl] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showKeyStatus, setShowKeyStatus] = useState(false);
+  const [checkingKeys, setCheckingKeys] = useState(false);
+  const [keyStatuses, setKeyStatuses] = useState<any[]>([]);
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -63,6 +68,52 @@ export default function ManageRecipes() {
     } finally {
       setScraping(false);
     }
+  };
+
+  const handleCheckKeys = async () => {
+    setShowKeyStatus(true);
+    setCheckingKeys(true);
+    setKeyStatuses([]); // Limpa resultados anteriores
+    
+    try {
+      const response = await fetch('/api/admin/check-keys', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.keys) {
+        // Mostra o progresso de exibição individual para manter o efeito visual
+        for (let i = 0; i < data.keys.length; i++) {
+          setKeyStatuses(prev => [...prev, { ...data.keys[i], status: 'loading' }]);
+          
+          // Pequeno delay artificial para o usuário ver o "Analisando" de cada chave
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          setKeyStatuses(prev => {
+            const newStatuses = [...prev];
+            newStatuses[i] = { ...data.keys[i] };
+            return newStatuses;
+          });
+        }
+      } else {
+        throw new Error(data.error || 'Falha ao obter status das chaves');
+      }
+    } catch (err: any) {
+      console.error('Erro no diagnóstico:', err);
+      setKeyStatuses([{ key: 'Erro Crítico', status: 'error', message: err.message || 'Falha na comunicação com o servidor' }]);
+    } finally {
+      setCheckingKeys(false);
+    }
+  };
+
+  const resetKeyStatuses = () => {
+    setKeyStatuses([]);
+    setShowKeyStatus(false);
   };
 
   const handleDelete = async (id: string) => {
@@ -134,6 +185,13 @@ export default function ManageRecipes() {
               className="bg-primary text-white px-6 py-3 rounded-xl font-bold text-sm hover:bg-primary-container transition-all disabled:opacity-50 flex items-center gap-2 whitespace-nowrap"
             >
               {scraping ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Importar'}
+            </button>
+            <button 
+              onClick={handleCheckKeys}
+              title="Verificar Saúde das APIs"
+              className="p-3 bg-stone-100 text-stone-500 rounded-xl hover:bg-stone-200 hover:text-primary transition-all flex items-center justify-center"
+            >
+              <Activity className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -293,6 +351,132 @@ export default function ManageRecipes() {
                   )}
                 </button>
               </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+      {/* Key Status Modal */}
+      <AnimatePresence>
+        {showKeyStatus && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-0">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={resetKeyStatuses}
+              className="absolute inset-0 bg-stone-950/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-stone-900 w-full max-w-lg rounded-[2.5rem] p-8 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.5)] border border-white/10 overflow-hidden"
+            >
+              {/* Decorative Gradient Background */}
+              <div className="absolute top-0 right-0 w-64 h-64 bg-primary/20 blur-[100px] -z-10 rounded-full" />
+              
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-primary text-white rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-black text-white tracking-tight">Status das APIs</h3>
+                    <p className="text-sm text-stone-400 font-medium">Diagnóstico de Cotas Gemini</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={resetKeyStatuses} 
+                  className="p-2.5 bg-white/5 hover:bg-white/10 rounded-full transition-all border border-white/5 group"
+                >
+                  <XCircle className="w-6 h-6 text-stone-500 group-hover:text-white transition-colors" />
+                </button>
+              </div>
+
+              <div className="space-y-4 mb-8 max-h-[450px] overflow-y-auto pr-3 custom-scrollbar">
+                {keyStatuses.length === 0 && !checkingKeys && (
+                  <div className="text-center py-12 px-6 bg-white/5 rounded-3xl border border-dashed border-white/10">
+                    <AlertCircle className="w-10 h-10 text-stone-600 mx-auto mb-4" />
+                    <p className="text-stone-400 font-bold">Nenhuma chave detectada.</p>
+                    <p className="text-stone-600 text-xs mt-2 italic">Verifique as variáveis de ambiente no arquivo .env</p>
+                  </div>
+                )}
+                {keyStatuses.map((item, idx) => (
+                  <motion.div 
+                    key={idx}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: idx * 0.08 }}
+                    className={`flex items-center justify-between p-5 rounded-3xl border-2 transition-all group ${
+                      item.status === 'active' ? 'bg-emerald-500/5 border-emerald-500/30' :
+                      item.status === 'exhausted' ? 'bg-amber-500/5 border-amber-500/30' :
+                      (item.status === 'invalid' || item.status === 'error') ? 'bg-red-500/5 border-red-500/30' :
+                      'bg-white/5 border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${
+                        item.status === 'active' ? 'bg-emerald-500 text-white' :
+                        item.status === 'exhausted' ? 'bg-amber-500 text-white' :
+                        (item.status === 'invalid' || item.status === 'error') ? 'bg-red-500 text-white' :
+                        'bg-stone-800 text-stone-500'
+                      }`}>
+                        <Key className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="font-black text-white text-base mb-1">{item.key}</p>
+                        <p className="text-[10px] font-mono font-black text-stone-400 bg-black/40 px-3 py-1 rounded-lg border border-white/5">
+                          ...{item.keyRaw?.substring(item.keyRaw.length - 15)}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex flex-col items-end gap-1.5">
+                      {item.status === 'loading' && (
+                        <div className="flex items-center gap-2 text-primary animate-pulse bg-primary/10 px-4 py-1.5 rounded-full border border-primary/20">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Analisando</span>
+                        </div>
+                      )}
+                      {item.status === 'active' && (
+                        <div className="flex items-center gap-2 text-emerald-400 bg-emerald-500/10 px-4 py-1.5 rounded-full border border-emerald-500/20">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Ativa</span>
+                        </div>
+                      )}
+                      {item.status === 'exhausted' && (
+                        <div className="flex items-center gap-2 text-amber-400 bg-amber-500/10 px-4 py-1.5 rounded-full border border-amber-500/20">
+                          <AlertCircle className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Esgotada</span>
+                        </div>
+                      )}
+                      {(item.status === 'invalid' || item.status === 'error') && (
+                        <div className="flex items-center gap-2 text-red-400 bg-red-500/10 px-4 py-1.5 rounded-full border border-red-500/20">
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span className="text-[10px] font-black uppercase tracking-widest">Inválida</span>
+                        </div>
+                      )}
+                      {item.message && item.status !== 'active' && (
+                        <span className="text-[9px] font-bold text-stone-500 uppercase tracking-tighter">{item.message}</span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-[1.5rem] p-5 flex gap-4 mb-8">
+                <Info className="w-6 h-6 text-blue-400 flex-shrink-0" />
+                <p className="text-[11px] text-blue-300/80 font-medium leading-relaxed">
+                  A Alquimia do Prato utiliza um sistema de <strong className="text-blue-300">transmutação de chaves</strong>: se uma API atingir o limite de cota gratuito, o sistema rotaciona automaticamente para a próxima chave saudável disponível.
+                </p>
+              </div>
+
+              <button 
+                onClick={resetKeyStatuses}
+                className="w-full py-5 rounded-[1.5rem] font-black bg-primary text-white hover:bg-primary-container transition-all shadow-lg shadow-primary/20 active:scale-[0.98]"
+              >
+                FECHAR DIAGNÓSTICO
+              </button>
             </motion.div>
           </div>
         )}
