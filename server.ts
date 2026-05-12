@@ -99,6 +99,45 @@ const upload = multer({
   }
 });
 
+/**
+ * Helper function to download and save an image locally
+ */
+async function downloadAndSaveImage(url: string): Promise<string | null> {
+  try {
+    if (!url || !url.startsWith('http')) return null;
+
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      }
+    });
+
+    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
+    
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.startsWith("image/")) {
+      console.warn(`URL does not point to a valid image: ${url}`);
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    
+    // Extract extension from content-type or URL
+    let extension = contentType.split("/")[1]?.split("+")[0] || "jpg";
+    if (extension === "jpeg") extension = "jpg";
+    
+    const filename = `downloaded-${Date.now()}-${Math.round(Math.random() * 1e9)}.${extension}`;
+    const filePath = path.join(uploadDir, filename);
+
+    fs.writeFileSync(filePath, buffer);
+    console.log(`[Image Service] Salva com sucesso: /uploads/${filename}`);
+    return `/uploads/${filename}`;
+  } catch (error) {
+    console.error(`[Image Service] Erro ao baixar imagem de ${url}:`, error);
+    return null;
+  }
+}
+
 // Middleware to protect API routes if APP_API_KEY is configured
 const authenticateAPI = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const apiKey = process.env.APP_API_KEY;
@@ -171,6 +210,57 @@ app.post("/api/admin/check-keys", authenticateAPI, async (req, res) => {
   }
 });
 
+/**
+ * Endpoint de Migração: Converte imagens de receitas (URLs externas -> locais)
+ */
+app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) => {
+  try {
+    const db = getFirestore();
+    const recipesRef = db.collection('recipes');
+    const snapshot = await recipesRef.get();
+    
+    console.log(`[Migration] Iniciando migração de imagens para ${snapshot.size} receitas...`);
+    
+    let migratedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const currentImage = data.image;
+
+      // Só migra se for uma URL externa (http/https)
+      if (currentImage && typeof currentImage === 'string' && (currentImage.startsWith('http://') || currentImage.startsWith('https://'))) {
+        console.log(`[Migration] Baixando para: ${data.title}`);
+        const localPath = await downloadAndSaveImage(currentImage);
+        
+        if (localPath) {
+          await doc.ref.update({ 
+            image: localPath,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+          migratedCount++;
+        } else {
+          errorCount++;
+        }
+      } else {
+        skippedCount++;
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      migratedCount, 
+      skippedCount, 
+      errorCount,
+      message: `Migração concluída com sucesso.`
+    });
+  } catch (error: any) {
+    console.error("[Migration] Erro crítico:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // API Route for Admin Role Management
 app.post("/api/admin/set-role", async (req, res) => {
   const { uid, role } = req.body;
@@ -190,7 +280,7 @@ app.post("/api/admin/set-role", async (req, res) => {
 
 // API Route for Fetching HTML (proxy to avoid CORS)
 app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
-  let { url } = req.body;
+  let { url, autoDownloadImage } = req.body;
   if (!url) {
     return res.status(400).json({ error: "URL is required" });
   }
@@ -271,11 +361,21 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
     const scripts = doc.querySelectorAll('script, style, nav, footer, iframe, noscript, header, svg');
     scripts.forEach(s => s.remove());
     
+    const ogImage = doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || "";
+    
+    // Se solicitado, baixa a imagem principal automaticamente
+    let localOgImage = ogImage;
+    if (autoDownloadImage && ogImage && ogImage.startsWith('http')) {
+      const downloaded = await downloadAndSaveImage(ogImage);
+      if (downloaded) localOgImage = downloaded;
+    }
+
     res.json({ 
       success: true,
       html: doc.body.innerHTML?.substring(0, 50000),
       metaDescription: doc.querySelector('meta[name="description"]')?.getAttribute('content') || "",
-      ogImage: doc.querySelector('meta[property="og:image"]')?.getAttribute('content') || "",
+      ogImage: localOgImage,
+      originalOgImage: ogImage,
       allImagesFound: uniqueImages
     });
   } catch (error: any) {
