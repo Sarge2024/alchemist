@@ -161,8 +161,8 @@ export default function Explore() {
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <span className="text-sm font-semibold text-on-surface-variant uppercase tracking-wider">Filtros ativos:</span>
             {Array.from(searchParams.entries()).map(([key, value]) => (
-              <div key={key} className="px-3 py-1 rounded-full bg-stone-100 border border-stone-200 text-xs font-bold flex items-center gap-2">
-                <span className="text-[10px] text-stone-400 uppercase">{key}:</span>
+              <div key={key} className="px-3 py-1 rounded-full bg-surface-container-high border border-surface-container-highest text-xs font-bold flex items-center gap-2">
+                <span className="text-[10px] text-on-surface-variant uppercase">{key}:</span>
                 {value}
                 <button 
                   onClick={() => {
@@ -385,9 +385,9 @@ export default function Explore() {
                         >
                           <Link 
                             to={`/recipe/${recipe.id}`}
-                            className="bg-surface-container-low p-3 md:p-4 rounded-xl border border-stone-100 flex items-center gap-4 hover:bg-surface-container transition-colors group"
+                            className="bg-surface-container-low p-3 md:p-4 rounded-xl border border-surface-container-high flex items-center gap-4 hover:bg-surface-container transition-colors group"
                           >
-                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden flex-shrink-0 bg-stone-200">
+                            <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-high">
                               {recipe.image ? (
                                 <img 
                                   src={getAssetUrl(recipe.image)} 

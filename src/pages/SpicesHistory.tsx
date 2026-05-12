@@ -95,9 +95,9 @@ const SpicesHistory: React.FC = () => {
   const selectedClass = classifications.find(c => c.id === selectedClassification);
 
   return (
-    <div className="min-h-screen bg-[#fdfbf7] text-[#2c241b] font-body pb-20">
+    <div className="min-h-screen bg-background text-on-surface font-body pb-20">
       {/* Sub-Header Interativo */}
-      <div className="sticky top-[64px] md:top-[72px] z-40 bg-[#fdfbf7]/95 backdrop-blur-md border-b border-stone-200 shadow-sm">
+      <div className="sticky top-[64px] md:top-[72px] z-40 bg-background/95 backdrop-blur-md border-b border-surface-container-high shadow-sm">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-center py-4 overflow-x-auto">
             <nav className="flex space-x-1 sm:space-x-4">
@@ -114,8 +114,8 @@ const SpicesHistory: React.FC = () => {
                   className={`
                     flex items-center gap-2 whitespace-nowrap px-3 py-2 text-sm font-semibold transition-all rounded-lg
                     ${activeTab === tab.id 
-                      ? 'text-primary bg-primary/5' 
-                      : 'text-stone-500 hover:text-primary hover:bg-stone-50'}
+                      ? 'text-primary bg-primary/10' 
+                      : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'}
                   `}
                 >
                   {tab.icon}
@@ -145,15 +145,15 @@ const SpicesHistory: React.FC = () => {
                 >
                   Alquimia do Prato Apresenta
                 </motion.p>
-                <h2 className="font-serif text-5xl sm:text-7xl text-stone-900 mb-8 leading-tight tracking-tighter">
+                <h2 className="font-serif text-5xl sm:text-7xl text-on-surface mb-8 leading-tight tracking-tighter">
                   O Mundo em uma <span className="text-primary italic text-6xl sm:text-8xl">Pitada</span>
                 </h2>
-                <p className="text-lg sm:text-xl text-stone-600 leading-relaxed mb-10 font-medium">
+                <p className="text-lg sm:text-xl text-on-surface-variant leading-relaxed mb-10 font-medium">
                   Muito antes de existirem supermercados, as especiarias moldaram o mapa do mundo. Elas motivaram descobrimentos, construíram impérios e revolucionaram a forma como a humanidade se relaciona com a comida.
                 </p>
                 <button 
                   onClick={() => setActiveTab('conceitos')}
-                  className="bg-stone-900 text-white px-10 py-4 rounded-full hover:bg-primary transition-all duration-500 font-bold shadow-xl flex items-center gap-3 mx-auto group active:scale-95"
+                  className="bg-on-surface text-background px-10 py-4 rounded-full hover:bg-primary hover:text-white transition-all duration-500 font-bold shadow-xl flex items-center gap-3 mx-auto group active:scale-95"
                 >
                   Iniciar Exploração <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </button>
@@ -165,10 +165,10 @@ const SpicesHistory: React.FC = () => {
                   { icon: <Leaf className="w-8 h-8" />, title: 'Medicina Ancestral', desc: 'Originalmente valorizadas por suas propriedades conservantes e curativas antes de serem apenas temperos.' },
                   { icon: <FlaskConical className="w-8 h-8" />, title: 'Química Pura', desc: 'O sabor é, em sua essência, um complexo de compostos voláteis que hoje controlamos.' },
                 ].map((item, i) => (
-                  <div key={i} className="bg-white p-8 rounded-3xl shadow-sm border border-stone-100 text-center hover:shadow-xl transition-all">
-                    <div className="inline-flex items-center justify-center p-4 bg-stone-50 rounded-2xl text-primary mb-6">{item.icon}</div>
-                    <h3 className="font-serif font-bold text-2xl mb-4 text-stone-900">{item.title}</h3>
-                    <p className="text-stone-500 leading-relaxed">{item.desc}</p>
+                  <div key={i} className="bg-background p-8 rounded-3xl shadow-sm border border-surface-container-high text-center hover:shadow-xl transition-all">
+                    <div className="inline-flex items-center justify-center p-4 bg-surface-container rounded-2xl text-primary mb-6">{item.icon}</div>
+                    <h3 className="font-serif font-bold text-2xl mb-4 text-on-surface">{item.title}</h3>
+                    <p className="text-on-surface-variant leading-relaxed">{item.desc}</p>
                   </div>
                 ))}
               </div>
@@ -184,17 +184,17 @@ const SpicesHistory: React.FC = () => {
               className="space-y-12"
             >
               <div className="max-w-3xl">
-                <h2 className="font-serif text-4xl text-stone-900 mb-6">O que são <span className="text-primary">Especiarias</span>?</h2>
-                <p className="text-lg text-stone-600">
+                <h2 className="font-serif text-4xl text-on-surface mb-6">O que são <span className="text-primary">Especiarias</span>?</h2>
+                <p className="text-lg text-on-surface-variant">
                   Para entender a história, precisamos definir o objeto. Nesta seção, exploramos a diferença fundamental entre ervas e especiarias e como classificamos esses tesouros de sabor.
                 </p>
               </div>
 
-              <div className="bg-white rounded-[40px] p-8 sm:p-12 shadow-xl border border-stone-100">
+              <div className="bg-background rounded-[40px] p-8 sm:p-12 shadow-xl border border-surface-container-high">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
                   <div className="space-y-6">
                     <h3 className="font-serif text-3xl font-bold text-primary">Especiarias vs. Ervas</h3>
-                    <div className="space-y-4 text-stone-700 leading-relaxed text-lg">
+                    <div className="space-y-4 text-on-surface leading-relaxed text-lg">
                       <p>
                         <strong>Ervas</strong> são as partes verdes e folhosas de plantas cultivadas em climas temperados (ex: manjericão, orégano).
                       </p>
@@ -208,7 +208,7 @@ const SpicesHistory: React.FC = () => {
                       <div className="w-40 h-40 rounded-full bg-secondary/10 flex items-center justify-center text-6xl shadow-inner border-2 border-secondary/20">🌿</div>
                       <span className="font-black text-xs uppercase tracking-widest text-secondary">Ervas (Folhas)</span>
                     </div>
-                    <div className="text-4xl text-stone-200 hidden sm:block">↔️</div>
+                    <div className="text-4xl text-on-surface-variant/20 hidden sm:block">↔️</div>
                     <div className="text-center space-y-4">
                       <div className="w-40 h-40 rounded-full bg-primary/10 flex items-center justify-center text-6xl shadow-inner border-2 border-primary/20">🪵</div>
                       <span className="font-black text-xs uppercase tracking-widest text-primary">Especiarias (Resto)</span>
@@ -219,8 +219,8 @@ const SpicesHistory: React.FC = () => {
 
               <div className="space-y-8">
                 <div className="text-center">
-                  <h3 className="font-serif text-3xl font-bold text-stone-900 mb-2">Classificação Botânica</h3>
-                  <p className="text-stone-500">Selecione uma categoria para explorar os exemplos</p>
+                  <h3 className="font-serif text-3xl font-bold text-on-surface mb-2">Classificação Botânica</h3>
+                  <p className="text-on-surface-variant">Selecione uma categoria para explorar os exemplos</p>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -232,7 +232,7 @@ const SpicesHistory: React.FC = () => {
                         p-6 rounded-3xl border-2 transition-all flex flex-col items-center gap-3 group
                         ${selectedClassification === c.id 
                           ? 'bg-primary border-primary text-white shadow-lg scale-105' 
-                          : 'bg-white border-stone-100 hover:border-primary/30 text-stone-700'}
+                          : 'bg-background border-surface-container-high hover:border-primary/30 text-on-surface-variant'}
                       `}
                     >
                       <span className="text-4xl group-hover:scale-110 transition-transform">{c.icon}</span>
@@ -248,7 +248,7 @@ const SpicesHistory: React.FC = () => {
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -10 }}
-                      className="bg-stone-900 text-white p-10 rounded-[40px] shadow-2xl relative overflow-hidden"
+                      className="bg-on-surface text-background p-10 rounded-[40px] shadow-2xl relative overflow-hidden"
                     >
                       <div className="absolute top-0 right-0 p-8 opacity-10 text-9xl">{selectedClass.icon}</div>
                       <div className="relative z-10 space-y-6">
@@ -256,7 +256,7 @@ const SpicesHistory: React.FC = () => {
                           <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-2xl">{selectedClass.icon}</div>
                           <h4 className="font-serif text-3xl font-bold">{selectedClass.name}</h4>
                         </div>
-                        <p className="text-xl text-stone-300 max-w-2xl">{selectedClass.desc}</p>
+                        <p className="text-xl opacity-80 max-w-2xl">{selectedClass.desc}</p>
                         <div className="flex flex-wrap gap-3">
                           {selectedClass.ex.map(ex => (
                             <span key={ex} className="bg-white/10 backdrop-blur-md px-5 py-2 rounded-full text-sm font-bold border border-white/10">{ex}</span>
@@ -279,8 +279,8 @@ const SpicesHistory: React.FC = () => {
               className="space-y-10"
             >
               <div className="max-w-3xl">
-                <h2 className="font-serif text-4xl text-stone-900 mb-6">Geografia do <span className="text-primary">Sabor</span></h2>
-                <p className="text-lg text-stone-600">
+                <h2 className="font-serif text-4xl text-on-surface mb-6">Geografia do <span className="text-primary">Sabor</span></h2>
+                <p className="text-lg text-on-surface-variant">
                   As especiarias são ligadas à geografia. Antes da globalização, certos sabores só existiam em pequenas ilhas ou ecossistemas específicos.
                 </p>
               </div>
@@ -294,17 +294,17 @@ const SpicesHistory: React.FC = () => {
                       className={`
                         p-6 rounded-3xl border-2 text-left transition-all group
                         ${selectedRegion === key 
-                          ? 'bg-stone-900 border-stone-900 text-white shadow-xl translate-x-2' 
-                          : 'bg-white border-stone-100 hover:border-primary/40 text-stone-600'}
+                          ? 'bg-on-surface border-on-surface text-background shadow-xl translate-x-2' 
+                          : 'bg-background border-surface-container-high hover:border-primary/40 text-on-surface-variant'}
                       `}
                     >
-                      <h3 className={`font-bold text-lg mb-1 ${selectedRegion === key ? 'text-white' : 'text-stone-900'}`}>{data.title}</h3>
+                      <h3 className={`font-bold text-lg mb-1 ${selectedRegion === key ? 'text-background' : 'text-on-surface'}`}>{data.title}</h3>
                       <p className="text-xs font-medium opacity-60 uppercase tracking-widest">Explorar região</p>
                     </button>
                   ))}
                 </div>
                 
-                <div className="lg:col-span-8 bg-white p-10 sm:p-16 rounded-[50px] shadow-2xl border border-stone-100 relative overflow-hidden">
+                <div className="lg:col-span-8 bg-background p-10 sm:p-16 rounded-[50px] shadow-2xl border border-surface-container-high relative overflow-hidden">
                   <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/5 rounded-full"></div>
                   <AnimatePresence mode="wait">
                     <motion.div
@@ -314,9 +314,9 @@ const SpicesHistory: React.FC = () => {
                       exit={{ opacity: 0, x: -10 }}
                       className="space-y-8 relative z-10"
                     >
-                      <h3 className="font-serif text-4xl font-bold text-stone-900">{originData[selectedRegion].title}</h3>
+                      <h3 className="font-serif text-4xl font-bold text-on-surface">{originData[selectedRegion].title}</h3>
                       <div 
-                        className="text-stone-700 space-y-6 text-lg leading-relaxed"
+                        className="text-on-surface/80 space-y-6 text-lg leading-relaxed"
                         dangerouslySetInnerHTML={{ __html: originData[selectedRegion].content }}
                       />
                     </motion.div>
@@ -335,14 +335,14 @@ const SpicesHistory: React.FC = () => {
               className="space-y-16"
             >
               <div className="text-center max-w-2xl mx-auto">
-                <h2 className="font-serif text-4xl text-stone-900 mb-6">Linha do Tempo</h2>
-                <p className="text-lg text-stone-600">
+                <h2 className="font-serif text-4xl text-on-surface mb-6">Linha do Tempo</h2>
+                <p className="text-lg text-on-surface-variant">
                   De oferendas sagradas a pilares da gastronomia cotidiana.
                 </p>
               </div>
 
               <div className="max-w-4xl mx-auto relative pl-8 sm:pl-0">
-                <div className="absolute left-4 sm:left-1/2 top-0 bottom-0 w-1 bg-stone-200 rounded-full"></div>
+                <div className="absolute left-4 sm:left-1/2 top-0 bottom-0 w-1 bg-surface-container-high rounded-full"></div>
 
                 {[
                   { era: 'Antiguidade', date: '3000 a.C. - 500 d.C.', icon: '🏺', color: 'bg-amber-400', desc: 'Egípcios, Gregos e Romanos usavam especiarias em embalsamamentos, rituais e como remédios. O uso culinário era reservado à elite.' },
@@ -358,13 +358,13 @@ const SpicesHistory: React.FC = () => {
                     className={`relative mb-16 flex flex-col sm:flex-row items-center gap-8 ${i % 2 === 0 ? 'sm:flex-row' : 'sm:flex-row-reverse'}`}
                   >
                     <div className={`sm:w-1/2 flex flex-col ${i % 2 === 0 ? 'sm:items-end sm:text-right' : 'sm:items-start sm:text-left'} pl-10 sm:pl-0`}>
-                      <span className="text-xs font-black uppercase tracking-[0.2em] text-stone-400 mb-2">{item.date}</span>
-                      <h3 className="font-serif text-3xl font-bold text-stone-900 mb-4">{item.era}</h3>
-                      <p className="text-stone-600 leading-relaxed text-lg">{item.desc}</p>
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-on-surface-variant/40 mb-2">{item.date}</span>
+                      <h3 className="font-serif text-3xl font-bold text-on-surface mb-4">{item.era}</h3>
+                      <p className="text-on-surface-variant leading-relaxed text-lg">{item.desc}</p>
                     </div>
                     
-                    <div className="absolute left-0 sm:left-1/2 -translate-x-1/2 w-12 h-12 rounded-2xl bg-white border-4 border-stone-50 shadow-xl flex items-center justify-center text-xl z-10 transition-transform hover:rotate-12">
-                      <div className={`w-full h-full rounded-xl ${item.color} flex items-center justify-center text-white shadow-inner`}>
+                    <div className="absolute left-0 sm:left-1/2 -translate-x-1/2 w-12 h-12 rounded-2xl bg-background border-4 border-surface-container shadow-xl flex items-center justify-center text-xl z-10 transition-transform hover:rotate-12">
+                      <div className={`w-full h-full rounded-xl ${item.color} flex items-center justify-center text-on-primary shadow-inner`}>
                         {item.icon}
                       </div>
                     </div>
@@ -385,19 +385,19 @@ const SpicesHistory: React.FC = () => {
               className="space-y-12"
             >
               <div className="max-w-3xl">
-                <h2 className="font-serif text-4xl text-stone-900 mb-6">A <span className="text-primary">Ciência</span> do Sabor</h2>
-                <p className="text-lg text-stone-600">
+                <h2 className="font-serif text-4xl text-on-surface mb-6">A <span className="text-primary">Ciência</span> do Sabor</h2>
+                <p className="text-lg text-on-surface-variant">
                   Hoje, entendemos que o "sabor" é uma complexa matriz química. Podemos identificar, extrair e sintetizar as moléculas responsáveis pelos aromas.
                 </p>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
                 <div className="space-y-6">
-                  <div className="bg-white p-8 rounded-[35px] border-l-[12px] border-secondary shadow-lg">
-                    <h3 className="font-serif text-2xl font-bold text-stone-900 mb-4 flex items-center gap-3">
+                  <div className="bg-background p-8 rounded-[35px] border-l-[12px] border-secondary shadow-lg">
+                    <h3 className="font-serif text-2xl font-bold text-on-surface mb-4 flex items-center gap-3">
                       <FlaskConical className="w-6 h-6 text-secondary" /> Compostos Voláteis
                     </h3>
-                    <ul className="space-y-4 text-stone-700">
+                    <ul className="space-y-4 text-on-surface-variant">
                       <li className="flex gap-4">
                         <span className="font-black text-secondary">•</span>
                         <div><strong>Piperina:</strong> O ardor característico da pimenta-do-reino.</div>
@@ -413,34 +413,34 @@ const SpicesHistory: React.FC = () => {
                     </ul>
                   </div>
 
-                  <div className="bg-stone-900 text-white p-8 rounded-[35px] shadow-2xl relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-8 opacity-10">🍦</div>
+                  <div className="bg-on-surface text-background p-8 rounded-[35px] shadow-2xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-8 opacity-10 text-6xl">🍦</div>
                     <h3 className="font-serif text-2xl font-bold mb-4 flex items-center gap-3">
                       <Info className="w-6 h-6 text-primary" /> O Caso da Baunilha
                     </h3>
-                    <p className="text-stone-300 leading-relaxed mb-6">
+                    <p className="opacity-80 leading-relaxed mb-6">
                       A síntese química permitiu atender à demanda global. A molécula principal, a <strong>Vanilina</strong>, é hoje sintetizada em larga escala, garantindo que o sabor esteja presente em todo o mundo.
                     </p>
-                    <div className="flex items-center gap-4 p-4 bg-white/5 rounded-2xl border border-white/10">
+                    <div className="flex items-center gap-4 p-4 bg-background/10 rounded-2xl border border-background/20">
                       <Quote className="w-8 h-8 text-primary opacity-50" />
                       <p className="text-sm italic font-medium">"A síntese química é a democratização final do luxo sensorial."</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-white p-10 rounded-[50px] shadow-2xl border border-stone-100 flex flex-col items-center">
-                  <h3 className="font-bold text-xl text-stone-900 mb-2">Mercado Global de Baunilha</h3>
-                  <p className="text-xs font-black uppercase tracking-widest text-stone-400 mb-8">Volume de Consumo por Origem</p>
+                <div className="bg-background p-10 rounded-[50px] shadow-2xl border border-surface-container-high flex flex-col items-center">
+                  <h3 className="font-bold text-xl text-on-surface mb-2">Mercado Global de Baunilha</h3>
+                  <p className="text-xs font-black uppercase tracking-widest text-on-surface-variant/40 mb-8">Volume de Consumo por Origem</p>
                   
                   <div className="relative w-full h-[350px]">
                     <Doughnut data={chartData} options={chartOptions} />
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                      <span className="text-3xl font-serif font-bold text-stone-900">99%</span>
-                      <span className="text-[10px] font-black uppercase text-stone-400">Aroma/Sintético</span>
+                      <span className="text-3xl font-serif font-bold text-on-surface">99%</span>
+                      <span className="text-[10px] font-black uppercase text-on-surface-variant/40">Aroma/Sintético</span>
                     </div>
                   </div>
                   
-                  <p className="text-xs text-stone-500 mt-8 text-center max-w-sm leading-relaxed">
+                  <p className="text-xs text-on-surface-variant/60 mt-8 text-center max-w-sm leading-relaxed">
                     Embora a molécula principal seja idêntica, a fava natural (apenas 1%) carrega centenas de notas secundárias irreplicáveis.
                   </p>
                 </div>

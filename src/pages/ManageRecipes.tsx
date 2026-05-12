@@ -177,7 +177,7 @@ export default function ManageRecipes() {
               value={scrapeUrl}
               onChange={(e) => setScrapeUrl(e.target.value)}
               placeholder="https://panelinha.com.br/..."
-              className="flex-1 md:w-80 p-3 rounded-xl bg-surface-container-low text-on-surface border border-stone-200 outline-none focus:ring-2 focus:ring-primary text-sm placeholder:text-on-surface-variant/50 shadow-inner"
+              className="flex-1 md:w-80 p-3 rounded-xl bg-surface-container-low text-on-surface border border-surface-container-high outline-none focus:ring-2 focus:ring-primary text-sm placeholder:text-on-surface-variant/50 shadow-inner"
             />
             <button 
               onClick={handleScrape}
@@ -201,10 +201,10 @@ export default function ManageRecipes() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-surface-container-low rounded-3xl p-12 text-center border-2 border-dashed border-stone-200"
+          className="bg-surface-container-low rounded-3xl p-12 text-center border-2 border-dashed border-surface-container-high"
         >
-          <div className="w-20 h-20 bg-stone-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Plus className="w-10 h-10 text-stone-300" />
+          <div className="w-20 h-20 bg-surface-container-high rounded-full flex items-center justify-center mx-auto mb-6">
+            <Plus className="w-10 h-10 text-on-surface-variant/30" />
           </div>
           <h2 className="text-2xl font-bold text-on-surface mb-4">Você ainda não publicou nada</h2>
           <p className="text-on-surface-variant mb-8 max-w-md mx-auto">
@@ -240,9 +240,9 @@ export default function ManageRecipes() {
               initial={{ opacity: 0, x: -20 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="group bg-surface-container-low rounded-2xl p-4 md:p-6 border border-stone-100 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center gap-6"
+              className="group bg-surface-container-low rounded-2xl p-4 md:p-6 border border-surface-container-high shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center gap-6"
             >
-              <div className="w-full md:w-32 h-32 rounded-xl overflow-hidden bg-stone-200 flex-shrink-0">
+              <div className="w-full md:w-32 h-32 rounded-xl overflow-hidden bg-surface-container-high flex-shrink-0">
                 {recipe.image ? (
                   <img src={getAssetUrl(recipe.image)} alt={recipe.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
@@ -277,24 +277,24 @@ export default function ManageRecipes() {
                 </p>
               </div>
 
-              <div className="flex items-center gap-2 md:pl-6 md:border-l border-stone-100">
+              <div className="flex items-center gap-2 md:pl-6 md:border-l border-surface-container-high">
                 <Link 
                   to={`/recipe/${recipe.id}`}
-                  className="p-3 text-stone-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"
+                  className="p-3 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
                   title="Ver Receita"
                 >
                   <ChevronRight className="w-6 h-6" />
                 </Link>
                 <Link 
                   to={`/submit/${recipe.id}`}
-                  className="p-3 text-stone-400 hover:text-blue-500 hover:bg-blue-50 rounded-xl transition-all"
+                  className="p-3 text-on-surface-variant hover:text-blue-500 hover:bg-blue-500/10 rounded-xl transition-all"
                   title="Editar"
                 >
                   <Edit3 className="w-5 h-5" />
                 </Link>
                 <button 
                   onClick={() => setDeletingId(recipe.id || null)}
-                  className="p-3 text-stone-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  className="p-3 text-on-surface-variant hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                   title="Excluir"
                 >
                   <Trash2 className="w-5 h-5" />
@@ -309,19 +309,19 @@ export default function ManageRecipes() {
       <AnimatePresence>
         {deletingId && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-6 sm:p-0">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setDeletingId(null)}
-              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative bg-white w-full max-w-md rounded-3xl p-8 shadow-2xl overflow-hidden"
-            >
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setDeletingId(null)}
+                className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+              />
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                className="relative bg-surface-container-lowest w-full max-w-md rounded-3xl p-8 shadow-2xl border border-surface-container-high overflow-hidden"
+              >
               <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
                 <AlertTriangle className="w-10 h-10" />
               </div>
@@ -333,7 +333,7 @@ export default function ManageRecipes() {
                 <button 
                   onClick={() => setDeletingId(null)}
                   disabled={isDeleting}
-                  className="flex-1 py-4 px-6 rounded-2xl font-bold text-on-surface-variant hover:bg-stone-50 transition-colors disabled:opacity-50"
+                  className="flex-1 py-4 px-6 rounded-2xl font-bold text-on-surface-variant hover:bg-surface-container transition-colors disabled:opacity-50"
                 >
                   Cancelar
                 </button>

@@ -439,7 +439,7 @@ export default function RecipeDetail() {
           <div className="flex gap-3">
             <Link 
               to={`/submit/${recipe.id}`}
-              className="flex items-center gap-2 px-4 py-2 bg-stone-100 text-on-surface rounded-lg hover:bg-stone-200 transition-all font-semibold"
+              className="flex items-center gap-2 px-4 py-2 bg-surface-container-high text-on-surface rounded-lg hover:bg-surface-container transition-all font-semibold"
             >
               <Edit3 className="w-4 h-4" /> Editar
             </Link>
@@ -466,7 +466,7 @@ export default function RecipeDetail() {
         <motion.div 
           initial={{ x: -20, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          className="rounded-3xl overflow-hidden shadow-2xl h-[500px] bg-stone-100"
+          className="rounded-3xl overflow-hidden shadow-2xl h-[500px] bg-surface-container-low"
         >
           {recipe.image ? (
             <img 
@@ -502,7 +502,7 @@ export default function RecipeDetail() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-x-4 gap-y-6 py-6 border-y border-stone-200">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-6 py-6 border-y border-surface-container-high">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
                 <Clock className="w-5 h-5" />
@@ -557,7 +557,7 @@ export default function RecipeDetail() {
                 <p className="font-semibold text-sm">{recipe.dietType || 'Convencional'}</p>
               </div>
             </div>
-            <div className="flex items-center gap-3 pt-4 border-t border-stone-100">
+            <div className="flex items-center gap-3 pt-4 border-t border-surface-container-high">
               <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
                 <Heart className="w-5 h-5" />
               </div>
@@ -576,7 +576,7 @@ export default function RecipeDetail() {
               type="button"
               onClick={handlePrint}
               disabled={isPrinting}
-              className="p-4 rounded-xl border-2 border-stone-200 hover:border-primary hover:text-primary transition-all active:scale-95 flex items-center gap-2 font-bold"
+              className="p-4 rounded-xl border-2 border-surface-container-high hover:border-primary hover:text-primary transition-all active:scale-95 flex items-center gap-2 font-bold"
               title="Imprimir Receita"
             >
               {isPrinting ? <Loader2 className="w-6 h-6 animate-spin" /> : <Printer className="w-6 h-6" />}
@@ -586,7 +586,7 @@ export default function RecipeDetail() {
               <button 
                 onClick={() => setShowShareMenu(!showShareMenu)}
                 disabled={isSharing}
-                className={`p-4 rounded-xl border-2 transition-all active:scale-95 flex items-center gap-2 ${showShareMenu ? 'border-primary text-primary bg-primary/5' : 'border-stone-200 hover:border-primary hover:text-primary'} ${isSharing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`p-4 rounded-xl border-2 transition-all active:scale-95 flex items-center gap-2 ${showShareMenu ? 'border-primary text-primary bg-primary/5' : 'border-surface-container-high hover:border-primary hover:text-primary'} ${isSharing ? 'opacity-50 cursor-not-allowed' : ''}`}
                 title="Compartilhar"
               >
                 {isSharing ? <Loader2 className="w-6 h-6 animate-spin" /> : (showShareMenu ? <X className="w-6 h-6" /> : <Share2 className="w-6 h-6" />)}
@@ -594,8 +594,8 @@ export default function RecipeDetail() {
               </button>
 
               {showShareMenu && (
-                <div className="absolute bottom-full mb-4 right-0 bg-white rounded-2xl shadow-2xl border border-stone-100 p-2 flex flex-col gap-1 min-w-[240px] z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                  <div className="px-3 py-2 text-xs font-bold text-stone-400 uppercase tracking-widest border-b border-stone-50 mb-1">
+                <div className="absolute bottom-full mb-4 right-0 bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container-high p-2 flex flex-col gap-1 min-w-[240px] z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  <div className="px-3 py-2 text-xs font-bold text-on-surface-variant opacity-60 uppercase tracking-widest border-b border-surface-container-high mb-1">
                     Opções de Envio
                   </div>
                   
@@ -608,12 +608,12 @@ export default function RecipeDetail() {
 
                   <button 
                     onClick={copyToClipboard}
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-stone-50 text-stone-600 transition-colors font-bold w-full text-left"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-container text-on-surface-variant transition-colors font-bold w-full text-left"
                   >
                     <Printer className="w-5 h-5" /> Copiar Link
                   </button>
 
-                  <div className="h-px bg-stone-100 my-1 mx-2"></div>
+                  <div className="h-px bg-surface-container-high my-1 mx-2"></div>
 
                   <a 
                     href={shareLinks.whatsapp} 
@@ -633,7 +633,7 @@ export default function RecipeDetail() {
       {/* Ingredients & Instructions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
         <aside className="lg:col-span-1 space-y-8">
-          <div className="bg-surface-container-low p-8 rounded-3xl border border-stone-100">
+          <div className="bg-surface-container-low p-8 rounded-3xl border border-surface-container-high">
             <h3 className="text-2xl font-bold mb-6 text-primary border-b border-primary/10 pb-4">Ingredientes</h3>
             <div className="space-y-8">
               {groupKeys.map(groupName => (
@@ -647,7 +647,7 @@ export default function RecipeDetail() {
                     {groupedIngredients[groupName].map((ing, i) => (
                       <li key={i} className="flex items-start gap-4 group cursor-pointer border-b border-primary/5 pb-2 last:border-0">
                         <div className="mt-1 flex-shrink-0">
-                          <CheckCircle2 className="w-4 h-4 text-stone-300 group-hover:text-secondary transition-colors" />
+                          <CheckCircle2 className="w-4 h-4 text-on-surface-variant/30 group-hover:text-secondary transition-colors" />
                         </div>
                         <div className="flex flex-col">
                           {typeof ing === 'object' && ing.quantity && (
@@ -686,7 +686,7 @@ export default function RecipeDetail() {
       </div>
 
       {/* Reviews Section */}
-      <div className="mt-20 border-t border-stone-100 pt-16 no-print">
+      <div className="mt-20 border-t border-surface-container-high pt-16 no-print">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
           <div>
             <h3 className="text-3xl font-bold text-on-surface mb-2">Avaliações da Comunidade</h3>
@@ -717,7 +717,7 @@ export default function RecipeDetail() {
               <form onSubmit={handleAddReview} className="bg-surface-container-low p-8 rounded-3xl border-2 border-primary/20">
                 <div className="flex items-center justify-between mb-6">
                   <h4 className="text-xl font-bold text-on-surface">Sua Avaliação</h4>
-                  <button type="button" onClick={() => setShowReviewForm(false)} className="text-stone-400 hover:text-stone-600">
+                  <button type="button" onClick={() => setShowReviewForm(false)} className="text-on-surface-variant hover:text-on-surface">
                     <X className="w-6 h-6" />
                   </button>
                 </div>
@@ -734,7 +734,7 @@ export default function RecipeDetail() {
                           className="transition-transform active:scale-125"
                         >
                           <Star 
-                            className={`w-8 h-8 ${star <= newRating ? 'fill-amber-400 text-amber-400' : 'text-stone-300'}`} 
+                            className={`w-8 h-8 ${star <= newRating ? 'fill-amber-400 text-amber-400' : 'text-on-surface-variant/20'}`} 
                           />
                         </button>
                       ))}
@@ -747,7 +747,7 @@ export default function RecipeDetail() {
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
                       placeholder="O que achou do sabor? Fez alguma substituição?"
-                      className="w-full bg-white dark:bg-stone-800 border-2 border-stone-100 dark:border-stone-700 rounded-2xl p-4 min-h-[120px] focus:border-primary outline-none transition-all font-medium"
+                      className="w-full bg-background border-2 border-surface-container-high rounded-2xl p-4 min-h-[120px] focus:border-primary outline-none transition-all font-medium"
                       required
                     />
                   </div>
@@ -774,14 +774,14 @@ export default function RecipeDetail() {
                 key={review.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-white dark:bg-stone-900/40 p-6 rounded-2xl border border-stone-100 dark:border-stone-800"
+                className="bg-surface-container-low p-6 rounded-2xl border border-surface-container-high"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex items-center gap-4">
                     {review.userPhoto ? (
-                      <img src={review.userPhoto} alt={review.userName} className="w-12 h-12 rounded-full object-cover border-2 border-stone-50" />
+                      <img src={review.userPhoto} alt={review.userName} className="w-12 h-12 rounded-full object-cover border-2 border-surface-container-high" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-stone-100 flex items-center justify-center text-stone-400 font-bold uppercase">
+                      <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant font-bold uppercase">
                         {review.userName.charAt(0)}
                       </div>
                     )}

@@ -18,7 +18,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -8 }}
-      className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-stone-100 flex flex-col h-full group"
+      className="bg-surface-container-lowest rounded-3xl overflow-hidden shadow-md hover:shadow-xl transition-all border border-surface-container-high flex flex-col h-full group"
     >
       {/* Image Section */}
       <div className="relative aspect-[4/3] overflow-hidden">
@@ -67,7 +67,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
             <Clock className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">{time || '20 min'}</span>
           </div>
-          <div className="flex items-center gap-1.5 border-l border-stone-200 pl-4">
+          <div className="flex items-center gap-1.5 border-l border-surface-container-high pl-4">
             <Gauge className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium">{difficulty || 'Fácil'}</span>
           </div>
@@ -79,7 +79,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
           </div>
           <Link
             to={`/recipe/${id}`}
-            className="inline-flex items-center gap-2 bg-stone-100 hover:bg-primary hover:text-white text-primary font-bold px-4 py-2 rounded-xl transition-all active:scale-95 text-sm group/btn"
+            className="inline-flex items-center gap-2 bg-surface-container-high hover:bg-primary hover:text-white text-primary font-bold px-4 py-2 rounded-xl transition-all active:scale-95 text-sm group/btn"
           >
             Ver Receita
             <ArrowRight className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />

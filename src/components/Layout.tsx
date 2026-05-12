@@ -106,14 +106,14 @@ export default function Layout({ children }: LayoutProps) {
       )}
 
       {/* Navbar */}
-      <nav className="fixed top-0 w-full z-50 glass border-b border-stone-100/50 dark:border-stone-800/50">
+      <nav className="fixed top-0 w-full z-50 glass border-b border-surface-container-high/50">
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2 md:py-3">
           
           {/* LADO ESQUERDO: Logo e Toggle Mobile */}
           <div className="flex-1 flex items-center gap-4">
             <button 
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-surface-container rounded-xl text-on-surface-variant transition-colors"
+              className="md:hidden p-2 hover:bg-surface-container rounded-xl text-on-surface transition-colors"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
@@ -129,7 +129,7 @@ export default function Layout({ children }: LayoutProps) {
               <Link 
                 key={link.path}
                 to={link.path} 
-                className={`px-3 py-2 rounded-xl transition-all ${isActive(link.path) ? 'text-primary font-bold bg-primary/5' : 'hover:text-primary hover:bg-stone-50/50'}`}
+                className={`px-3 py-2 rounded-xl transition-all ${isActive(link.path) ? 'text-primary font-bold bg-primary/10' : 'hover:text-primary hover:bg-surface-container-high'}`}
               >
                 {link.label}
               </Link>
@@ -138,7 +138,7 @@ export default function Layout({ children }: LayoutProps) {
             {user && (
               <Link 
                 to="/lounge" 
-                className={`px-3 py-2 rounded-xl transition-all ${isActive('/lounge') ? 'text-primary font-bold bg-primary/5' : 'hover:text-primary hover:bg-stone-50/50'}`}
+                className={`px-3 py-2 rounded-xl transition-all ${isActive('/lounge') ? 'text-primary font-bold bg-primary/10' : 'hover:text-primary hover:bg-surface-container-high'}`}
               >
                 Lounge
               </Link>
@@ -153,32 +153,32 @@ export default function Layout({ children }: LayoutProps) {
                 <button 
                   className={`
                     px-3 py-2 rounded-xl transition-all flex items-center gap-1.5 cursor-pointer
-                    ${(isActive('/admin') || isActive('/members')) ? 'text-primary font-bold bg-primary/5' : 'hover:text-primary hover:bg-stone-50/50'}
+                    ${(isActive('/admin') || isActive('/members')) ? 'text-primary font-bold bg-primary/10' : 'hover:text-primary hover:bg-surface-container-high'}
                   `}
                 >
                   <Shield className="w-4 h-4" /> Admin <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isAdminDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 <div className={`
-                  absolute top-full left-0 mt-1 w-56 bg-white dark:bg-stone-900 rounded-2xl shadow-2xl border border-stone-100 dark:border-stone-800 overflow-hidden transition-all duration-200 z-50
+                  absolute top-full left-0 mt-1 w-56 bg-surface-container-lowest rounded-2xl shadow-2xl border border-surface-container-high overflow-hidden transition-all duration-200 z-50
                   ${isAdminDropdownOpen ? 'opacity-100 visible translate-y-0' : 'opacity-0 invisible -translate-y-2'}
                 `}>
                   <div className="p-2 space-y-1">
                     <Link 
                       to="/admin"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/admin') ? 'bg-primary/10 text-primary' : 'text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/admin') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       <Shield className="w-4 h-4" /> Painel Geral
                     </Link>
                     <Link 
                       to="/members"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/members') ? 'bg-primary/10 text-primary' : 'text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/members') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       <Users className="w-4 h-4" /> Gestão de Membros
                     </Link>
                     <Link 
                       to="/manage"
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/manage') ? 'bg-primary/10 text-primary' : 'text-stone-500 dark:text-stone-400 hover:bg-stone-50 dark:hover:bg-stone-800'}`}
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/manage') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                     >
                       <Bookmark className="w-4 h-4" /> Minhas Receitas
                     </Link>
@@ -204,11 +204,11 @@ export default function Layout({ children }: LayoutProps) {
               
               {user ? (
                 <div className="flex items-center gap-2 ml-2">
-                  <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-stone-200 bg-stone-100 hover:ring-2 hover:ring-primary transition-all">
+                  <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-surface-container-high bg-surface-container hover:ring-2 hover:ring-primary transition-all">
                     {user.photoURL ? (
                       <img src={user.photoURL} alt={user.displayName || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                      <User className="w-full h-full p-1 text-stone-400" />
+                      <User className="w-full h-full p-1 text-on-surface-variant" />
                     )}
                   </Link>
                   <button onClick={handleLogout} className="p-2 hover:text-primary transition-colors" title="Sair">
@@ -235,7 +235,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* Mobile Menu Overlay */}
         {isMobileMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 w-full bg-background border-t border-stone-100 dark:border-stone-800 shadow-2xl animate-in slide-in-from-top-2 duration-200">
+          <div className="md:hidden absolute top-full left-0 w-full bg-background border-t border-surface-container-high shadow-2xl animate-in slide-in-from-top-2 duration-200">
             <div className="p-4 space-y-2">
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
@@ -249,7 +249,7 @@ export default function Layout({ children }: LayoutProps) {
                 <Link 
                   key={link.path}
                   to={link.path} 
-                  className={`block p-3 rounded-xl font-bold transition-all ${isActive(link.path) ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-stone-50'}`}
+                  className={`block p-3 rounded-xl font-bold transition-all ${isActive(link.path) ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                 >
                   {link.label}
                 </Link>
@@ -257,7 +257,7 @@ export default function Layout({ children }: LayoutProps) {
               {user && (
                 <Link 
                   to="/lounge" 
-                  className={`block p-3 rounded-xl font-bold transition-all ${isActive('/lounge') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-stone-50'}`}
+                  className={`block p-3 rounded-xl font-bold transition-all ${isActive('/lounge') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                 >
                   Lounge
                 </Link>
@@ -266,29 +266,29 @@ export default function Layout({ children }: LayoutProps) {
               {user && (
                 <Link 
                   to="/profile" 
-                  className={`block p-3 rounded-xl font-bold transition-all ${isActive('/profile') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-stone-50'}`}
+                  className={`block p-3 rounded-xl font-bold transition-all ${isActive('/profile') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                 >
                   Meu Perfil
                 </Link>
               )}
               {isAdmin && (
-                <div className="pt-4 mt-4 border-t border-stone-100 dark:border-stone-800">
-                  <div className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">Administração</div>
+                <div className="pt-4 mt-4 border-t border-surface-container-high">
+                  <div className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant">Administração</div>
                   <Link 
                     to="/admin" 
-                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/admin') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-stone-50'}`}
+                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/admin') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                   >
                     Painel Geral
                   </Link>
                   <Link 
                     to="/members" 
-                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/members') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-stone-50'}`}
+                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/members') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                   >
                     Gestão de Membros
                   </Link>
                   <Link 
                     to="/manage" 
-                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/manage') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-stone-50'}`}
+                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/manage') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                   >
                     Minhas Receitas
                   </Link>
@@ -304,7 +304,7 @@ export default function Layout({ children }: LayoutProps) {
       </main>
 
       {/* Footer */}
-      <footer className="bg-surface-container-lowest border-t border-stone-200 mt-12">
+      <footer className="bg-surface-container-lowest border-t border-surface-container-high mt-12">
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
             <div className="flex flex-col items-center md:items-start gap-2">
@@ -321,10 +321,10 @@ export default function Layout({ children }: LayoutProps) {
               <Link to="/" className="hover:text-primary transition-colors">Contato</Link>
             </div>
             <div className="flex gap-3">
-              <button className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
+              <button className="w-10 h-10 rounded-full border border-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
                 <Share2 className="w-4 h-4" />
               </button>
-              <a href="mailto:alchemist.master1998@gmail.com" className="w-10 h-10 rounded-full border border-stone-200 flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
+              <a href="mailto:alchemist.master1998@gmail.com" className="w-10 h-10 rounded-full border border-surface-container-high flex items-center justify-center text-on-surface-variant hover:text-primary hover:border-primary transition-all">
                 <Mail className="w-4 h-4" />
               </a>
             </div>

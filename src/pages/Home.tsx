@@ -125,7 +125,7 @@ export default function Home() {
             <Link 
               key={i} 
               to={`/explore?momento=${encodeURIComponent(cat.name)}`}
-              className="group flex items-center md:flex-col gap-4 cursor-pointer p-3 md:p-0 rounded-2xl bg-surface-container-low md:bg-transparent border border-stone-100 md:border-0 hover:border-primary/30 transition-all"
+              className="group flex items-center md:flex-col gap-4 cursor-pointer p-3 md:p-0 rounded-2xl bg-surface-container-low md:bg-transparent border border-surface-container-high md:border-0 hover:border-primary/30 transition-all"
             >
               <div className="md:hidden w-12 h-12 flex-shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
                 <cat.icon size={24} />
@@ -148,7 +148,7 @@ export default function Home() {
               </div>
 
               <div className="ml-auto md:hidden pr-2">
-                <ArrowRight className="w-4 h-4 text-stone-300 group-hover:text-primary transition-colors" />
+                <ArrowRight className="w-4 h-4 text-on-surface-variant/40 group-hover:text-primary transition-colors" />
               </div>
             </Link>
           ))}

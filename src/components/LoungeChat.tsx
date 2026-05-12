@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Heart, ChefHat, Shield, MessageCircle, Reply, X as CloseIcon } from 'lucide-react';
+import { Send, Heart, ChefHat, Shield, MessageCircle, Reply, X as CloseIcon, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { loungeService, LoungeMessage } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
 import { userService, UserProfile } from '../infra/services/userService';
@@ -16,6 +17,8 @@ export const LoungeChat: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [replyingTo, setReplyingTo] = useState<LoungeMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<LoungeMessage | null>(null);
+  const [editInput, setEditInput] = useState('');
   const [directedTo, setDirectedTo] = useState<UserProfile | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -61,33 +64,59 @@ export const LoungeChat: React.FC = () => {
       await loungeService.sendMessage(
         inputText,
         user.uid,
-        userProfile?.role || 'user',
-        userProfile?.displayName || user.displayName || user.email?.split('@')[0] || 'Membro',
+        userProfile?.role || 'member',
+        userProfile?.displayName || user.displayName || 'Membro',
         {
-          ...(replyingTo ? {
-            replyTo: {
-              id: replyingTo.id,
-              text: replyingTo.text,
-              senderName: replyingTo.senderName || 'Alquimista'
-            }
-          } : {}),
-          ...(directedTo ? {
-            directedTo: {
-              uid: directedTo.uid,
-              name: directedTo.displayName,
-              role: directedTo.role
-            }
-          } : {})
+          replyTo: replyingTo ? {
+            id: replyingTo.id,
+            text: replyingTo.text,
+            senderName: replyingTo.senderName
+          } : undefined,
+          directedTo: directedTo ? {
+            uid: directedTo.uid,
+            name: directedTo.displayName
+          } : undefined
         }
       );
       setInputText('');
       setReplyingTo(null);
       setDirectedTo(null);
     } catch (error) {
-      console.error("Erro ao enviar mensagem:", error);
+      console.error('Error sending message:', error);
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleUpdateMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMessage || !editInput.trim() || isSending) return;
+
+    setIsSending(true);
+    try {
+      await loungeService.updateMessage(editingMessage.id, editInput);
+      setEditingMessage(null);
+      setEditInput('');
+    } catch (error) {
+      console.error('Error updating message:', error);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId: string) => {
+    if (!window.confirm('Deseja realmente excluir esta mensagem?')) return;
+    
+    try {
+      await loungeService.deleteMessage(messageId);
+    } catch (error) {
+      console.error('Error deleting message:', error);
+    }
+  };
+
+  const startEditing = (msg: LoungeMessage) => {
+    setEditingMessage(msg);
+    setEditInput(msg.text);
   };
 
   const toggleLike = (msg: LoungeMessage) => {
@@ -96,16 +125,16 @@ export const LoungeChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[700px] bg-[#F3F4F6] dark:bg-stone-900/80 backdrop-blur-md rounded-2xl border border-stone-200 dark:border-stone-800 overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[500px] max-h-[800px] bg-surface-container backdrop-blur-md rounded-2xl border border-surface-container-high overflow-hidden shadow-2xl transition-all">
       {/* Header */}
-      <div className="p-4 border-b border-stone-100 dark:border-stone-800 flex items-center justify-between bg-stone-100/30 dark:bg-stone-900/30">
+      <div className="p-4 border-b border-surface-container-high flex items-center justify-between bg-surface-container-low/30">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
             <MessageCircle className="w-6 h-6" />
           </div>
           <div>
-            <h3 className="font-black text-stone-950 dark:text-stone-50 uppercase tracking-tight">Conversação Alquimista</h3>
-            <p className="text-[10px] text-stone-500 dark:text-stone-400 font-bold uppercase tracking-widest">Ambiente linear e moderado</p>
+            <h3 className="font-black text-on-surface uppercase tracking-tight">Conversação Alquimista</h3>
+            <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Ambiente linear e moderado</p>
           </div>
         </div>
       </div>
@@ -130,11 +159,11 @@ export const LoungeChat: React.FC = () => {
               <React.Fragment key={msg.id}>
                 {isNewDay && (
                   <div className="flex items-center justify-center my-8">
-                    <div className="h-[1px] flex-1 bg-stone-200 dark:bg-stone-800"></div>
-                    <span className="px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400 dark:text-stone-500 bg-stone-50 dark:bg-stone-900 rounded-full border border-stone-200 dark:border-stone-800">
+                    <div className="h-[1px] flex-1 bg-surface-container-high"></div>
+                    <span className="px-4 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant bg-surface-container-lowest rounded-full border border-surface-container-high">
                       {msgDate.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}
                     </span>
-                    <div className="h-[1px] flex-1 bg-stone-200 dark:bg-stone-800"></div>
+                    <div className="h-[1px] flex-1 bg-surface-container-high"></div>
                   </div>
                 )}
                 
@@ -145,7 +174,7 @@ export const LoungeChat: React.FC = () => {
                   className={`flex flex-col ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}
                 >
                   <div className="flex items-center gap-2 mb-1.5 px-1">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-stone-500 dark:text-stone-400">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
                       {msg.senderName || (msg.senderId === user?.uid ? 'Você' : `Usuário-${String(msg.senderId || '0000').substring(0,4)}`)}
                     </span>
                     {msg.senderRole === 'chef' && (
@@ -154,17 +183,17 @@ export const LoungeChat: React.FC = () => {
                       </span>
                     )}
                     {msg.senderRole === 'admin' && (
-                      <span className="bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5">
+                      <span className="bg-on-surface text-background p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5">
                         <Shield className="w-2.5 h-2.5" /> ADMIN
                       </span>
                     )}
                   </div>
 
                   <div className={`
-                    max-w-[85%] p-3 rounded-xl relative group shadow-sm
+                    max-w-[90%] md:max-w-[85%] p-3 rounded-xl relative group shadow-sm
                     ${msg.senderId === user?.uid
-                      ? 'bg-stone-900 dark:bg-stone-700 text-white rounded-tr-none shadow-stone-400/10'
-                      : 'bg-white dark:bg-stone-800 text-stone-900 dark:text-white border border-stone-100 dark:border-stone-700 rounded-tl-none shadow-stone-200/50'}
+                      ? 'bg-on-surface text-background rounded-tr-none'
+                      : 'bg-surface-container-lowest text-on-surface border border-surface-container-high rounded-tl-none shadow-stone-200/50'}
                   `}>
                     {/* Directed Message Badge */}
                     {msg.metadata?.directedTo && (
@@ -187,14 +216,74 @@ export const LoungeChat: React.FC = () => {
                       </div>
                     )}
                     
-                    <p className="text-sm md:text-base leading-relaxed font-medium">{msg.text}</p>
+                    {editingMessage?.id === msg.id ? (
+                      <form onSubmit={handleUpdateMessage} className="relative">
+                        <textarea
+                          value={editInput}
+                          onChange={(e) => setEditInput(e.target.value)}
+                          className="w-full bg-background/50 border border-primary/30 rounded-lg p-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 min-h-[80px] resize-none font-medium"
+                          autoFocus
+                        />
+                        <div className="flex justify-end gap-2 mt-2">
+                          <button 
+                            type="button" 
+                            onClick={() => setEditingMessage(null)}
+                            className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-on-surface-variant hover:bg-surface-container rounded-lg"
+                          >
+                            Cancelar
+                          </button>
+                          <button 
+                            type="submit"
+                            disabled={!editInput.trim() || isSending}
+                            className="px-3 py-1 text-[10px] font-bold uppercase tracking-widest bg-primary text-white rounded-lg shadow-sm hover:scale-105 active:scale-95 disabled:opacity-50"
+                          >
+                            Salvar
+                          </button>
+                        </div>
+                      </form>
+                    ) : msg.metadata?.type === 'new_recipe' && msg.metadata?.recipeId ? (
+                      <Link 
+                        to={`/recipe/${msg.metadata.recipeId}`}
+                        className="text-sm md:text-base leading-relaxed font-bold text-primary hover:underline flex items-center gap-2 group/link"
+                      >
+                        <ExternalLink className="w-4 h-4 flex-shrink-0 group-hover/link:scale-110 transition-transform" />
+                        {msg.text}
+                      </Link>
+                    ) : (
+                      <div className="relative group/text">
+                        <p className="text-sm md:text-base leading-relaxed font-medium">{msg.text}</p>
+                        {msg.metadata?.isEdited && (
+                          <span className="text-[8px] italic opacity-40">(editada)</span>
+                        )}
+                      </div>
+                    )}
 
                     {/* Actions Container */}
                     <div className="absolute -bottom-3 -right-2 flex items-center gap-1">
+                      {/* Owner Actions */}
+                      {msg.senderId === user?.uid && !editingMessage && (
+                        <>
+                          <button
+                            onClick={() => startEditing(msg)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all bg-surface-container-lowest border-surface-container-high text-on-surface-variant/40 hover:text-amber-500 hover:scale-110"
+                            title="Editar"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            className="w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all bg-surface-container-lowest border-surface-container-high text-on-surface-variant/40 hover:text-red-500 hover:scale-110"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+
                       {/* Reply Button */}
                       <button
                         onClick={() => setReplyingTo(msg)}
-                        className="w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all bg-white dark:bg-stone-800 border-stone-100 dark:border-stone-700 text-stone-300 hover:text-primary hover:scale-110"
+                        className="w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all bg-surface-container-lowest border-surface-container-high text-on-surface-variant/40 hover:text-primary hover:scale-110"
                       >
                         <Reply className="w-4 h-4" />
                       </button>
@@ -205,8 +294,8 @@ export const LoungeChat: React.FC = () => {
                         className={`
                           w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all
                           ${msg.reactions?.[user?.uid || '']
-                            ? 'bg-red-50 border-red-100 text-red-500 scale-110'
-                            : 'bg-white dark:bg-stone-800 border-stone-100 dark:border-stone-700 text-stone-300 hover:text-red-400'}
+                            ? 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-500 scale-110'
+                            : 'bg-surface-container-lowest border-surface-container-high text-on-surface-variant/40 hover:text-red-400'}
                         `}
                       >
                         <motion.div
@@ -235,27 +324,27 @@ export const LoungeChat: React.FC = () => {
       </div>
 
       {/* Input Area */}
-      <div className="p-6 bg-white/20 border-t border-stone-100 relative">
+      <div className="p-6 bg-surface-container-lowest/20 border-t border-surface-container-high relative">
         <AnimatePresence>
           {replyingTo && (
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-full left-6 right-6 mb-2 p-3 bg-white dark:bg-stone-800 rounded-t-xl border-x border-t border-stone-200 dark:border-stone-700 shadow-lg flex items-center gap-3 overflow-hidden"
+              className="absolute bottom-full left-6 right-6 mb-2 p-3 bg-surface-container-lowest rounded-t-xl border-x border-t border-surface-container-high shadow-lg flex items-center gap-3 overflow-hidden"
             >
               <div className="w-1 h-full bg-primary absolute left-0 top-0"></div>
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">
                   Respondendo a {replyingTo.senderName}
                 </p>
-                <p className="text-xs text-stone-600 dark:text-stone-400 truncate">
+                <p className="text-xs text-on-surface-variant truncate">
                   {replyingTo.text}
                 </p>
               </div>
               <button 
                 onClick={() => setReplyingTo(null)}
-                className="p-1.5 hover:bg-stone-100 dark:hover:bg-stone-700 rounded-full text-stone-400"
+                className="p-1.5 hover:bg-surface-container rounded-full text-on-surface-variant"
               >
                 <CloseIcon className="w-4 h-4" />
               </button>
@@ -295,7 +384,7 @@ export const LoungeChat: React.FC = () => {
             onChange={(e) => setInputText(e.target.value)}
             placeholder="Compartilhe seu conhecimento culinário..."
             disabled={isSending}
-            className="w-full bg-white dark:bg-stone-800 border border-stone-200 dark:border-stone-700 rounded-xl py-3 pl-6 pr-14 text-sm md:text-base font-bold text-stone-900 dark:text-white focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-400 dark:placeholder:text-stone-600 shadow-sm"
+            className="w-full bg-background border border-surface-container-high rounded-xl py-3 pl-6 pr-14 text-sm md:text-base font-bold text-on-surface focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-on-surface-variant/40 shadow-sm"
           />
           <button
             type="submit"
@@ -304,7 +393,7 @@ export const LoungeChat: React.FC = () => {
               absolute right-2 p-2.5 rounded-xl transition-all
               ${inputText.trim() && !isSending
                 ? 'bg-primary text-white shadow-lg shadow-primary/20 hover:scale-105 active:scale-95'
-                : 'bg-stone-100 text-stone-300'}
+                : 'bg-surface-container text-on-surface-variant/20'}
             `}
           >
             <Send className="w-5 h-5" />

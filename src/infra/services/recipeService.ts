@@ -157,7 +157,7 @@ export const recipeService = {
 
         // Post no Lounge (Sempre envia ao publicar)
         await addDoc(collection(db, 'lounge_messages'), {
-          text: `👨‍🍳 **Nova Receita Publicada!**\n\nO alquimista **${authorName}** acabou de compartilhar a receita: **${sanitizedRecipe.title}**.\n\nConfira na aba Explorar para ver os ingredientes e o modo de preparo!`,
+          text: `${authorName}, publicou nova receita ${sanitizedRecipe.title} sob a forma de link para que possam acessar diretamente a receita cadastrada`,
           senderId: 'system',
           senderName: 'Alquimia do Prato',
           senderRole: 'admin',
@@ -461,32 +461,6 @@ export const recipeService = {
 
     const { html, metaDescription, ogImage, allImagesFound } = responseData;
     const scrapedRecipe = await geminiService.extractRecipeFromHtml(html, { metaDescription, ogImage, allImagesFound });
-
-    // Notificação de Descoberta no Lounge (Trigger de Atividade)
-    try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const userSnap = await getDoc(doc(db, 'users', currentUser.uid));
-        const authorName = userSnap.exists() ? (userSnap.data().displayName || userSnap.data().name) : 'Um Alquimista';
-        
-        await addDoc(collection(db, 'lounge_messages'), {
-          text: `🔍 **Nova Descoberta via IA!**\n\nO alquimista **${authorName}** acabou de usar a inteligência artificial para extrair uma receita de: **${url}**.\n\nAguardem, novidades podem surgir em breve no mural!`,
-          senderId: 'system',
-          senderName: 'Alquimia do Prato',
-          senderRole: 'admin',
-          status: 'approved',
-          timestamp: serverTimestamp(),
-          reactions: {},
-          metadata: {
-            type: 'scrape_discovery',
-            url: url,
-            title: scrapedRecipe.title
-          }
-        });
-      }
-    } catch (e) {
-      console.error('Falha ao notificar descoberta de scrap:', e);
-    }
 
     return scrapedRecipe;
   }

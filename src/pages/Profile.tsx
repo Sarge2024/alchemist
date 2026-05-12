@@ -134,8 +134,8 @@ export default function Profile() {
   if (!profile) {
     return (
       <div className="max-w-4xl mx-auto px-6 py-24 text-center">
-        <User className="w-16 h-16 text-stone-200 mx-auto mb-6" />
-        <h1 className="text-3xl font-bold text-stone-900 mb-4">Perfil não encontrado</h1>
+        <User className="w-16 h-16 text-on-surface-variant/20 mx-auto mb-6" />
+        <h1 className="text-3xl font-bold text-on-surface mb-4">Perfil não encontrado</h1>
         <button onClick={() => navigate(-1)} className="text-primary font-bold">Voltar</button>
       </div>
     );
@@ -150,25 +150,25 @@ export default function Profile() {
       >
         <button 
           onClick={() => navigate(-1)}
-          className="flex items-center gap-2 text-stone-400 hover:text-primary transition-colors font-bold uppercase tracking-widest text-xs mb-8"
+          className="flex items-center gap-2 text-on-surface-variant hover:text-primary transition-colors font-bold uppercase tracking-widest text-xs mb-8"
         >
           <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
 
-        <div className="bg-white rounded-[3rem] shadow-2xl shadow-stone-200/50 border border-stone-100 overflow-hidden">
+        <div className="bg-surface-container-lowest rounded-[3rem] shadow-2xl border border-surface-container-high overflow-hidden">
           {/* Header Banner */}
-          <div className="h-48 bg-stone-900 relative">
+          <div className="h-48 bg-on-surface relative">
             <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
             <div className="absolute -bottom-16 left-12 flex items-end gap-6">
               <div className="relative group">
-                <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-white bg-white shadow-xl relative">
+                <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-surface-container-lowest bg-surface-container-lowest shadow-xl relative">
                   <img 
                     src={formData.photoURL || 'https://via.placeholder.com/150'} 
                     alt={profile.displayName} 
                     className="w-full h-full object-cover"
                   />
                   {isEditing && (
-                    <label className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm flex flex-col items-center justify-center text-white cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
+                    <label className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm flex flex-col items-center justify-center text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
                       {uploadingImage ? (
                         <Loader2 className="w-8 h-8 animate-spin" />
                       ) : (
@@ -182,27 +182,27 @@ export default function Profile() {
                   )}
                 </div>
                 {profile.role === 'admin' && (
-                  <div className="absolute -top-2 -right-2 bg-primary text-white p-2 rounded-2xl shadow-lg border-4 border-white">
+                  <div className="absolute -top-2 -right-2 bg-primary text-white p-2 rounded-2xl shadow-lg border-4 border-surface-container-lowest">
                     <Shield className="w-5 h-5" />
                   </div>
                 )}
               </div>
               <div className="mb-4">
-                <h1 className="text-4xl font-bold text-stone-900 tracking-tight leading-none mb-2">
+                <h1 className="text-4xl font-bold text-on-surface tracking-tight leading-none mb-2">
                   {profile.displayName}
                 </h1>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className={`
                     px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest
-                    ${profile.role === 'admin' ? 'bg-stone-900 text-white' : 
+                    ${profile.role === 'admin' ? 'bg-on-surface text-background' : 
                       profile.role === 'chef' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
-                      profile.role === 'collaborator' ? 'bg-emerald-100 text-emerald-700' : 'bg-stone-100 text-stone-500'}
+                      profile.role === 'collaborator' ? 'bg-emerald-100 text-emerald-700' : 'bg-surface-container-high text-on-surface-variant'}
                   `}>
                     {profile.role === 'admin' ? 'Admin' : 
                      profile.role === 'chef' ? 'Chef' : 
                      profile.role === 'collaborator' ? 'Colaborador' : 'Membro'}
                   </span>
-                  <span className="text-stone-400 text-sm font-medium flex items-center gap-1.5">
+                  <span className="text-on-surface-variant text-sm font-medium flex items-center gap-1.5">
                     <Mail className="w-4 h-4" /> {profile.email}
                   </span>
                   {profile.internalEmail && (
@@ -218,13 +218,13 @@ export default function Profile() {
           <div className="pt-24 p-12">
             <div className="flex justify-between items-start mb-12">
               <div>
-                <h2 className="text-2xl font-bold text-stone-900 mb-2">Informações do Perfil</h2>
-                <p className="text-stone-500">Detalhes da sua identidade na Alquimia do Prato.</p>
+                <h2 className="text-2xl font-bold text-on-surface mb-2">Informações do Perfil</h2>
+                <p className="text-on-surface-variant">Detalhes da sua identidade na Alquimia do Prato.</p>
               </div>
               {canEdit && !isEditing && (
                 <button 
                   onClick={() => setIsEditing(true)}
-                  className="px-8 py-3 bg-stone-900 text-white rounded-2xl font-bold hover:bg-stone-800 transition-all shadow-lg active:scale-95"
+                  className="px-8 py-3 bg-on-surface text-background rounded-2xl font-bold hover:bg-on-surface-variant transition-all shadow-lg active:scale-95"
                 >
                   Editar Perfil
                 </button>
@@ -240,29 +240,29 @@ export default function Profile() {
             <form onSubmit={handleSave} className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-stone-400 uppercase tracking-widest mb-3 ml-1">Nome de Exibição</label>
+                  <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Nome de Exibição</label>
                   <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300" />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
                     <input 
                       type="text"
                       disabled={!isEditing}
                       value={formData.displayName}
                       onChange={(e) => setFormData(prev => ({ ...prev, displayName: e.target.value }))}
-                      className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-black text-stone-400 uppercase tracking-widest mb-3 ml-1">WhatsApp</label>
+                  <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">WhatsApp</label>
                   <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300" />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
                     <input 
                       type="text"
                       disabled={!isEditing}
                       value={formData.whatsapp}
                       onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
-                      className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                      className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
                     />
                   </div>
                 </div>
@@ -270,39 +270,39 @@ export default function Profile() {
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-stone-400 uppercase tracking-widest mb-3 ml-1">Localização</label>
+                  <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Localização</label>
                   <div className="grid grid-cols-2 gap-4">
                     <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300" />
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
                       <input 
                         type="text"
                         placeholder="Estado"
                         disabled={!isEditing}
                         value={formData.state}
                         onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                        className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
                       />
                     </div>
                     <div className="relative">
-                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-300" />
+                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
                       <input 
                         type="text"
                         placeholder="País"
                         disabled={!isEditing}
                         value={formData.country}
                         onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                        className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-100 rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
                       />
                     </div>
                   </div>
                 </div>
 
                 <div className="pt-6">
-                  <div className="p-6 bg-stone-50 rounded-[2rem] border border-stone-100 flex items-start gap-4">
+                  <div className="p-6 bg-surface-container-low rounded-[2rem] border border-surface-container-high flex items-start gap-4">
                     <CheckCircle2 className="w-6 h-6 text-secondary shrink-0 mt-1" />
                     <div>
-                      <div className="font-bold text-stone-900">Membro Verificado</div>
-                      <p className="text-sm text-stone-500">Seu perfil é verificado e suas receitas são compartilhadas com a comunidade.</p>
+                      <div className="font-bold text-on-surface">Membro Verificado</div>
+                      <p className="text-sm text-on-surface-variant">Seu perfil é verificado e suas receitas são compartilhadas com a comunidade.</p>
                     </div>
                   </div>
                 </div>
@@ -318,12 +318,12 @@ export default function Profile() {
                         </h3>
                       </div>
                       
-                      <div className="flex items-center justify-between p-4 bg-white/50 dark:bg-stone-900/50 rounded-2xl border border-amber-100 dark:border-amber-900">
+                      <div className="flex items-center justify-between p-4 bg-surface-container/50 rounded-2xl border border-amber-100/20">
                         <div>
-                          <div className="font-bold text-stone-900 dark:text-white flex items-center gap-2">
+                          <div className="font-bold text-on-surface flex items-center gap-2">
                             Classificar como Chef
                           </div>
-                          <p className="text-xs text-stone-500">Exibe o selo de Mestre Culinário no Lounge.</p>
+                          <p className="text-xs text-on-surface-variant">Exibe o selo de Mestre Culinário no Lounge.</p>
                         </div>
                         <button
                           type="button"
@@ -333,7 +333,7 @@ export default function Profile() {
                           }))}
                           className={`
                             w-12 h-6 rounded-full p-1 transition-colors
-                            ${formData.role === 'chef' ? 'bg-amber-500' : 'bg-stone-200 dark:bg-stone-700'}
+                            ${formData.role === 'chef' ? 'bg-amber-500' : 'bg-surface-container-high'}
                           `}
                         >
                           <div className={`
@@ -347,14 +347,14 @@ export default function Profile() {
                         <button
                           type="button"
                           onClick={() => setFormData(prev => ({ ...prev, role: 'member' }))}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.role === 'member' ? 'bg-stone-900 text-white' : 'bg-white border border-stone-100 text-stone-400'}`}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.role === 'member' ? 'bg-on-surface text-background' : 'bg-surface-container-lowest border border-surface-container-high text-on-surface-variant'}`}
                         >
                           Membro
                         </button>
                         <button
                           type="button"
                           onClick={() => setFormData(prev => ({ ...prev, role: 'collaborator' }))}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.role === 'collaborator' ? 'bg-emerald-500 text-white' : 'bg-white border border-stone-100 text-stone-400'}`}
+                          className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.role === 'collaborator' ? 'bg-emerald-500 text-white' : 'bg-surface-container-lowest border border-surface-container-high text-on-surface-variant'}`}
                         >
                           Colaborador
                         </button>
@@ -375,7 +375,7 @@ export default function Profile() {
                     <button 
                       type="button"
                       onClick={() => setIsEditing(false)}
-                      className="px-8 py-4 text-stone-400 font-bold hover:text-stone-600 transition-colors"
+                      className="px-8 py-4 text-on-surface-variant font-bold hover:text-on-surface transition-colors"
                     >
                       Cancelar
                     </button>

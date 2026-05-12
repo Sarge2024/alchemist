@@ -37,24 +37,24 @@ const Lounge: React.FC = () => {
             </div>
 
             {/* Tab Selector */}
-            <div className="bg-surface-container p-2 rounded-1xl border border-stone-100 dark:border-stone-800 shadow-xl flex gap-1">
+            <div className="bg-surface-container p-1.5 md:p-2 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-xl flex flex-row gap-1 w-full md:w-fit overflow-x-auto no-scrollbar">
               <button
                 onClick={() => setActiveTab('chat')}
                 className={`
-                  flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all
+                  flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-bold transition-all text-sm md:text-base whitespace-nowrap
                   ${activeTab === 'chat' ? 'bg-stone-900 dark:bg-stone-800 text-white shadow-lg' : 'text-stone-400 hover:text-stone-600'}
                 `}
               >
-                <MessageSquare className="w-5 h-5" /> Chat
+                <MessageSquare className="w-4 h-4 md:w-5 md:h-5" /> Chat
               </button>
               <button
                 onClick={() => setActiveTab('atas')}
                 className={`
-                  flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all
+                  flex-1 md:flex-none flex items-center justify-center gap-2 px-4 md:px-6 py-3 rounded-xl font-bold transition-all text-sm md:text-base whitespace-nowrap
                   ${activeTab === 'atas' ? 'bg-stone-900 dark:bg-stone-800 text-white shadow-lg' : 'text-stone-400 hover:text-stone-600'}
                 `}
               >
-                <BookOpen className="w-5 h-5" /> Mural de Atas
+                <BookOpen className="w-4 h-4 md:w-5 md:h-5" /> Mural
               </button>
             </div>
           </motion.div>

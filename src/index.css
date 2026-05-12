@@ -22,6 +22,7 @@
   --color-on-surface-variant: var(--text-variant);
   
   --color-surface-container: var(--surface-default);
+  --color-surface-container-lowest: var(--surface-lowest);
   --color-surface-container-low: var(--surface-low);
   --color-surface-container-high: var(--surface-high);
   --color-surface-container-highest: var(--surface-highest);
@@ -35,6 +36,7 @@
   --text-default: #1c1c19;
   --text-variant: #54433e;
   --surface-default: #f1ede8;
+  --surface-lowest: #ffffff;
   --surface-low: #f7f3ee;
   --surface-high: #ebe8e3;
   --surface-highest: #e6e2dd;
@@ -47,6 +49,7 @@
   --text-default: #f3f4f6;
   --text-variant: #9ca3af;
   --surface-default: #3e454d;
+  --surface-lowest: #23292f;
   --surface-low: #2b3138;
   --surface-high: #4a525c;
   --surface-highest: #555e69;

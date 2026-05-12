@@ -8,7 +8,8 @@ import {
   updateDoc,
   increment,
   setDoc,
-  deleteDoc
+  deleteDoc,
+  getDocs
 } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 
@@ -163,6 +164,44 @@ export const loungeService = {
       throw new Error('Falha ao enviar mensagem');
     }
 
-    return response.json();
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data;
+  },
+
+  /**
+   * Remove uma mensagem (Acesso do Autor ou Admin).
+   */
+  async deleteMessage(messageId: string) {
+    const docRef = doc(db, 'lounge_messages', messageId);
+    await deleteDoc(docRef);
+  },
+
+  /**
+   * Atualiza o texto de uma mensagem (Acesso do Autor).
+   */
+  async updateMessage(messageId: string, newText: string) {
+    const docRef = doc(db, 'lounge_messages', messageId);
+    await updateDoc(docRef, { 
+      text: newText,
+      updatedAt: new Date(), // Local date is fine for display
+      isEdited: true
+    });
+  },
+
+  /**
+   * Recupera todas as mensagens para moderação admin.
+   */
+  async getAllMessagesForAdmin() {
+    const q = query(
+      collection(db, 'lounge_messages'),
+      orderBy('timestamp', 'desc')
+    );
+    
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })) as LoungeMessage[];
   }
 };
