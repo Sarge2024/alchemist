@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { BookOpen, Calendar, Star, ChevronRight, Hash, CheckCircle2, Quote, Flame, Users, Award, ShieldCheck, MessageSquare } from 'lucide-react';
 import { loungeService, DailyAta } from '../infra/services/loungeService';
@@ -93,7 +94,7 @@ export const MuralDeAtas: React.FC = () => {
                 acc[month].push(ata);
                 return acc;
               }, {} as Record<string, DailyAta[]>)
-            ).map(([month, monthAtas]) => (
+            ).map(([month, monthAtas]: [string, DailyAta[]]) => (
               <div key={month} className="space-y-3">
                 <div className="flex items-center gap-2 px-2 text-[10px] font-black uppercase tracking-[0.2em] text-stone-400">
                   <div className="h-px flex-1 bg-stone-100"></div>
@@ -235,7 +236,16 @@ export const MuralDeAtas: React.FC = () => {
                         <h5 className="text-xl font-serif font-bold text-stone-900 tracking-tight">📚 Acervo & Referências</h5>
                       </div>
                       <div className="space-y-3">
-                        <div className="p-4 bg-white border border-stone-100 rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group">
+                        <div 
+                          onClick={() => {
+                            const articleTitle = selectedAta.referencias?.artigo?.toLowerCase() || "";
+                            const isSpecificAta = selectedAta.date === "11/05/2026";
+                            if (isSpecificAta || articleTitle.includes("especiarias")) {
+                              window.location.href = "/historia-das-especiarias";
+                            }
+                          }}
+                          className="p-4 bg-white border border-stone-100 rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group"
+                        >
                           <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-bold text-xs">📖</div>
                           <div>
                             <p className="text-[10px] font-black uppercase tracking-widest text-stone-400">Artigo no Site</p>
