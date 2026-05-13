@@ -157,7 +157,7 @@ export const recipeService = {
 
         // Post no Lounge (Sempre envia ao publicar)
         await addDoc(collection(db, 'lounge_messages'), {
-          text: `${authorName}, publicou nova receita ${sanitizedRecipe.title} sob a forma de link para que possam acessar diretamente a receita cadastrada`,
+          text: `${authorName}, publicou nova receita ${sanitizedRecipe.title}.`,
           senderId: 'system',
           senderName: 'Alquimia do Prato',
           senderRole: 'admin',

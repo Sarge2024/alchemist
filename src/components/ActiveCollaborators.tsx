@@ -4,6 +4,7 @@ import { Users, ChefHat, Shield, Circle } from 'lucide-react';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { UserProfile } from '../infra/services/userService';
+import { Avatar } from './Avatar';
 
 /**
  * Componente que exibe a lista de colaboradores registrados na plataforma.
@@ -128,17 +129,12 @@ export const ActiveCollaborators: React.FC = () => {
               >
                 {/* Avatar */}
                 <div className="relative">
-                  {collab.photoURL ? (
-                    <img
-                      src={collab.photoURL}
-                      alt={collab.displayName || 'Alquimista'}
-                      className="w-9 h-9 rounded-xl object-cover ring-2 ring-white shadow-sm"
-                    />
-                  ) : (
-                    <div className={`w-9 h-9 rounded-xl ${getAvatarColor(collab.displayName)} flex items-center justify-center text-white text-xs font-bold ring-2 ring-white shadow-sm`}>
-                      {getInitials(collab.displayName)}
-                    </div>
-                  )}
+                  <Avatar 
+                    src={collab.photoURL} 
+                    alt={collab.displayName || 'Alquimista'}
+                    size="sm"
+                    className="ring-2 ring-white shadow-sm"
+                  />
                   {/* Indicador de status (online visual) */}
                   <Circle className="w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5 text-emerald-400 fill-emerald-400 stroke-white stroke-[3]" />
                 </div>

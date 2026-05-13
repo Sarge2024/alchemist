@@ -49,6 +49,13 @@ export const getAssetUrl = (path: string | undefined | null) => {
     cleanPath.startsWith('blob:') || 
     cleanPath.startsWith('data:')
   ) {
+    // Handle Google Drive links to make them direct image links
+    if (cleanPath.includes('drive.google.com')) {
+      const driveId = cleanPath.match(/\/d\/([^\/]+)/)?.[1] || cleanPath.match(/id=([^&]+)/)?.[1];
+      if (driveId) {
+        return `https://drive.google.com/uc?export=view&id=${driveId}`;
+      }
+    }
     return cleanPath;
   }
 

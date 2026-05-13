@@ -67,10 +67,11 @@ try {
 try {
   initializeAdminApp({
     projectId: firebaseConfig.projectId,
-    storageBucket: "sagacitas-financeiro.firebasestorage.app",
+    storageBucket: "sagacitas-financeiro.appspot.com",
     ...(credential ? { credential } : {})
   });
   console.log(`[Admin] Firebase Admin initialized for project: ${firebaseConfig.projectId}`);
+  console.log(`[Admin] Storage Bucket padrão: ${getStorage().bucket().name}`);
 } catch (e) {
   // Already initialized
 }
@@ -109,7 +110,7 @@ const upload = multer({
  */
 async function uploadToStorage(localPath: string, destinationName: string): Promise<string | null> {
   try {
-    const bucket = getStorage().bucket();
+    const bucket = getStorage().bucket("sagacitas-financeiro.appspot.com");
     let fullLocalPath = localPath;
     
     if (localPath.startsWith('/uploads/')) {
@@ -266,6 +267,8 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
     for (const doc of snapshot.docs) {
       const data = doc.data();
       const currentImage = data.image;
+      
+      console.log(`[Migration] Processando: "${data.title}" | Imagem atual: "${currentImage}"`);
 
       if (!currentImage) {
         skippedCount++;

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
 import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield } from 'lucide-react';
 import { userService } from '../infra/services/userService';
+import { Avatar } from './Avatar';
 
 interface LayoutProps {
   children: ReactNode;
@@ -204,12 +205,12 @@ export default function Layout({ children }: LayoutProps) {
               
               {user ? (
                 <div className="flex items-center gap-2 ml-2">
-                  <Link to="/profile" className="w-8 h-8 rounded-full overflow-hidden border border-surface-container-high bg-surface-container hover:ring-2 hover:ring-primary transition-all">
-                    {user.photoURL ? (
-                      <img src={user.photoURL} alt={user.displayName || ''} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                    ) : (
-                      <User className="w-full h-full p-1 text-on-surface-variant" />
-                    )}
+                  <Link to="/profile" className="hover:ring-2 hover:ring-primary transition-all rounded-xl overflow-hidden">
+                    <Avatar 
+                      src={user.photoURL} 
+                      alt={user.displayName || 'Alquimista'} 
+                      size="sm"
+                    />
                   </Link>
                   <button onClick={handleLogout} className="p-2 hover:text-primary transition-colors" title="Sair">
                     <LogOut className="w-5 h-5" />

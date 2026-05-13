@@ -18,6 +18,7 @@ import {
 import { userService, UserProfile } from '../infra/services/userService';
 import { MemberService } from '../infra/services/MemberService';
 import { useAuth } from '../context/AuthContext';
+import { Avatar } from '../components/Avatar';
 
 export default function Profile() {
   const { uid: paramUid } = useParams<{ uid: string }>();
@@ -162,10 +163,11 @@ export default function Profile() {
             <div className="absolute -bottom-16 left-12 flex items-end gap-6">
               <div className="relative group">
                 <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-surface-container-lowest bg-surface-container-lowest shadow-xl relative">
-                  <img 
-                    src={formData.photoURL || 'https://via.placeholder.com/150'} 
+                  <Avatar 
+                    src={formData.photoURL} 
                     alt={profile.displayName} 
-                    className="w-full h-full object-cover"
+                    size="xl"
+                    className="w-full h-full"
                   />
                   {isEditing && (
                     <label className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm flex flex-col items-center justify-center text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">

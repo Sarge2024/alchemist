@@ -4,6 +4,7 @@ import { ChefHat, Star, Award, Circle, MessageSquare } from 'lucide-react';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { UserProfile } from '../infra/services/userService';
+import { Avatar } from './Avatar';
 
 export const ChefList: React.FC = () => {
   const [chefs, setChefs] = useState<UserProfile[]>([]);
@@ -81,17 +82,12 @@ export const ChefList: React.FC = () => {
             >
               {/* Avatar com coroa/destaque */}
               <div className="relative">
-                {chef.photoURL ? (
-                  <img
-                    src={chef.photoURL}
-                    alt={chef.displayName}
-                    className="w-12 h-12 rounded-2xl object-cover ring-2 ring-amber-400 shadow-lg shadow-amber-500/20"
-                  />
-                ) : (
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500 flex items-center justify-center text-white text-sm font-bold ring-2 ring-amber-400 shadow-lg shadow-amber-500/20">
-                    {getInitials(chef.displayName)}
-                  </div>
-                )}
+                <Avatar 
+                  src={chef.photoURL} 
+                  alt={chef.displayName}
+                  size="lg"
+                  className="ring-2 ring-amber-400 shadow-lg shadow-amber-500/20"
+                />
                 <div className="absolute -top-2 -right-2 bg-amber-500 text-white p-1 rounded-lg shadow-md">
                   <Star className="w-3 h-3 fill-current" />
                 </div>

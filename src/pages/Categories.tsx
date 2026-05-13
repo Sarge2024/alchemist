@@ -8,32 +8,38 @@ const CATEGORIES_DETAILED = [
   { 
     name: 'Café da Manhã', 
     desc: 'Comece o dia com receitas nutritivas e reconfortantes.',
-    img: ASSETS.CATEGORIES.BREAKFAST 
+    img: ASSETS.CATEGORIES.BREAKFAST,
+    filter: { key: 'momento', value: 'Café da Manhã' }
   },
   { 
     name: 'Almoço', 
     desc: 'Refeições leves e equilibradas para o seu meio de dia.',
-    img: ASSETS.CATEGORIES.LUNCH 
+    img: ASSETS.CATEGORIES.LUNCH,
+    filter: { key: 'momento', value: 'Almoço' }
   },
   { 
     name: 'Jantar', 
     desc: 'Pratos sofisticados para encantar a família e amigos.',
-    img: ASSETS.CATEGORIES.DINNER 
+    img: ASSETS.CATEGORIES.DINNER,
+    filter: { key: 'momento', value: 'Jantar' }
   },
   { 
     name: 'Sobremesas', 
     desc: 'Doces artesanais que celebram sabores naturais.',
-    img: ASSETS.CATEGORIES.DESSERTS 
+    img: ASSETS.CATEGORIES.DESSERTS,
+    filter: { key: 'technique', value: 'Doces e Sobremesas' }
   },
   { 
     name: 'Petiscos / Aperitivos', 
     desc: 'Petiscos, quitutes e tira-gostos para cofee breaks e recepções.',
-    img: ASSETS.CATEGORIES.SNACKS 
+    img: ASSETS.CATEGORIES.SNACKS,
+    filter: { key: 'momento', value: 'Petiscos / Aperitivos' }
   },
   { 
     name: 'Bebidas', 
     desc: 'Sucos, drinks e bebidas refrescantes para todas as ocasiões.',
-    img: ASSETS.CATEGORIES.DRINKS 
+    img: ASSETS.CATEGORIES.DRINKS,
+    filter: { key: 'momento', value: 'Bebidas' }
   }
 ];
 
@@ -47,7 +53,11 @@ export default function Categories() {
         const counts: Record<string, number> = {};
         
         CATEGORIES_DETAILED.forEach(cat => {
-          counts[cat.name] = recipes.filter(r => r.momento && r.momento.includes(cat.name)).length;
+          const field = cat.filter.key === 'momento' ? 'momento' : 'tipo_prato';
+          counts[cat.name] = recipes.filter(r => {
+            const values = (r as any)[field];
+            return Array.isArray(values) && values.includes(cat.filter.value);
+          }).length;
         });
         
         setCategoryCounts(counts);
@@ -68,7 +78,7 @@ export default function Categories() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {CATEGORIES_DETAILED.map((cat, i) => (
-          <Link key={i} to={`/explore?momento=${encodeURIComponent(cat.name)}`}>
+          <Link key={i} to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}>
             <motion.div 
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
