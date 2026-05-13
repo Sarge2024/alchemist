@@ -9,12 +9,13 @@ import fs from "fs";
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { initializeApp as initializeAdminApp, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
+import { getFirestore, FieldValue } from 'firebase-admin/firestore';
+import { getStorage } from 'firebase-admin/storage';
 import { IdentityAccessService } from "./src/infra/auth/IdentityAccessService";
 import { ModerationService } from "./src/infra/services/ModerationService";
 import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
 import { geminiService } from "./src/infra/services/geminiService";
 import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import cron from "node-cron";
 
 // Removed __filename and __dirname to prevent import.meta.url SyntaxError
@@ -66,6 +67,7 @@ try {
 try {
   initializeAdminApp({
     projectId: firebaseConfig.projectId,
+    storageBucket: "sagacitas-financeiro.firebasestorage.app",
     ...(credential ? { credential } : {})
   });
   console.log(`[Admin] Firebase Admin initialized for project: ${firebaseConfig.projectId}`);
@@ -102,6 +104,35 @@ const upload = multer({
 /**
  * Helper function to download and save an image locally
  */
+/**
+ * Helper: Faz upload de arquivo local para o Firebase Storage e retorna URL pública
+ */
+async function uploadToStorage(localPath: string, destinationName: string): Promise<string | null> {
+  try {
+    const bucket = getStorage().bucket();
+    const fullLocalPath = localPath.startsWith('/') ? localPath : path.join(process.cwd(), 'public', localPath);
+    
+    if (!fs.existsSync(fullLocalPath)) {
+      console.error(`[Storage] Arquivo não encontrado para upload: ${fullLocalPath}`);
+      return null;
+    }
+
+    const [file] = await bucket.upload(fullLocalPath, {
+      destination: `recipes/${destinationName}`,
+      metadata: {
+        cacheControl: 'public, max-age=31536000',
+      },
+    });
+
+    // Torna o arquivo público e gera a URL
+    await file.makePublic();
+    return `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+  } catch (error) {
+    console.error("[Storage] Erro no upload:", error);
+    return null;
+  }
+}
+
 async function downloadAndSaveImage(url: string): Promise<string | null> {
   try {
     if (!url || !url.startsWith('http')) return null;
@@ -219,9 +250,10 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
     const recipesRef = db.collection('recipes');
     const snapshot = await recipesRef.get();
     
-    console.log(`[Migration] Iniciando migração de imagens para ${snapshot.size} receitas...`);
+    console.log(`[Migration] Iniciando migração e sincronização em nuvem para ${snapshot.size} receitas...`);
     
     let migratedCount = 0;
+    let cloudSyncedCount = 0;
     let skippedCount = 0;
     let errorCount = 0;
 
@@ -229,21 +261,53 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
       const data = doc.data();
       const currentImage = data.image;
 
-      // Só migra se for uma URL externa (http/https)
-      if (currentImage && typeof currentImage === 'string' && (currentImage.startsWith('http://') || currentImage.startsWith('https://'))) {
-        console.log(`[Migration] Baixando para: ${data.title}`);
+      if (!currentImage) {
+        skippedCount++;
+        continue;
+      }
+
+      // Caso 1: Ainda é uma URL externa - Baixa e sobe pra nuvem
+      if (typeof currentImage === 'string' && (currentImage.startsWith('http://') || currentImage.startsWith('https://')) && !currentImage.includes('storage.googleapis.com')) {
+        console.log(`[Migration] Baixando e subindo para nuvem: ${data.title}`);
         const localPath = await downloadAndSaveImage(currentImage);
         
         if (localPath) {
-          await doc.ref.update({ 
-            image: localPath,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-          migratedCount++;
+          const fileName = path.basename(localPath);
+          const cloudUrl = await uploadToStorage(localPath, fileName);
+          
+          if (cloudUrl) {
+            await doc.ref.update({ 
+              image: cloudUrl,
+              updatedAt: FieldValue.serverTimestamp()
+            });
+            cloudSyncedCount++;
+            migratedCount++;
+          } else {
+            // Se falhou cloud, mantém local por segurança
+            await doc.ref.update({ image: localPath });
+            migratedCount++;
+          }
         } else {
           errorCount++;
         }
-      } else {
+      } 
+      // Caso 2: Já é local - Sobe pra nuvem se necessário
+      else if (typeof currentImage === 'string' && currentImage.startsWith('/uploads/')) {
+        console.log(`[Migration] Sincronizando imagem local com nuvem: ${data.title}`);
+        const fileName = path.basename(currentImage);
+        const cloudUrl = await uploadToStorage(currentImage, fileName);
+        
+        if (cloudUrl) {
+          await doc.ref.update({ 
+            image: cloudUrl,
+            updatedAt: FieldValue.serverTimestamp()
+          });
+          cloudSyncedCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+      else {
         skippedCount++;
       }
     }
@@ -251,9 +315,10 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
     res.json({ 
       success: true, 
       migratedCount, 
+      cloudSyncedCount,
       skippedCount, 
       errorCount,
-      message: `Migração concluída com sucesso.`
+      message: `Sincronização concluída. ${cloudSyncedCount} imagens estão agora na nuvem.`
     });
   } catch (error: any) {
     console.error("[Migration] Erro crítico:", error);
