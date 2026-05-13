@@ -110,7 +110,13 @@ const upload = multer({
 async function uploadToStorage(localPath: string, destinationName: string): Promise<string | null> {
   try {
     const bucket = getStorage().bucket();
-    const fullLocalPath = localPath.startsWith('/') ? localPath : path.join(process.cwd(), 'public', localPath);
+    let fullLocalPath = localPath;
+    
+    if (localPath.startsWith('/uploads/')) {
+      fullLocalPath = path.join(process.cwd(), 'public', localPath);
+    } else if (!path.isAbsolute(localPath)) {
+      fullLocalPath = path.join(process.cwd(), 'public', localPath);
+    }
     
     if (!fs.existsSync(fullLocalPath)) {
       console.error(`[Storage] Arquivo não encontrado para upload: ${fullLocalPath}`);
