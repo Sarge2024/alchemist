@@ -18,7 +18,8 @@ import {
   Plus,
   X,
   Tag,
-  Pencil
+  Pencil,
+  Eye
 } from 'lucide-react';
 import { libraryService, LibraryItem, LibraryItemType } from '../infra/services/libraryService';
 import { useAuth } from '../context/AuthContext';
@@ -42,6 +43,7 @@ export default function Acervo() {
   
   // Registration/Edit Form State
   const [showAddModal, setShowAddModal] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -167,7 +169,64 @@ export default function Acervo() {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-12">
-      {/* Header Section */}
+        {/* Preview Modal */}
+        <AnimatePresence>
+          {previewUrl && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-10 bg-stone-900/95 backdrop-blur-sm"
+            >
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                className="relative w-full h-full bg-white rounded-3xl overflow-hidden flex flex-col"
+              >
+                <div className="p-4 bg-white border-b flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <button 
+                      onClick={() => setPreviewUrl(null)}
+                      className="p-2 hover:bg-stone-100 rounded-full transition-colors"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                    <h3 className="font-bold text-on-surface line-clamp-1">Visualizando Documento</h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <a 
+                      href={previewUrl} 
+                      download
+                      className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary-hover transition-all"
+                    >
+                      <Download className="w-4 h-4" />
+                      Baixar Original
+                    </a>
+                  </div>
+                </div>
+                
+                <div className="flex-1 bg-stone-100 relative flex flex-col">
+                  {/* Fallback info */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-on-surface-variant/40">
+                    <FileText className="w-16 h-16 mb-4 opacity-20" />
+                    <p className="text-sm font-medium max-w-xs">
+                      Se o arquivo não carregar em alguns segundos, clique em <strong>"Baixar Original"</strong> no topo para visualizar diretamente no seu dispositivo.
+                    </p>
+                  </div>
+                  
+                  <iframe 
+                    src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(previewUrl)}`}
+                    className="relative z-10 w-full h-full border-none"
+                    title="Document Preview"
+                  />
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Modal de Cadastro */}
       <div className="relative mb-16 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -327,15 +386,13 @@ export default function Acervo() {
                           Explorar Conteúdo
                         </Link>
                       ) : (
-                        <a 
-                          href={item.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
+                        <button 
+                          onClick={() => setPreviewUrl(item.url)}
                           className={`flex items-center gap-2 font-bold text-sm ${Config.color} hover:underline`}
                         >
-                          <Download className="w-4 h-4" />
-                          Acessar Arquivo
-                        </a>
+                          <Eye className="w-4 h-4" />
+                          Visualizar Documento
+                        </button>
                       )
                     ) : (
                       <span className="text-xs text-on-surface-variant italic">Link indisponível</span>
