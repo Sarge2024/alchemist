@@ -100,8 +100,8 @@ export const geminiService = {
           const result = await client.models.generateContent({
             model: "gemini-3-flash-preview",
             contents: [{ role: "user", parts: [{ text: prompt }] }],
-            tools: isUrlOnly ? [{ googleSearch: {} }] : undefined as any
-          });
+            ...(isUrlOnly ? { tools: [{ googleSearch: {} }] } : {})
+          } as any);
           
           response = result;
           
@@ -258,8 +258,8 @@ export const geminiService = {
               const result = await client.models.generateContent({
                 model: "gemini-3-flash-preview",
                 contents: [{ role: "user", parts: [{ text: searchPrompt }] }],
-                tools: [{ googleSearch: {} }] as any
-              });
+                ...(true ? { tools: [{ googleSearch: {} }] } : {})
+              } as any);
               
               searchResponse = result;
               break; // Sucesso

@@ -1,3 +1,9 @@
+/**
+ * AdminDashboard.tsx
+ * Painel central de controle para administradores.
+ * Permite a moderação de receitas, gestão de mensagens do lounge 
+ * e exclusão de conteúdos que violem as regras da comunidade.
+ */
 import { motion, AnimatePresence } from 'motion/react';
 import { Trash2, Shield, Loader2, Search, Filter, AlertTriangle, User, Calendar, ExternalLink, Edit3 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';

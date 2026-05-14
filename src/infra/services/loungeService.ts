@@ -1,3 +1,8 @@
+/**
+ * loungeService.ts
+ * Serviço de infraestrutura para o Lounge Gastronômico.
+ * Gerencia a troca de mensagens em tempo real, reações, votações em atas e moderação.
+ */
 import { 
   collection, 
   query, 

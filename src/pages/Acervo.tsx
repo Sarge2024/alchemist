@@ -1,3 +1,9 @@
+/**
+ * Acervo.tsx
+ * Página do Acervo Digital do Alchemist.
+ * Centraliza a gestão e visualização de materiais culturais (PDFs, Ebooks, Apresentações).
+ * Inclui sistema de busca, filtros por categoria e visualizador de documentos integrado.
+ */
 import React, { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -197,7 +203,8 @@ export default function Acervo() {
                   <div className="flex items-center gap-2">
                     <a 
                       href={previewUrl} 
-                      download
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary-hover transition-all"
                     >
                       <Download className="w-4 h-4" />

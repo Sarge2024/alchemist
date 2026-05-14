@@ -1,3 +1,9 @@
+/**
+ * RecipeDetail.tsx
+ * Página de visualização detalhada de uma receita.
+ * Exibe ingredientes, modo de preparo, metadados (tempo, dificuldade) e 
+ * sistema de avaliações dos usuários. Inclui funcionalidade de impressão (PDF).
+ */
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useParams, Link, useNavigate } from 'react-router-dom';

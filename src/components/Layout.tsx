@@ -1,3 +1,9 @@
+/**
+ * Layout.tsx
+ * Shell principal da aplicação (Frame).
+ * Define a navegação global, sistema de autenticação (Google Sign-In), 
+ * barra de busca e estrutura comum a todas as páginas.
+ */
 import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';

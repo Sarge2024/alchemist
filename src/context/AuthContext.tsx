@@ -1,3 +1,9 @@
+/**
+ * AuthContext.tsx
+ * Provedor de contexto para autenticação.
+ * Expõe o estado do usuário (User), estado de carregamento (loading) 
+ * e permissões administrativas (isAdmin) baseadas no e-mail verificado.
+ */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from '../lib/firebase';

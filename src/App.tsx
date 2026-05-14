@@ -1,3 +1,8 @@
+/**
+ * App.tsx
+ * Componente raiz da aplicação Alchemist.
+ * Gerencia o roteamento principal (React Router v7) e os provedores de contexto globais.
+ */
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Home from './pages/Home';

@@ -1,3 +1,8 @@
+/**
+ * Manifesto.tsx
+ * Página institucional que detalha a visão, missão e valores do Alchemist.
+ * Explica a filosofia de resgate da cultura gastronômica e convida o usuário a participar.
+ */
 import { motion } from 'motion/react';
 import { ChevronLeft, Info, Heart, BookOpen, Users, Coffee } from 'lucide-react';
 import { Link } from 'react-router-dom';

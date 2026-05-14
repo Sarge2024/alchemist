@@ -1,3 +1,8 @@
+/**
+ * libraryService.ts
+ * Serviço de infraestrutura para gestão do Acervo Digital.
+ * Interface com o Firestore para persistência de itens do acervo (LibraryItem).
+ */
 import { 
   collection, 
   query, 

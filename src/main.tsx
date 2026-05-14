@@ -1,3 +1,8 @@
+/**
+ * main.tsx
+ * Ponto de entrada da aplicação Vite/React.
+ * Inicializa o renderizador do React (DOM) e registra o Service Worker para suporte a PWA.
+ */
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';

@@ -1,3 +1,8 @@
+/**
+ * MuralDeAtas.tsx
+ * Componente editorial que exibe o histórico de interações comunitárias (Atas).
+ * Transforma conversas do Lounge em registros culturais estruturados e navegáveis.
+ */
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';

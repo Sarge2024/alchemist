@@ -1,3 +1,9 @@
+/**
+ * RecipeCard.tsx
+ * Componente de card para exibição resumida de uma receita.
+ * Apresenta imagem, título, tempo de preparo, dificuldade e avaliação.
+ * Utilizado em grids de listagem e na home.
+ */
 import React from 'react';
 import { motion } from 'motion/react';
 import { Clock, Star, Gauge, ArrowRight } from 'lucide-react';

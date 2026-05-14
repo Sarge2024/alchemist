@@ -1,3 +1,9 @@
+/**
+ * reviewService.ts
+ * Serviço de gestão de avaliações e comentários.
+ * Lida com a submissão de reviews, upload de fotos de pratos feitos e 
+ * cálculo de estatísticas de avaliação (rating).
+ */
 import { 
   collection, 
   addDoc, 

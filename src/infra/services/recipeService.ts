@@ -1,3 +1,8 @@
+/**
+ * recipeService.ts
+ * Core de dados para a gestão de receitas.
+ * Implementa CRUD, filtragem por categoria/dificuldade e integração com o sistema de scraping.
+ */
 import { 
   collection, 
   addDoc, 

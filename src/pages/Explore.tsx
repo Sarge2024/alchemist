@@ -1,3 +1,9 @@
+/**
+ * Explore.tsx
+ * Motor de busca e exploração de receitas do sistema.
+ * Oferece filtragem avançada por dieta, dificuldade, momento do dia e técnicas culinárias.
+ * Suporta visualização em Grid e Lista.
+ */
 import { motion } from 'motion/react';
 import { Heart, Star, Clock, Filter, ChevronDown, Loader2, X, LayoutGrid, List, Utensils, AlertTriangle } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';

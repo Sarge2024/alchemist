@@ -1,3 +1,9 @@
+/**
+ * firebase.ts
+ * Configuração e inicialização do Firebase SDK.
+ * Exporta as instâncias de Auth e Firestore (db) utilizadas em todo o sistema.
+ * Inclui validação básica de conexão no carregamento.
+ */
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore, doc, getDocFromServer } from 'firebase/firestore';

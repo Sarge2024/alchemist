@@ -1,3 +1,9 @@
+/**
+ * Avatar.tsx
+ * Componente visual para exibição de fotos de usuários.
+ * Implementa lógica de fallback para iniciais e cores dinâmicas baseadas no nome, 
+ * garantindo que sempre haja uma representação visual do usuário.
+ */
 import React, { useState } from 'react';
 import { User } from 'lucide-react';
 

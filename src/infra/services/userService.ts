@@ -1,3 +1,9 @@
+/**
+ * userService.ts
+ * Gestão de perfis e identidades de usuários.
+ * Gerencia a persistência de perfis, atribuição de papéis (roles) 
+ * e geração de e-mails internos automáticos.
+ */
 import { 
   doc, 
   getDoc, 

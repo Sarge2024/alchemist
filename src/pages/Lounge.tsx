@@ -1,3 +1,9 @@
+/**
+ * Lounge.tsx
+ * Página do Lounge Gastronômico.
+ * Ponto de encontro da comunidade para discussões em tempo real (Chat) e 
+ * consulta de registros históricos da comunidade (Mural de Atas).
+ */
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
 import { LoungeChat } from '../components/LoungeChat';

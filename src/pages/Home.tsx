@@ -1,3 +1,8 @@
+/**
+ * Home.tsx
+ * Landing page e ponto de entrada visual do Alchemist.
+ * Apresenta o destaque editorial, categorias populares de receitas e as publicações mais recentes da comunidade.
+ */
 import { motion } from 'motion/react';
 import { ArrowRight, Clock, Utensils, Loader2, Coffee, Soup, Pizza, GlassWater, Cake, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
