@@ -1,11 +1,11 @@
 import { ReactNode, useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
 import { signOut, browserPopupRedirectResolver, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { APP_VERSION } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
-import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield } from 'lucide-react';
+import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield, ArrowLeft } from 'lucide-react';
 import { userService } from '../infra/services/userService';
 import { Avatar } from './Avatar';
 
@@ -15,6 +15,7 @@ interface LayoutProps {
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -58,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
     } catch (error: any) {
       console.error('Login error:', error);
       if (error.code === 'auth/popup-blocked') {
-        setAuthError('O popup foi bloqueado pelo seu navegador. Por favor, permita popups para este site.');
+        setAuthError('O popup foi blocked pelo seu navegador. Por favor, permita popups para este site.');
       } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
         // Just user closing the popup
       } else if (error.code === 'auth/unauthorized-domain') {
@@ -90,9 +91,12 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/', label: 'Início' },
     { path: '/explore', label: 'Explorar' },
     { path: '/categories', label: 'Categorias' },
+    { path: '/acervo', label: 'Acervo' },
     { path: '/submit', label: 'Enviar' },
     { path: '/register-collaborator', label: 'Seja um Colaborador' },
   ];
+
+  const showBackButton = location.pathname !== '/';
 
   return (
     <div className="min-h-screen bg-background selection:bg-secondary-container selection:text-secondary">
@@ -111,13 +115,27 @@ export default function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2 md:py-3">
           
           {/* LADO ESQUERDO: Logo e Toggle Mobile */}
-          <div className="flex-1 flex items-center gap-4">
-            <button 
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="md:hidden p-2 hover:bg-surface-container rounded-xl text-on-surface transition-colors"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
+          <div className="flex-1 flex items-center gap-2 md:gap-4">
+            <div className="flex items-center gap-1 md:gap-2">
+              <button 
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 hover:bg-surface-container rounded-xl text-on-surface transition-colors"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+              
+              {showBackButton && (
+                <button 
+                  onClick={() => navigate(-1)}
+                  className="p-2 hover:bg-surface-container rounded-xl text-primary transition-all active:scale-90 flex items-center gap-1 group"
+                  title="Voltar"
+                >
+                  <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                  <span className="hidden lg:inline text-xs font-bold uppercase tracking-widest">Voltar</span>
+                </button>
+              )}
+            </div>
+
             <Link to="/" className="text-xl md:text-2xl font-bold text-primary tracking-tighter font-sans flex items-center gap-2">
               <span className="hidden sm:inline">Alquimia do Prato</span>
               <span className="sm:hidden">Alquimia</span>
@@ -126,7 +144,7 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* CENTRO: Links de Navegação (Desktop) */}
           <div className="hidden md:flex flex-[2] justify-center items-center gap-1 lg:gap-4 font-sans font-medium text-on-surface-variant text-sm">
-            {navLinks.slice(0, 3).map(link => (
+            {navLinks.slice(0, 4).map(link => (
               <Link 
                 key={link.path}
                 to={link.path} 

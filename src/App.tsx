@@ -13,6 +13,7 @@ import UserManagement from './pages/UserManagement';
 import Profile from './pages/Profile';
 import Lounge from './pages/Lounge';
 import SpicesHistory from './pages/SpicesHistory';
+import Acervo from './pages/Acervo';
 
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/recipe/:id" element={<RecipeDetail />} />
             <Route path="/manifesto" element={<Manifesto />} />
             <Route path="/historia-das-especiarias" element={<SpicesHistory />} />
+            <Route path="/acervo" element={<Acervo />} />
 
             
             <Route path="*" element={<Home />} />

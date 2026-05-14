@@ -241,27 +241,38 @@ export const MuralDeAtas: React.FC = () => {
                         <h5 className="text-xl font-serif font-bold text-on-surface tracking-tight">📚 Acervo & Referências</h5>
                       </div>
                       <div className="space-y-3">
+                        {/* Artigo / Conteúdo Interno */}
                         <div 
                           onClick={() => {
                             const articleTitle = (selectedAta.referencias?.artigo || "").toLowerCase();
-                            const isSpecificAta = selectedAta.date === "11/05/2026";
-                            if (isSpecificAta || articleTitle.includes("especiarias")) {
+                            if (articleTitle.includes("especiarias")) {
                               window.location.href = "/historia-das-especiarias";
+                            } else {
+                              // Fallback para busca no acervo
+                              window.location.href = `/acervo?search=${encodeURIComponent(selectedAta.referencias?.artigo || "")}`;
                             }
                           }}
                           className="p-4 bg-background border border-surface-container-high rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-bold text-xs">📖</div>
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Artigo no Site</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Artigo & Pesquisa</p>
                             <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{selectedAta?.referencias?.artigo || "Fundamentos da Gastronomia"}</p>
                           </div>
                         </div>
-                        <div className="p-4 bg-background border border-surface-container-high rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group">
+
+                        {/* E-book / Material do Acervo */}
+                        <div 
+                          onClick={() => {
+                            const ebookSearch = selectedAta.referencias?.ebook || "";
+                            window.location.href = `/acervo?search=${encodeURIComponent(ebookSearch)}`;
+                          }}
+                          className="p-4 bg-background border border-surface-container-high rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group"
+                        >
                           <div className="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center text-secondary font-bold text-xs">📗</div>
                           <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">E-book Gratuito</p>
-                            <p className="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">{selectedAta.referencias?.ebook || "Manual do Alquimista Vol. 1"}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Material no Acervo</p>
+                            <p className="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">{selectedAta.referencias?.ebook || "Consultar Biblioteca"}</p>
                           </div>
                         </div>
                       </div>
