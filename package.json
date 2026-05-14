@@ -1,7 +1,7 @@
 {
   "name": "alchemist",
   "private": true,
-  "version": "2.1.1j",
+  "version": "2.1.1k",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
@@ -16,13 +16,15 @@
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
-    "sync": "tsx src/infra/scripts/sync-version.ts && git add . && git commit -m \"chore(deploy): sync repository and bump version\" && git push"
+    "sync": "tsx src/infra/scripts/sync-version.ts && git add . && git commit -m \"chore(deploy): sync repository and bump version\" && git push",
+    "migrate-blob": "tsx src/infra/scripts/migrate-to-vercel-blob.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
     "@mendable/firecrawl-js": "^4.22.2",
     "@tailwindcss/vite": "^4.1.14",
     "@types/jsdom": "^28.0.1",
+    "@vercel/blob": "^2.3.3",
     "@vitejs/plugin-react": "^5.0.4",
     "chart.js": "^4.5.1",
     "date-fns": "^4.1.0",

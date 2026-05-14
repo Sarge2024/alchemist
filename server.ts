@@ -16,6 +16,7 @@ import { ModerationService } from "./src/infra/services/ModerationService";
 import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
 import { geminiService } from "./src/infra/services/geminiService";
 import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
+import { put } from "@vercel/blob";
 import cron from "node-cron";
 
 // Removed __filename and __dirname to prevent import.meta.url SyntaxError
@@ -79,16 +80,7 @@ try {
 
 const identityService = new IdentityAccessService();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, process.env.VERCEL === "1" ? "/tmp" : uploadDir);
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, "upload-" + uniqueSuffix + ext);
-  },
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage,
@@ -216,12 +208,29 @@ app.use(express.static(path.resolve(process.cwd(), 'public'), {
 }));
 
 // API Route for File Upload
-app.post("/api/upload", authenticateAPI, upload.single("image"), (req, res) => {
+app.post("/api/upload", authenticateAPI, upload.single("image"), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: "Nenhum arquivo enviado" });
   }
-  const imageUrl = `/uploads/${req.file.filename}`;
-  res.json({ success: true, imageUrl });
+
+  try {
+    // Determine a content type for the blob
+    const contentType = req.file.mimetype || 'image/jpeg';
+    
+    // Upload to Vercel Blob
+    const blob = await put(req.file.originalname, req.file.buffer, {
+      access: 'public',
+      contentType: contentType,
+      addRandomSuffix: true,
+      token: process.env.BLOB_READ_WRITE_TOKEN
+    });
+
+    console.log(`[Upload] File uploaded to Vercel Blob: ${blob.url}`);
+    res.json({ success: true, imageUrl: blob.url });
+  } catch (error: any) {
+    console.error("[Upload] Error uploading to Vercel Blob:", error);
+    res.status(500).json({ error: "Falha no upload para o Vercel Blob: " + error.message });
+  }
 });
 
 // API Route for Checking Gemini API Keys Status
