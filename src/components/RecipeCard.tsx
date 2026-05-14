@@ -48,10 +48,14 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
             </span>
           )}
         </div>
-        {rating && (
+        {rating && reviewsCount > 0 ? (
           <div className="absolute bottom-4 right-4 px-2 py-1 bg-primary text-white text-xs font-bold rounded-lg flex items-center gap-1 shadow-lg">
             <Star className="w-3 h-3 fill-white" />
             {rating.toFixed(1)}
+          </div>
+        ) : (
+          <div className="absolute bottom-4 right-4 px-2 py-1 bg-black/40 backdrop-blur-sm text-white text-[10px] font-bold rounded-lg flex items-center gap-1 shadow-lg">
+            Nova
           </div>
         )}
       </div>
@@ -75,7 +79,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
 
         <div className="mt-auto flex items-center justify-between">
           <div className="text-xs text-on-surface-variant italic font-medium">
-            {reviewsCount || 0} avaliações
+            {reviewsCount && reviewsCount > 0 ? `${reviewsCount} avaliações` : 'Sem avaliações'}
           </div>
           <Link
             to={`/recipe/${id}`}

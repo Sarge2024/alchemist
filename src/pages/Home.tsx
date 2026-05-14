@@ -7,11 +7,36 @@ import { RecipeCard } from '../components/RecipeCard';
 import { ASSETS, getAssetUrl } from '../lib/assets';
 
 const CATEGORIES = [
-  { name: 'Café da Manhã', icon: Coffee, img: ASSETS.CATEGORIES.BREAKFAST },
-  { name: 'Almoço', icon: Soup, img: ASSETS.CATEGORIES.LUNCH },
-  { name: 'Jantar', icon: Pizza, img: ASSETS.CATEGORIES.DINNER },
-  { name: 'Bebidas', icon: GlassWater, img: ASSETS.CATEGORIES.DRINKS },
-  { name: 'Sobremesas', icon: Cake, img: ASSETS.CATEGORIES.DESSERTS },
+  { 
+    name: 'Café da Manhã', 
+    icon: Coffee, 
+    img: ASSETS.CATEGORIES.BREAKFAST,
+    filter: { key: 'momento', value: 'Café da Manhã' }
+  },
+  { 
+    name: 'Almoço', 
+    icon: Soup, 
+    img: ASSETS.CATEGORIES.LUNCH,
+    filter: { key: 'momento', value: 'Almoço' }
+  },
+  { 
+    name: 'Jantar', 
+    icon: Pizza, 
+    img: ASSETS.CATEGORIES.DINNER,
+    filter: { key: 'momento', value: 'Jantar' }
+  },
+  { 
+    name: 'Bebidas', 
+    icon: GlassWater, 
+    img: ASSETS.CATEGORIES.DRINKS,
+    filter: { key: 'momento', value: 'Bebidas' }
+  },
+  { 
+    name: 'Sobremesas', 
+    icon: Cake, 
+    img: ASSETS.CATEGORIES.DESSERTS,
+    filter: { key: 'technique', value: 'Doces e Sobremesas' }
+  },
 ];
 
 const MOCK_RECIPES: Recipe[] = [];
@@ -32,7 +57,11 @@ export default function Home() {
       // Calculate category counts based on real data
       const counts: Record<string, number> = {};
       CATEGORIES.forEach(cat => {
-        counts[cat.name] = data.filter(r => r.momento && r.momento.includes(cat.name)).length;
+        const field = cat.filter.key === 'momento' ? 'momento' : 'tipo_prato';
+        counts[cat.name] = data.filter(r => {
+          const values = (r as any)[field];
+          return Array.isArray(values) && values.includes(cat.filter.value);
+        }).length;
       });
       setCategoryCounts(counts);
       
@@ -124,7 +153,7 @@ export default function Home() {
           {CATEGORIES.map((cat, i) => (
             <Link 
               key={i} 
-              to={`/explore?momento=${encodeURIComponent(cat.name)}`}
+              to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}
               className="group flex items-center md:flex-col gap-4 cursor-pointer p-3 md:p-0 rounded-2xl bg-surface-container-low md:bg-transparent border border-surface-container-high md:border-0 hover:border-primary/30 transition-all"
             >
               <div className="md:hidden w-12 h-12 flex-shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">

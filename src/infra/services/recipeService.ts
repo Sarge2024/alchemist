@@ -57,7 +57,7 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
  * Recursively removes undefined values from an object or array
  * to prevent Firestore "Unsupported field value: undefined" errors.
  */
-function deepSanitize<T>(obj: T): T {
+export function deepSanitize<T>(obj: T): T {
   if (obj === undefined) return null as any;
   if (obj === null || typeof obj !== 'object') return obj;
 
@@ -121,7 +121,7 @@ export const recipeService = {
         ...sanitizedRecipe,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        rating: 4.5, // Default rating for new recipes
+        rating: 0, // Initial rating
         reviewsCount: 0
       });
 

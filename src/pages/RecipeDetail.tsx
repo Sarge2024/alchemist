@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Clock, Utensils, Heart, Share2, Printer, ChevronLeft, CheckCircle2, Edit3, Trash2, Loader2, Gauge, Facebook, Twitter, MessageCircle, X, Star, Plus } from 'lucide-react';
+import { Clock, Utensils, Heart, Share2, Printer, ChevronLeft, CheckCircle2, Edit3, Trash2, Loader2, Gauge, Facebook, Twitter, MessageCircle, X, Star, Plus, Camera } from 'lucide-react';
 import { recipeService, Recipe, Ingredient } from '../infra/services/recipeService';
 import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -151,9 +151,15 @@ export default function RecipeDetail() {
   // Reviews State
   const [reviews, setReviews] = useState<ReviewType[]>([]);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
-  const [newRating, setNewRating] = useState(5);
+  const [newRating, setNewRating] = useState(0); // Começa com 0 conforme imagem
   const [newComment, setNewComment] = useState('');
+  const [newReviewPhoto, setNewReviewPhoto] = useState<string | null>(null);
+  const [isUploadingReviewPhoto, setIsUploadingReviewPhoto] = useState(false);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+  const [editRating, setEditRating] = useState(0);
+  const [editComment, setEditComment] = useState('');
+  const [isUpdatingReview, setIsUpdatingReview] = useState(false);
 
   const shareUrl = window.location.href;
   const shareText = recipe 
@@ -254,7 +260,10 @@ export default function RecipeDetail() {
 
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !id || !newComment.trim()) return;
+    if (!user || !id || !newComment.trim() || newRating === 0) {
+      if (newRating === 0) alert('Por favor, selecione uma nota!');
+      return;
+    }
 
     setIsSubmittingReview(true);
     try {
@@ -264,11 +273,13 @@ export default function RecipeDetail() {
         userName: user.displayName || 'Alquimista',
         userPhoto: user.photoURL || undefined,
         rating: newRating,
-        comment: newComment
+        comment: newComment,
+        image: newReviewPhoto || undefined
       });
       
       setNewComment('');
-      setNewRating(5);
+      setNewRating(0);
+      setNewReviewPhoto(null);
       setShowReviewForm(false);
       
       // Reload everything
@@ -278,6 +289,71 @@ export default function RecipeDetail() {
       alert('Erro ao enviar avaliação. Tente novamente.');
     } finally {
       setIsSubmittingReview(false);
+    }
+  };
+
+  const handleReviewPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingReviewPhoto(true);
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+        },
+        body: formData,
+      });
+      const data = await response.json();
+      if (data.success) {
+        setNewReviewPhoto(data.imageUrl);
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+    } finally {
+      setIsUploadingReviewPhoto(false);
+    }
+  };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!id || !window.confirm('Tem certeza que deseja apagar esta avaliação?')) return;
+    
+    try {
+      await reviewService.deleteReview(reviewId, id);
+      await loadRecipe(id);
+      await loadReviews(id);
+    } catch (error) {
+      alert('Erro ao apagar avaliação.');
+    }
+  };
+
+  const handleStartEditReview = (review: ReviewType) => {
+    setEditingReviewId(review.id || null);
+    setEditRating(review.rating);
+    setEditComment(review.comment);
+  };
+
+  const handleUpdateReview = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !editingReviewId) return;
+
+    setIsUpdatingReview(true);
+    try {
+      await reviewService.updateReview(editingReviewId, id, {
+        rating: editRating,
+        comment: editComment
+      });
+      setEditingReviewId(null);
+      await loadRecipe(id);
+      await loadReviews(id);
+    } catch (error) {
+      alert('Erro ao atualizar avaliação.');
+    } finally {
+      setIsUpdatingReview(false);
     }
   };
 
@@ -687,22 +763,16 @@ export default function RecipeDetail() {
 
       {/* Reviews Section */}
       <div className="mt-20 border-t border-surface-container-high pt-16 no-print">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
-          <div>
-            <h3 className="text-3xl font-bold text-on-surface mb-2">Avaliações da Comunidade</h3>
-            <p className="text-on-surface-variant font-medium">
-              O que os outros alquimistas estão dizendo sobre esta criação.
-            </p>
-          </div>
+        <div className="bg-[#fdf8f4] rounded-3xl p-8 mb-12 text-center border border-[#f3e5d8]">
+          <h3 className="text-2xl font-bold text-[#5c3d2e] mb-2">Você fez esta receita? Queremos sua avaliação!</h3>
+          <p className="text-[#8b7264] mb-4">Compartilhe conosco sua experiência. A receita ficou boa?</p>
           
-          {!showReviewForm && (
-            <button 
-              onClick={() => user ? setShowReviewForm(true) : alert('Faça login para avaliar!')}
-              className="bg-primary text-white font-bold px-8 py-4 rounded-xl shadow-lg shadow-primary/20 hover:bg-primary-container transition-all active:scale-95"
-            >
-              Avaliar Receita
-            </button>
-          )}
+          <button 
+            onClick={() => user ? setShowReviewForm(true) : alert('Faça login para avaliar!')}
+            className="inline-flex items-center gap-2 text-[#d97706] font-bold hover:underline"
+          >
+            <Camera className="w-4 h-4" /> Seja o primeiro a avaliar com foto!
+          </button>
         </div>
 
         {/* Review Form */}
@@ -714,103 +784,265 @@ export default function RecipeDetail() {
               exit={{ opacity: 0, height: 0 }}
               className="overflow-hidden mb-16"
             >
-              <form onSubmit={handleAddReview} className="bg-surface-container-low p-8 rounded-3xl border-2 border-primary/20">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-xl font-bold text-on-surface">Sua Avaliação</h4>
-                  <button type="button" onClick={() => setShowReviewForm(false)} className="text-on-surface-variant hover:text-on-surface">
-                    <X className="w-6 h-6" />
-                  </button>
+              <form onSubmit={handleAddReview} className="bg-[#fdf8f4] p-10 rounded-3xl border border-[#f3e5d8] space-y-8">
+                <div>
+                  <h4 className="text-xl font-bold text-[#5c3d2e] mb-4">sua nota</h4>
+                  <div className="flex gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setNewRating(star)}
+                        className="transition-transform active:scale-125"
+                      >
+                        <Star 
+                          className={`w-10 h-10 ${star <= newRating ? 'fill-[#f4a261] text-[#f4a261]' : 'text-stone-300'}`} 
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-[200px_1fr] gap-8">
                   <div>
-                    <label className="block text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-3">Sua Nota</label>
-                    <div className="flex gap-2">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <button
-                          key={star}
-                          type="button"
-                          onClick={() => setNewRating(star)}
-                          className="transition-transform active:scale-125"
-                        >
-                          <Star 
-                            className={`w-8 h-8 ${star <= newRating ? 'fill-amber-400 text-amber-400' : 'text-on-surface-variant/20'}`} 
-                          />
-                        </button>
-                      ))}
-                    </div>
+                    <h4 className="text-xl font-bold text-[#5c3d2e] mb-4">sua avaliação</h4>
+                    <label className="relative flex flex-col items-center justify-center aspect-square bg-white border-2 border-dashed border-[#e7d4c1] rounded-2xl cursor-pointer hover:bg-stone-50 transition-all overflow-hidden group">
+                      {isUploadingReviewPhoto ? (
+                        <Loader2 className="w-8 h-8 animate-spin text-[#d97706]" />
+                      ) : newReviewPhoto ? (
+                        <img src={getAssetUrl(newReviewPhoto)} alt="Preview" className="w-full h-full object-cover" />
+                      ) : (
+                        <div className="text-center p-4">
+                          <Camera className="w-8 h-8 text-[#5c3d2e] mx-auto mb-2" />
+                          <p className="text-xs font-bold text-[#5c3d2e]">Foto da receita</p>
+                          <p className="text-[10px] text-[#8b7264]">Sua foto inspira outros!</p>
+                        </div>
+                      )}
+                      <input type="file" className="hidden" accept="image/*" onChange={handleReviewPhotoUpload} />
+                    </label>
+                    <p className="mt-2 text-[10px] text-[#8b7264] text-center leading-tight">
+                      A imagem deve ser em formato PNG, JPG ou JPEG e ter no máximo 30MB
+                    </p>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-bold text-on-surface-variant uppercase tracking-wider mb-3">Seu Comentário</label>
+                  <div className="space-y-4">
                     <textarea
                       value={newComment}
                       onChange={(e) => setNewComment(e.target.value)}
-                      placeholder="O que achou do sabor? Fez alguma substituição?"
-                      className="w-full bg-background border-2 border-surface-container-high rounded-2xl p-4 min-h-[120px] focus:border-primary outline-none transition-all font-medium"
+                      placeholder="Conte como ficou! Fez alguma alteração? Tem alguma dica? Seu comentário ajuda outros a acertarem na receita."
+                      className="w-full bg-white border border-[#e7d4c1] rounded-lg p-4 min-h-[160px] focus:ring-2 focus:ring-[#f4a261] outline-none transition-all text-[#5c3d2e]"
                       required
                     />
-                  </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <input 
+                        type="text" 
+                        placeholder="Seu nome" 
+                        readOnly 
+                        value={user?.displayName || ''} 
+                        className="bg-white border border-[#e7d4c1] rounded-lg p-3 text-sm text-[#8b7264]"
+                      />
+                      <input 
+                        type="email" 
+                        placeholder="Seu email" 
+                        readOnly 
+                        value={user?.email || ''} 
+                        className="bg-white border border-[#e7d4c1] rounded-lg p-3 text-sm text-[#8b7264]"
+                      />
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={isSubmittingReview}
-                    className="w-full bg-primary text-white font-bold py-4 rounded-xl shadow-xl shadow-primary/20 hover:bg-primary-container transition-all flex items-center justify-center gap-2"
-                  >
-                    {isSubmittingReview ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5" />}
-                    Publicar Avaliação
-                  </button>
+                    <div className="flex justify-end gap-4 pt-4">
+                      <button 
+                        type="button"
+                        onClick={() => setShowReviewForm(false)}
+                        className="px-10 py-3 bg-[#f38d76] text-white rounded-full font-bold shadow-md hover:bg-[#e67a61] transition-all"
+                      >
+                        cancelar
+                      </button>
+                      <button 
+                        type="submit"
+                        disabled={isSubmittingReview || isUploadingReviewPhoto}
+                        className="px-10 py-3 bg-[#f53d1a] text-white rounded-full font-bold shadow-md hover:bg-[#d43214] transition-all disabled:opacity-50"
+                      >
+                        {isSubmittingReview ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : 'enviar'}
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </form>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* Rating Summary Breakdown */}
+        <div className="mb-16 border-t border-stone-100 pt-12">
+          <div className="flex flex-col items-center mb-10">
+            <div className="flex gap-1 mb-2">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star 
+                  key={star} 
+                  className={`w-8 h-8 ${star <= Math.round(recipe.rating || 0) ? 'fill-[#f53d1a] text-[#f53d1a]' : 'text-stone-200'}`} 
+                />
+              ))}
+            </div>
+            <p className="text-xl font-bold text-[#5c3d2e]">
+              {(recipe.rating || 0).toFixed(1)} de 5 ({recipe.reviewsCount || 0} avaliações)
+            </p>
+          </div>
+
+          <div className="max-w-md mx-auto space-y-3">
+            {[5, 4, 3, 2, 1].map((star) => {
+              const count = reviews.filter(r => Math.round(r.rating) === star).length;
+              const percentage = recipe.reviewsCount ? (count / recipe.reviewsCount) * 100 : 0;
+              return (
+                <div key={star} className="flex items-center gap-4 text-sm font-bold text-[#8b7264]">
+                  <span className="w-16 whitespace-nowrap">{star} {star === 1 ? 'estrela' : 'estrelas'}</span>
+                  <Star className="w-4 h-4 fill-[#5c3d2e] text-[#5c3d2e]" />
+                  <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${percentage}%` }}
+                      className="h-full bg-[#f53d1a]"
+                    />
+                  </div>
+                  <span className="w-4 text-right">{count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Reviews List */}
-        <div className="space-y-6">
+        <div className="space-y-8">
           {reviews.length > 0 ? (
             reviews.map((review) => (
               <motion.div 
                 key={review.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="bg-surface-container-low p-6 rounded-2xl border border-surface-container-high"
+                className="bg-white p-8 rounded-3xl border border-stone-100 shadow-sm"
               >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col md:flex-row gap-8">
+                  {/* Left: User Info */}
+                  <div className="flex md:flex-col items-center md:items-start gap-4 md:w-48 shrink-0">
                     {review.userPhoto ? (
-                      <img src={review.userPhoto} alt={review.userName} className="w-12 h-12 rounded-full object-cover border-2 border-surface-container-high" />
+                      <img src={review.userPhoto} alt={review.userName} className="w-14 h-14 rounded-full object-cover border-2 border-[#f3e5d8]" />
                     ) : (
-                      <div className="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center text-on-surface-variant font-bold uppercase">
+                      <div className="w-14 h-14 rounded-full bg-[#fdf8f4] flex items-center justify-center text-[#5c3d2e] font-bold uppercase border-2 border-[#f3e5d8]">
                         {review.userName.charAt(0)}
                       </div>
                     )}
                     <div>
-                      <h5 className="font-bold text-on-surface">{review.userName}</h5>
-                      <div className="flex gap-0.5 mt-0.5">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star 
-                            key={star} 
-                            className={`w-3 h-3 ${star <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-stone-200'}`} 
-                          />
-                        ))}
-                      </div>
+                      <h5 className="font-bold text-[#5c3d2e]">{review.userName}</h5>
+                      <span className="text-[10px] text-[#8b7264] font-bold uppercase tracking-widest">
+                        {review.createdAt?.toDate?.() ? review.createdAt.toDate().toLocaleDateString('pt-BR') : 'Recente'}
+                      </span>
                     </div>
                   </div>
-                  <span className="text-xs text-on-surface-variant font-medium">
-                    {review.createdAt?.toDate?.() ? review.createdAt.toDate().toLocaleDateString('pt-BR') : 'Recente'}
-                  </span>
+
+                  {/* Right: Content */}
+                  <div className="flex-1 space-y-4">
+                    <div className="flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star} 
+                          className={`w-4 h-4 ${star <= review.rating ? 'fill-[#f4a261] text-[#f4a261]' : 'text-stone-200'}`} 
+                        />
+                      ))}
+                    </div>
+                    <p className="text-[#5c3d2e] leading-relaxed text-lg italic">
+                      "{review.comment}"
+                    </p>
+                    {review.image && (
+                      <div className="mt-4 rounded-2xl overflow-hidden border border-stone-100 max-w-sm shadow-sm group">
+                        <img 
+                          src={getAssetUrl(review.image)} 
+                          alt="Foto da receita" 
+                          className="w-full h-auto hover:scale-105 transition-transform duration-500" 
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    )}
+
+                    {/* Admin Actions */}
+                    {isAdmin && (
+                      <div className="flex gap-4 pt-4 border-t border-stone-50">
+                        <button 
+                          onClick={() => handleStartEditReview(review)}
+                          className="flex items-center gap-2 text-sm font-bold text-primary hover:underline"
+                        >
+                          <Edit3 className="w-4 h-4" /> Editar
+                        </button>
+                        <button 
+                          onClick={() => handleDeleteReview(review.id!)}
+                          className="flex items-center gap-2 text-sm font-bold text-red-600 hover:underline"
+                        >
+                          <Trash2 className="w-4 h-4" /> Apagar
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Inline Edit Form */}
+                    <AnimatePresence>
+                      {editingReviewId === review.id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          className="mt-6 p-6 bg-stone-50 rounded-2xl border border-stone-200"
+                        >
+                          <form onSubmit={handleUpdateReview} className="space-y-4">
+                            <div>
+                              <p className="text-sm font-bold text-[#5c3d2e] mb-2">Nota:</p>
+                              <div className="flex gap-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <button
+                                    key={star}
+                                    type="button"
+                                    onClick={() => setEditRating(star)}
+                                  >
+                                    <Star 
+                                      className={`w-6 h-6 ${star <= editRating ? 'fill-[#f4a261] text-[#f4a261]' : 'text-stone-300'}`} 
+                                    />
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                            <textarea
+                              value={editComment}
+                              onChange={(e) => setEditComment(e.target.value)}
+                              className="w-full p-4 border border-stone-200 rounded-xl bg-white text-sm outline-none focus:ring-2 focus:ring-primary/20"
+                              rows={3}
+                            />
+                            <div className="flex justify-end gap-3">
+                              <button 
+                                type="button"
+                                onClick={() => setEditingReviewId(null)}
+                                className="px-4 py-2 text-sm font-bold text-[#8b7264]"
+                              >
+                                Cancelar
+                              </button>
+                              <button 
+                                type="submit"
+                                disabled={isUpdatingReview}
+                                className="px-6 py-2 bg-primary text-white rounded-lg text-sm font-bold disabled:opacity-50"
+                              >
+                                {isUpdatingReview ? 'Salvando...' : 'Salvar Alterações'}
+                              </button>
+                            </div>
+                          </form>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
-                <p className="text-on-surface-variant leading-relaxed">
-                  {review.comment}
-                </p>
               </motion.div>
             ))
           ) : (
-            <div className="text-center py-12 bg-stone-50 dark:bg-stone-900/20 rounded-3xl border-2 border-dashed border-stone-100 dark:border-stone-800">
-              <Star className="w-12 h-12 text-stone-200 mx-auto mb-4" />
-              <p className="text-on-surface-variant font-bold">Nenhuma avaliação ainda.</p>
-              <p className="text-sm text-stone-400">Seja o primeiro a avaliar esta receita!</p>
+            <div className="text-center py-20 bg-[#fdf8f4] rounded-[3rem] border-2 border-dashed border-[#f3e5d8]">
+              <Star className="w-16 h-16 text-[#e7d4c1] mx-auto mb-6" />
+              <p className="text-xl font-bold text-[#5c3d2e]">Nenhuma avaliação ainda.</p>
+              <p className="text-[#8b7264]">Seja o primeiro a compartilhar sua experiência!</p>
             </div>
           )}
         </div>

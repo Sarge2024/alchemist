@@ -234,7 +234,7 @@ export default function Explore() {
                   Momento <ChevronDown className="w-4 h-4" />
                 </button>
                 <div className="mt-3 space-y-2 text-sm text-on-surface-variant">
-                  {['Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Petiscos', 'Bebidas'].map(cat => (
+                  {['Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Petiscos / Aperitivos', 'Bebidas'].map(cat => (
                     <label key={cat} className="flex items-center gap-2 cursor-pointer">
                       <input 
                         type="radio" 
@@ -259,7 +259,7 @@ export default function Explore() {
                   Técnica <ChevronDown className="w-4 h-4" />
                 </button>
                 <div className="mt-3 space-y-2 text-sm text-on-surface-variant">
-                  {['Assados', 'Frituras', 'Grelhados', 'Sopas e Caldos', 'Massas e Risotos', 'Bebidas', 'Doces e Sobremesas'].map(tech => (
+                  {['Assados', 'Frituras', 'Grelhados', 'Sopas e Caldos', 'Cremes e Purés', 'Massas e Risotos', 'Saladas e Pratos Frios', 'Cozidos / Guisados', 'Padaria e Pastelaria', 'Bebidas', 'Doces e Sobremesas'].map(tech => (
                     <label key={tech} className="flex items-center gap-2 cursor-pointer">
                       <input 
                         type="radio" 
@@ -284,7 +284,7 @@ export default function Explore() {
                   Base <ChevronDown className="w-4 h-4" />
                 </button>
                 <div className="mt-3 space-y-2 text-sm text-on-surface-variant">
-                  {['Carnes', 'Frutos do Mar', 'Vegetais e Legumes', 'Ovos e Laticínios', 'Grãos and Leguminosas'].map(base => (
+                  {['Carnes', 'Frutos do Mar', 'Vegetais e Legumes', 'Ovos e Laticínios', 'Grãos e Leguminosas'].map(base => (
                     <label key={base} className="flex items-center gap-2 cursor-pointer">
                       <input 
                         type="radio" 

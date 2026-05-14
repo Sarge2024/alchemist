@@ -36,7 +36,17 @@ service cloud.firestore {
       allow update: if request.auth != null;
     }
 
-    // 5. BLOQUEIO PADRÃO
+    // 5. AVALIAÇÕES - LEITURA PÚBLICA, ESCRITA PARA MEMBROS
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.userId || 
+        request.auth.token.email == 'sagacitas.sistemas@gmail.com'
+      );
+    }
+
+    // 6. BLOQUEIO PADRÃO
     match /{document=**} {
       allow read, write: if false;
     }
