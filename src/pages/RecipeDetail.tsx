@@ -13,6 +13,7 @@ import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import html2pdf from 'html2pdf.js';
 import { reviewService, Review as ReviewType } from '../infra/services/reviewService';
+import { ChefHat, Info as InfoIcon, Lightbulb } from 'lucide-react';
 
 import { ASSETS, getAssetUrl } from '../lib/assets';
 
@@ -488,13 +489,21 @@ export default function RecipeDetail() {
   const isAdmin = user && user.email === 'sagacitas.sistemas@gmail.com';
   const canManage = isOwner || isAdmin;
 
+  // Sauce Context Detection
+  const sauceKeywords = ['molho', 'sugo', 'pesto', 'béchamel', 'bechamel', 'hollandaise', 'velouté', 'veloute', 'espagnole', 'bolonhesa', 'bolognese', 'carbonara', 'alfredo', 'pomodoro'];
+  const mentionsSauce = sauceKeywords.some(keyword => 
+    recipe.title.toLowerCase().includes(keyword) || 
+    recipe.description?.toLowerCase().includes(keyword) ||
+    recipe.instructions.some(step => step.toLowerCase().includes(keyword))
+  );
+
   // Helper to group ingredients
   interface GroupedIngredients {
     [key: string]: (string | Ingredient)[];
   }
 
   const groupedIngredients: GroupedIngredients = {};
-  recipe.ingredients.forEach(ing => {
+  (recipe.ingredients || []).forEach(ing => {
     const groupName = (typeof ing === 'object' && ing.group) ? ing.group : 'Geral';
     if (!groupedIngredients[groupName]) {
       groupedIngredients[groupName] = [];
@@ -712,6 +721,40 @@ export default function RecipeDetail() {
         </div>
       </div>
 
+      {/* Alchemist Sauce Pointer */}
+      {mentionsSauce && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-12 no-print"
+        >
+          <Link 
+            to="/acervo/guia-dos-molhos"
+            className="group block bg-gradient-to-r from-[#8B2323] to-[#5C1616] p-[2px] rounded-3xl hover:shadow-xl hover:shadow-[#8B2323]/20 transition-all duration-300"
+          >
+            <div className="bg-white rounded-[1.4rem] p-6 flex flex-col md:flex-row items-center gap-6 group-hover:bg-stone-50 transition-colors">
+              <div className="w-16 h-16 rounded-2xl bg-[#8B2323]/5 flex items-center justify-center text-[#8B2323] flex-shrink-0 group-hover:scale-110 transition-transform">
+                <ChefHat className="w-8 h-8" />
+              </div>
+              <div className="flex-1 text-center md:text-left">
+                <div className="flex items-center justify-center md:justify-start gap-2 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#8B2323]">Dica do Alquimista</span>
+                  <div className="w-1 h-1 rounded-full bg-stone-300"></div>
+                  <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">Acervo Digital</span>
+                </div>
+                <h4 className="text-xl font-bold text-[#2C3E50] mb-1">Domine a Ciência dos Molhos</h4>
+                <p className="text-sm text-stone-500 leading-relaxed">
+                  Esta receita utiliza técnicas de molhos. Explore nosso guia interativo no acervo para entender o equilíbrio de sabores e a história por trás dessas bases clássicas.
+                </p>
+              </div>
+              <div className="bg-[#8B2323] text-white px-6 py-3 rounded-xl font-bold text-sm group-hover:bg-[#5C1616] transition-colors flex items-center gap-2">
+                Explorar Acervo <ChevronLeft className="w-4 h-4 rotate-180" />
+              </div>
+            </div>
+          </Link>
+        </motion.div>
+      )}
+
       {/* Ingredients & Instructions */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
         <aside className="lg:col-span-1 space-y-8">
@@ -751,7 +794,7 @@ export default function RecipeDetail() {
         <section className="lg:col-span-2 space-y-8">
           <h3 className="text-2xl font-bold text-primary">Modo de Preparo</h3>
           <div className="space-y-12">
-            {recipe.instructions.map((step, i) => (
+            {(recipe.instructions || []).map((step, i) => (
               <div key={i} className="flex gap-8 group">
                 <div className="flex-shrink-0 w-14 h-14 rounded-full bg-surface-container text-primary flex items-center justify-center font-bold text-xl shadow-inner group-hover:bg-primary group-hover:text-white transition-all duration-500">
                   {i + 1}
@@ -766,6 +809,31 @@ export default function RecipeDetail() {
           </div>
         </section>
       </div>
+
+      {/* Chef Tips Section */}
+      {recipe.chefTips && (
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16 w-full"
+        >
+          <div className="bg-[#8B2323]/5 border-2 border-dashed border-[#8B2323]/20 p-8 md:p-12 rounded-[2.5rem] relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+              <ChefHat className="w-32 h-32" />
+            </div>
+            
+            <div className="relative z-10">
+              <h3 className="text-2xl font-bold text-[#8B2323] mb-6 flex items-center gap-3">
+                <Lightbulb className="w-6 h-6" /> Dicas do Chef
+              </h3>
+              <div className="text-lg text-stone-700 leading-relaxed min-h-[4.5rem] whitespace-pre-line font-medium italic">
+                "{recipe.chefTips}"
+              </div>
+            </div>
+          </div>
+        </motion.section>
+      )}
 
       {/* Reviews Section */}
       <div className="mt-20 border-t border-surface-container-high pt-16 no-print">

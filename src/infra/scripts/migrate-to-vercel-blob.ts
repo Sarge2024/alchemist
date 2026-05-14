@@ -97,8 +97,10 @@ function shouldMigrate(url: string | any): boolean {
   // Se já está no Vercel Blob, ignora
   if (url.includes('public.blob.vercel-storage.com')) return false;
   
-  // Se for uma URL externa (http), local (/uploads) ou Firebase, migra!
-  return url.startsWith('http') || url.startsWith('/uploads/');
+  // Se for uma URL externa (http), local (/uploads) ou apenas um nome de arquivo local, migra!
+  return url.startsWith('http') || 
+         url.startsWith('/uploads/') || 
+         /^(recipe|downloaded|upload)-/.test(url);
 }
 
 async function uploadToBlob(sourceUrl: string, prefix: string): Promise<string | null> {
@@ -106,10 +108,18 @@ async function uploadToBlob(sourceUrl: string, prefix: string): Promise<string |
     let buffer: Buffer;
     let filename: string;
 
-    if (sourceUrl.startsWith('/uploads/')) {
+    if (sourceUrl.startsWith('/uploads/') || /^(recipe|downloaded|upload)-/.test(sourceUrl)) {
       // Caso Local
-      const localPath = path.join(process.cwd(), 'public', sourceUrl);
-      if (!fs.existsSync(localPath)) return null;
+      let localPath = sourceUrl.startsWith('/') 
+        ? path.join(process.cwd(), 'public', sourceUrl)
+        : path.join(process.cwd(), 'public', 'uploads', sourceUrl);
+        
+      if (!fs.existsSync(localPath)) {
+        // Tenta buscar diretamente em public/ se não achou em uploads
+        const altPath = path.join(process.cwd(), 'public', sourceUrl);
+        if (fs.existsSync(altPath)) localPath = altPath;
+        else return null;
+      }
       buffer = fs.readFileSync(localPath);
       filename = `${prefix}-${path.basename(localPath)}`;
     } else {

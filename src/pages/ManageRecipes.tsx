@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'motion/react';
-import { Edit3, Trash2, ChevronRight, Loader2, Plus, Clock, Star, AlertTriangle, User, ShieldCheck, Activity, CheckCircle2, XCircle, AlertCircle, Key, Info } from 'lucide-react';
+import { Edit3, Trash2, ChevronRight, Loader2, Plus, Clock, Star, AlertTriangle, User, ShieldCheck, Activity, CheckCircle2, XCircle, AlertCircle, Key, Info, Search } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { recipeService, Recipe } from '../infra/services/recipeService';
@@ -19,6 +19,7 @@ export default function ManageRecipes() {
   const [showKeyStatus, setShowKeyStatus] = useState(false);
   const [checkingKeys, setCheckingKeys] = useState(false);
   const [keyStatuses, setKeyStatuses] = useState<any[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
   const { user, isAdmin } = useAuth();
   const navigate = useNavigate();
 
@@ -131,6 +132,11 @@ export default function ManageRecipes() {
     }
   };
 
+  const filteredRecipes = recipes.filter(r => 
+    r.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (r.description && r.description.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
@@ -153,12 +159,24 @@ export default function ManageRecipes() {
               : 'Gerencie suas criações culinárias e compartilhe mais sabores.'}
           </p>
         </div>
-        <Link 
-          to="/submit" 
-          className="bg-primary text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-3 shadow-lg hover:bg-primary-container transition-all active:scale-95"
-        >
-          <Plus className="w-6 h-6" /> Nova Receita
-        </Link>
+        <div className="flex flex-col sm:flex-row items-center gap-4">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5" />
+            <input 
+              type="text" 
+              placeholder="Pesquisar em suas receitas..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-container-low border border-surface-container-high focus:ring-2 focus:ring-primary outline-none text-sm font-medium"
+            />
+          </div>
+          <Link 
+            to="/submit" 
+            className="bg-primary text-white px-8 py-4 rounded-2xl font-bold flex items-center gap-3 shadow-lg hover:bg-primary-container transition-all active:scale-95 whitespace-nowrap"
+          >
+            <Plus className="w-6 h-6" /> Nova Receita
+          </Link>
+        </div>
       </header>
 
       <motion.div 
@@ -234,7 +252,13 @@ export default function ManageRecipes() {
         </motion.div>
       ) : (
         <div className="space-y-4">
-          {recipes.map((recipe, index) => (
+          {filteredRecipes.length === 0 && searchTerm && (
+            <div className="text-center py-12 bg-surface-container-low rounded-3xl border-2 border-dashed border-surface-container-high">
+              <Search className="w-10 h-10 text-stone-300 mx-auto mb-4" />
+              <p className="text-on-surface-variant font-bold">Nenhuma receita corresponde à sua busca.</p>
+            </div>
+          )}
+          {filteredRecipes.map((recipe, index) => (
             <motion.div 
               key={recipe.id || `manage-row-${index}`}
               initial={{ opacity: 0, x: -20 }}

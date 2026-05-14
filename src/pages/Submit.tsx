@@ -41,6 +41,7 @@ export default function Submit() {
     ingredients: [{ name: '', quantity: '', group: '' }],
     instructions: [''],
     isClassic: false,
+    chefTips: '',
   });
 
   const [originalRecipe, setOriginalRecipe] = useState<Recipe | null>(null);
@@ -128,6 +129,7 @@ export default function Submit() {
           ),
           instructions: recipe.instructions,
           isClassic: recipe.isClassic || false,
+          chefTips: recipe.chefTips || '',
         });
       }
     } catch (error) {
@@ -765,6 +767,26 @@ export default function Submit() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Chef Tips */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+            <h2 className="text-2xl font-bold text-on-surface">Dicas do Chef</h2>
+          </div>
+          <div className="space-y-4">
+            <textarea 
+              name="chefTips"
+              value={formData.chefTips}
+              onChange={handleInputChange}
+              placeholder="Dê seus segredos de preparo, variações ou conselhos técnicos..." 
+              rows={4}
+              className="w-full p-6 rounded-[2rem] bg-surface-container border-none focus:ring-2 focus:ring-primary outline-none resize-none italic text-stone-700 min-h-[120px]" 
+            />
+            <p className="text-xs text-on-surface-variant flex items-center gap-2">
+              <Plus className="w-3 h-3" /> Use este espaço para o "pulo do gato" que faz sua receita ser única.
+            </p>
           </div>
         </section>
 

@@ -63,6 +63,7 @@ export const geminiService = {
           - "1/2 copo de água" -> { quantity: "1/2 copo", name: "água" }
           - "sal a gosto" -> { quantity: "a gosto", name: "sal" }
         - instructions (string[]).
+        - chefTips (string): Dicas adicionais, segredos do chef, variações da receita ou conselhos técnicos importantes. Procure por blocos de texto que contenham dicas, notas ou "Dica do Chef".
         - image, imageOptions (string[]).
     `;
 
@@ -218,6 +219,8 @@ export const geminiService = {
         recipeData.instructions = [];
       }
 
+      recipeData.chefTips = String(recipeData.chefTips || "").substring(0, 2000);
+
 
       // Mescla final de opções de imagem: Imagens originais do site + Imagens encontradas pela IA + Busca Google (se necessário)
       let finalOptions = Array.from(new Set([
@@ -315,6 +318,7 @@ export const geminiService = {
         isClassic: !!recipeData.isClassic,
         ingredients: recipeData.ingredients || [],
         instructions: recipeData.instructions || [],
+        chefTips: recipeData.chefTips || "",
         image: recipeData.image || "",
         imageOptions: recipeData.imageOptions || []
       };

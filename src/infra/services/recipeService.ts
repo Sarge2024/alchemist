@@ -114,6 +114,7 @@ export interface Recipe {
   reviewsCount?: number;
   isClassic?: boolean;
   imageOptions?: string[];
+  chefTips?: string;
 }
 
 const RECIPES_COLLECTION = 'recipes';
@@ -211,9 +212,12 @@ export const recipeService = {
   async updateRecipe(id: string, recipe: Partial<Recipe>) {
     try {
       const sanitizedRecipe = deepSanitize(recipe);
+      // Remove id from payload to avoid overwriting doc.id or storing it as a field
+      const { id: _, ...dataToUpdate } = sanitizedRecipe as any;
+      
       const docRef = doc(db, RECIPES_COLLECTION, id);
       await updateDoc(docRef, {
-        ...sanitizedRecipe,
+        ...dataToUpdate,
         updatedAt: serverTimestamp()
       });
     } catch (error) {
@@ -235,7 +239,7 @@ export const recipeService = {
       const docRef = doc(db, RECIPES_COLLECTION, id);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Recipe;
+        return { ...docSnap.data(), id: docSnap.id } as Recipe;
       }
       return null;
     } catch (error) {
@@ -248,7 +252,7 @@ export const recipeService = {
     try {
       // Fetch everything without ordering to avoid index/permission issues
       const querySnapshot = await getDocs(collection(db, RECIPES_COLLECTION));
-      const recipes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+      const recipes = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Recipe));
       
       // Sort in memory by createdAt desc
       return recipes.sort((a, b) => {
@@ -270,7 +274,7 @@ export const recipeService = {
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+      return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Recipe));
     } catch (error) {
       console.warn('Momento query with orderBy failed, falling back to client-side filter:', error);
       try {
@@ -291,7 +295,7 @@ export const recipeService = {
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Recipe));
+      return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Recipe));
     } catch (error) {
       console.warn('User query with orderBy failed, falling back to client-side filter:', error);
       try {

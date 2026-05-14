@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Send, Heart, ChefHat, Shield, MessageCircle, Reply, X as CloseIcon, ExternalLink, Pencil, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { loungeService, LoungeMessage } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
 import { userService, UserProfile } from '../infra/services/userService';
@@ -12,6 +12,7 @@ import { userService, UserProfile } from '../infra/services/userService';
  */
 export const LoungeChat: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<LoungeMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -193,8 +194,16 @@ export const LoungeChat: React.FC = () => {
                     max-w-[90%] md:max-w-[85%] p-3 rounded-xl relative group shadow-sm
                     ${msg.senderId === user?.uid
                       ? 'bg-on-surface text-background rounded-tr-none'
-                      : 'bg-surface-container-lowest text-on-surface border border-surface-container-high rounded-tl-none shadow-stone-200/50'}
-                  `}>
+                      : msg.metadata?.type === 'new_recipe'
+                        ? 'bg-primary/10 border-2 border-primary/30 text-on-surface shadow-primary/10 cursor-pointer hover:bg-primary/20 transition-all'
+                        : 'bg-surface-container-lowest text-on-surface border border-surface-container-high rounded-tl-none shadow-stone-200/50'}
+                  `}
+                  onClick={() => {
+                    if (msg.metadata?.type === 'new_recipe' && msg.metadata?.recipeId) {
+                      navigate(`/recipe/${msg.metadata.recipeId}`);
+                    }
+                  }}
+                  >
                     {/* Directed Message Badge */}
                     {msg.metadata?.directedTo && (
                       <div className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-500 bg-amber-50 dark:bg-amber-900/20 p-1.5 rounded-lg border border-amber-100 dark:border-amber-800">
@@ -242,13 +251,12 @@ export const LoungeChat: React.FC = () => {
                         </div>
                       </form>
                     ) : msg.metadata?.type === 'new_recipe' && msg.metadata?.recipeId ? (
-                      <Link 
-                        to={`/recipe/${msg.metadata.recipeId}`}
-                        className="text-sm md:text-base leading-relaxed font-bold text-primary hover:underline flex items-center gap-2 group/link"
-                      >
-                        <ExternalLink className="w-4 h-4 flex-shrink-0 group-hover/link:scale-110 transition-transform" />
+                      <div className="text-sm md:text-base leading-relaxed font-bold text-primary flex items-center gap-2 group/link">
+                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 animate-pulse">
+                          <ExternalLink className="w-4 h-4 text-primary" />
+                        </div>
                         {msg.text}
-                      </Link>
+                      </div>
                     ) : (
                       <div className="relative group/text">
                         <p className="text-sm md:text-base leading-relaxed font-medium">{msg.text}</p>

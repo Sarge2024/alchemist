@@ -5,6 +5,7 @@
  */
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
+import ScrollToTop from './components/ScrollToTop';
 import Home from './pages/Home';
 import Explore from './pages/Explore';
 import Categories from './pages/Categories';
@@ -19,6 +20,7 @@ import Profile from './pages/Profile';
 import Lounge from './pages/Lounge';
 import SpicesHistory from './pages/SpicesHistory';
 import Acervo from './pages/Acervo';
+import SaucesGuide from './pages/acervo/SaucesGuide';
 
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -29,6 +31,7 @@ export default function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
+          <ScrollToTop />
           <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
@@ -52,6 +55,7 @@ export default function App() {
             <Route path="/manifesto" element={<Manifesto />} />
             <Route path="/historia-das-especiarias" element={<SpicesHistory />} />
             <Route path="/acervo" element={<Acervo />} />
+            <Route path="/acervo/guia-dos-molhos" element={<SaucesGuide />} />
 
             
             <Route path="*" element={<Home />} />

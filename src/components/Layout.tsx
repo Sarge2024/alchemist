@@ -28,6 +28,7 @@ export default function Layout({ children }: LayoutProps) {
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAdminDropdownOpen, setIsAdminDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -84,6 +85,15 @@ export default function Layout({ children }: LayoutProps) {
       await signOut(auth);
     } catch (error) {
       console.error('Logout error:', error);
+    }
+  };
+  
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/explore?q=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+      setIsMobileMenuOpen(false);
     }
   };
 
@@ -215,14 +225,16 @@ export default function Layout({ children }: LayoutProps) {
 
           {/* LADO DIREITO: Busca, Tema e Perfil */}
           <div className="flex-1 flex items-center justify-end gap-2 md:gap-4">
-            <div className="relative hidden xl:block">
+            <form onSubmit={handleSearchSubmit} className="relative hidden xl:block">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-4 h-4" />
               <input 
                 type="text" 
-                placeholder="Buscar..." 
+                placeholder="Buscar receitas..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-1.5 rounded-full border-none bg-surface-container text-xs focus:ring-2 focus:ring-primary w-40 outline-none transition-all focus:w-56"
               />
-            </div>
+            </form>
             
             <div className="flex items-center gap-1 md:gap-2 text-on-surface-variant">
               <ThemeToggle />
@@ -262,14 +274,16 @@ export default function Layout({ children }: LayoutProps) {
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-background border-t border-surface-container-high shadow-2xl animate-in slide-in-from-top-2 duration-200">
             <div className="p-4 space-y-2">
-              <div className="relative mb-4">
+              <form onSubmit={handleSearchSubmit} className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-outline w-5 h-5" />
                 <input 
                   type="text" 
                   placeholder="Buscar receitas..." 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 rounded-xl border-none bg-surface-container text-base focus:ring-2 focus:ring-primary outline-none"
                 />
-              </div>
+              </form>
               {navLinks.map(link => (
                 <Link 
                   key={link.path}

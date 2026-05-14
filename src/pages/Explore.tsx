@@ -5,7 +5,7 @@
  * Suporta visualização em Grid e Lista.
  */
 import { motion } from 'motion/react';
-import { Heart, Star, Clock, Filter, ChevronDown, Loader2, X, LayoutGrid, List, Utensils, AlertTriangle } from 'lucide-react';
+import { Heart, Star, Clock, Filter, ChevronDown, Loader2, X, LayoutGrid, List, Utensils, AlertTriangle, Search } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { recipeService, Recipe } from '../infra/services/recipeService';
@@ -37,8 +37,16 @@ export default function Explore() {
     const diet = searchParams.get('diet');
     const difficulty = searchParams.get('difficulty');
     const classic = searchParams.get('classic');
+    const query = searchParams.get('q')?.toLowerCase();
     
     let filtered = [...recipes];
+
+    if (query) {
+      filtered = filtered.filter(r => 
+        r.title.toLowerCase().includes(query) || 
+        (r.description && r.description.toLowerCase().includes(query))
+      );
+    }
     
     if (momento) {
       filtered = filtered.filter(r => r.momento && r.momento.includes(momento));
@@ -145,21 +153,42 @@ export default function Explore() {
             </div>
           )}
           
-          <div className="flex items-center bg-surface-container rounded-xl p-1 shadow-inner">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'grid' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
-            >
-              <LayoutGrid className="w-4 h-4" />
-              Grid
-            </button>
-            <button 
-              onClick={() => setViewMode('list')}
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
-            >
-              <List className="w-4 h-4" />
-              Lista
-            </button>
+          <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+            <div className="relative w-full sm:w-80">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-stone-400 w-5 h-5" />
+              <input 
+                type="text" 
+                placeholder="Buscar por nome ou ingrediente..." 
+                value={searchParams.get('q') || ''}
+                onChange={(e) => {
+                  const newParams = new URLSearchParams(searchParams);
+                  if (e.target.value) {
+                    newParams.set('q', e.target.value);
+                  } else {
+                    newParams.delete('q');
+                  }
+                  setSearchParams(newParams);
+                }}
+                className="w-full pl-12 pr-4 py-3 rounded-xl bg-surface-container border-none focus:ring-2 focus:ring-primary outline-none text-sm font-medium" 
+              />
+            </div>
+
+            <div className="flex items-center bg-surface-container rounded-xl p-1 shadow-inner w-full sm:w-auto">
+              <button 
+                onClick={() => setViewMode('grid')}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'grid' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
+              >
+                <LayoutGrid className="w-4 h-4" />
+                Grid
+              </button>
+              <button 
+                onClick={() => setViewMode('list')}
+                className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${viewMode === 'list' ? 'bg-primary text-white shadow-md' : 'text-on-surface-variant hover:text-primary'}`}
+              >
+                <List className="w-4 h-4" />
+                Lista
+              </button>
+            </div>
           </div>
         </div>
         
