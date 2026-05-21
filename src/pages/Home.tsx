@@ -70,8 +70,35 @@ export default function Home() {
       });
       setCategoryCounts(counts);
       
-      // Display up to 6 real recipes
-      setRecipes(data.slice(0, 6));
+      // Shuffle and pick 6 distinct category recipes for rotation
+      const shuffled = [...data].sort(() => 0.5 - Math.random());
+      const selectedRecipes: Recipe[] = [];
+      const usedCategories = new Set<string>();
+
+      for (const recipe of shuffled) {
+        if (selectedRecipes.length >= 6) break;
+        
+        const typeField = (recipe as any).tipo_prato;
+        const momentField = (recipe as any).momento;
+        const mainCat = (Array.isArray(typeField) && typeField[0]) || (Array.isArray(momentField) && momentField[0]) || 'Outros';
+
+        if (!usedCategories.has(mainCat)) {
+          usedCategories.add(mainCat);
+          selectedRecipes.push(recipe);
+        }
+      }
+
+      // Fill remaining slots if we couldn't find 6 distinct categories
+      if (selectedRecipes.length < 6) {
+        for (const recipe of shuffled) {
+          if (selectedRecipes.length >= 6) break;
+          if (!selectedRecipes.some(r => r.id === recipe.id)) {
+            selectedRecipes.push(recipe);
+          }
+        }
+      }
+
+      setRecipes(selectedRecipes);
     } catch (error) {
       console.error('Error loading recent recipes:', error);
       setRecipes([]);

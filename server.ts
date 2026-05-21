@@ -102,7 +102,6 @@ const upload = multer({
  */
 async function uploadToStorage(localPath: string, destinationName: string): Promise<string | null> {
   try {
-    const bucket = getStorage().bucket("sagacitas-financeiro.appspot.com");
     let fullLocalPath = localPath;
     
     if (localPath.startsWith('/uploads/')) {
@@ -116,18 +115,16 @@ async function uploadToStorage(localPath: string, destinationName: string): Prom
       return null;
     }
 
-    const [file] = await bucket.upload(fullLocalPath, {
-      destination: `recipes/${destinationName}`,
-      metadata: {
-        cacheControl: 'public, max-age=31536000',
-      },
+    const buffer = fs.readFileSync(fullLocalPath);
+    
+    const blob = await put(`recipes/${destinationName}`, buffer, {
+      access: 'public',
+      token: process.env.BLOB_READ_WRITE_TOKEN
     });
 
-    // Torna o arquivo público e gera a URL
-    await file.makePublic();
-    return `https://storage.googleapis.com/${bucket.name}/${file.name}`;
+    return blob.url;
   } catch (error) {
-    console.error("[Storage] Erro no upload:", error);
+    console.error("[Storage] Erro no upload para o Vercel Blob:", error);
     return null;
   }
 }
@@ -184,7 +181,7 @@ const authenticateAPI = (req: express.Request, res: express.Response, next: expr
 };
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
 
 app.use(express.json());
 
@@ -285,7 +282,7 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
       }
 
       // Caso 1: Ainda é uma URL externa - Baixa e sobe pra nuvem
-      if (typeof currentImage === 'string' && (currentImage.startsWith('http://') || currentImage.startsWith('https://')) && !currentImage.includes('storage.googleapis.com')) {
+      if (typeof currentImage === 'string' && (currentImage.startsWith('http://') || currentImage.startsWith('https://')) && !currentImage.includes('public.blob.vercel-storage.com')) {
         console.log(`[Migration] Baixando e subindo para nuvem: ${data.title}`);
         const localPath = await downloadAndSaveImage(currentImage);
         
