@@ -22,12 +22,23 @@ export const ActiveCollaborators: React.FC = () => {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const users = snapshot.docs
-        .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile))
+        .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile & { isOnline?: boolean }))
         .filter(user => user.role !== 'chef'); // Chefs têm lista própria à esquerda
 
-      // Ordena: admin primeiro, depois collaborator, depois member
-      const roleOrder: Record<string, number> = { admin: 0, collaborator: 1, member: 2 };
-      users.sort((a, b) => (roleOrder[a.role] || 3) - (roleOrder[b.role] || 3));
+      // Ordena: Online primeiro, depois ordem alfabética
+      users.sort((a, b) => {
+        const aOnline = a.isOnline ? 1 : 0;
+        const bOnline = b.isOnline ? 1 : 0;
+        
+        if (aOnline !== bOnline) {
+          return bOnline - aOnline; // Online primeiro
+        }
+        
+        // Desempate: Ordem alfabética
+        const nameA = a.displayName || '';
+        const nameB = b.displayName || '';
+        return nameA.localeCompare(nameB);
+      });
 
       setCollaborators(users);
       setIsLoading(false);
@@ -136,7 +147,7 @@ export const ActiveCollaborators: React.FC = () => {
                     className="ring-2 ring-white shadow-sm"
                   />
                   {/* Indicador de status (online visual) */}
-                  <Circle className="w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5 text-emerald-400 fill-emerald-400 stroke-white stroke-[3]" />
+                  <Circle className={`w-2.5 h-2.5 absolute -bottom-0.5 -right-0.5 stroke-white stroke-[3] ${collab.isOnline ? 'text-emerald-400 fill-emerald-400' : 'text-red-400 fill-red-400'}`} />
                 </div>
 
                 {/* Informações */}

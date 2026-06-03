@@ -13,7 +13,10 @@ import {
   ArrowLeft,
   Save,
   Loader2,
-  X
+  X,
+  Trophy,
+  Star,
+  Award
 } from 'lucide-react';
 import { userService, UserProfile } from '../infra/services/userService';
 import { MemberService } from '../infra/services/MemberService';
@@ -393,6 +396,99 @@ export default function Profile() {
                 )}
               </AnimatePresence>
             </form>
+
+            {/* Seção de Gamificação & Conquistas */}
+            <div className="mt-16 pt-16 border-t border-surface-container-high">
+              <div className="flex justify-between items-start mb-8">
+                <div>
+                  <h2 className="text-2xl font-bold text-on-surface mb-2 flex items-center gap-3">
+                    <Trophy className="w-6 h-6 text-primary" />
+                    Progresso & Conquistas
+                  </h2>
+                  <p className="text-on-surface-variant">Sua jornada culinária, nível atual e itens exclusivos desbloqueados.</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Nível Atual */}
+                <div className="p-8 bg-surface-container-low rounded-[2rem] border border-surface-container-high relative overflow-hidden group">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-stone-300/20 dark:bg-stone-700/20 rounded-bl-[100px] transition-transform group-hover:scale-110" />
+                  <div className="flex items-center gap-5 mb-8 relative">
+                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-stone-300 to-stone-500 flex items-center justify-center shadow-2xl border-4 border-background">
+                      <Award className="w-10 h-10 text-white" />
+                    </div>
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1">Nível 3</div>
+                      <h3 className="text-3xl font-bold text-on-surface leading-none mb-1">Prata</h3>
+                      <p className="text-xs text-on-surface-variant font-medium">Cruzador de Conhecimento</p>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3 flex justify-between text-sm font-black text-on-surface-variant tracking-wider uppercase">
+                    <span>XP: 500</span>
+                    <span>Meta: 600</span>
+                  </div>
+                  <div className="w-full h-4 bg-surface-container-high rounded-full overflow-hidden shadow-inner">
+                    <div className="h-full bg-stone-400 dark:bg-stone-500 w-[83%] rounded-full shadow-lg" />
+                  </div>
+                  <p className="text-xs text-on-surface-variant mt-5 font-medium flex items-center gap-2">
+                    <Star className="w-4 h-4 text-amber-500" /> Próximo: <strong className="text-on-surface">Nível 4 (Ouro)</strong>
+                  </p>
+                </div>
+
+                {/* Itens Equipados / Loja */}
+                <div className="lg:col-span-2 p-8 bg-surface-container-low rounded-[2rem] border border-surface-container-high">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-6">Inventário & Itens Ativos</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Item 1 */}
+                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-amber-200 transition-colors">
+                      <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/50">
+                        <Trophy className="w-7 h-7 text-amber-500" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500 mb-1">Título • Mestre</div>
+                        <div className="text-base font-bold text-on-surface leading-tight">Mestre da Colaboração</div>
+                      </div>
+                    </div>
+                    
+                    {/* Item 2 */}
+                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-purple-200 transition-colors">
+                      <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/50">
+                        <User className="w-7 h-7 text-purple-500" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-500 mb-1">Avatar • Avatar</div>
+                        <div className="text-base font-bold text-on-surface leading-tight">Moldura de Avatar Exclusiva</div>
+                      </div>
+                    </div>
+
+                    {/* Item 3 */}
+                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-stone-200 transition-colors">
+                      <div className="w-14 h-14 rounded-2xl bg-stone-900 flex items-center justify-center shrink-0 border border-stone-800">
+                        <Shield className="w-7 h-7 text-stone-300" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Tema • Premium</div>
+                        <div className="text-base font-bold text-on-surface leading-tight">Tema Dark Premium</div>
+                      </div>
+                    </div>
+                    
+                    {/* Item 4 */}
+                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-primary/20 transition-colors opacity-60 grayscale hover:grayscale-0 cursor-not-allowed">
+                      <div className="w-14 h-14 rounded-2xl bg-surface-container-high flex items-center justify-center shrink-0 border border-surface-container">
+                        <Award className="w-7 h-7 text-on-surface-variant" />
+                      </div>
+                      <div>
+                        <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Crachá • Gold</div>
+                        <div className="text-base font-bold text-on-surface leading-tight">Crachá Gold do Perfil</div>
+                        <div className="text-xs text-on-surface-variant mt-1">Desbloqueia no Nível 4 (600 XP)</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>

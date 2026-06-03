@@ -11,7 +11,7 @@ import { signOut, browserPopupRedirectResolver, GoogleAuthProvider, signInWithPo
 import { APP_VERSION } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
-import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield, ArrowLeft } from 'lucide-react';
+import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield, ArrowLeft, Beaker } from 'lucide-react';
 import { userService } from '../infra/services/userService';
 import { Avatar } from './Avatar';
 
@@ -217,6 +217,12 @@ export default function Layout({ children }: LayoutProps) {
                     >
                       <Bookmark className="w-4 h-4" /> Minhas Receitas
                     </Link>
+                    <Link 
+                      to="/meu-perfil/alquimista"
+                      className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${isActive('/meu-perfil/alquimista') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                    >
+                      <Beaker className="w-4 h-4" /> Painel do Alquimista
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -330,6 +336,12 @@ export default function Layout({ children }: LayoutProps) {
                     className={`block p-3 rounded-xl font-bold transition-all ${isActive('/manage') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
                   >
                     Minhas Receitas
+                  </Link>
+                  <Link 
+                    to="/meu-perfil/alquimista" 
+                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/meu-perfil/alquimista') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  >
+                    Painel do Alquimista
                   </Link>
                 </div>
               )}

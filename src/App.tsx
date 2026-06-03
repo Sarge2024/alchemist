@@ -21,6 +21,7 @@ import Lounge from './pages/Lounge';
 import SpicesHistory from './pages/SpicesHistory';
 import Acervo from './pages/Acervo';
 import SaucesGuide from './pages/acervo/SaucesGuide';
+import AlchemistPanel from './pages/AlchemistPanel';
 
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -45,6 +46,7 @@ export default function App() {
             <Route path="/manage" element={<ProtectedRoute><ManageRecipes /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/profile/:uid" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/meu-perfil/alquimista" element={<ProtectedRoute requireAdmin><AlchemistPanel /></ProtectedRoute>} />
             <Route path="/lounge" element={<ProtectedRoute><Lounge /></ProtectedRoute>} />
             
             {/* Admin Only Routes */}

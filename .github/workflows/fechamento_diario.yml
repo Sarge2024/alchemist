@@ -1,0 +1,34 @@
+name: Fechamento Diario de IA (Lote)
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # Roda todos os dias às 03:00 UTC (meia-noite no BR)
+  workflow_dispatch: # Permite rodar manualmente para testes
+
+jobs:
+  process_batch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Código
+        uses: actions/checkout@v4
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar Dependências
+        # Corrigido os nomes dos pacotes para bater com as bibliotecas oficiais em Python (fastmcp e google-generativeai)
+        run: |
+          pip install fastmcp google-generativeai
+
+      - name: Executar Agentes de Fechamento (Ata e Pontos)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          VERCEL_BLOB_TOKEN: ${{ secrets.VERCEL_BLOB_TOKEN }}
+        run: |
+          # Executa um script python isolado que:
+          # 1. Abre o servidor MCP localmente
+          # 2. Roda o Agente 2 para ler o log do dia e cuspir a ata em HTML
+          # 3. Roda o Agente 1 para calcular as interações e rodar a Tool 'atualizar_gamificacao_lote'
+          python scripts/cron_fechamento.py
