@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
+import { setDoc, doc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { 
   LayoutDashboard, 
   ShoppingBag, 
@@ -98,6 +100,16 @@ export default function AlchemistPanel() {
         if (row.id === id) return { ...row, [level]: num };
         return row;
       }));
+    }
+  };
+
+  const handleSave = async () => {
+    try {
+      await setDoc(doc(db, 'config', 'matrix'), { matrix });
+      alert('Configurações salvas com sucesso!');
+    } catch (error) {
+      console.error('Erro ao salvar configuração:', error);
+      alert('Falha ao salvar as configurações.');
     }
   };
 
@@ -287,7 +299,7 @@ export default function AlchemistPanel() {
                   <p className="text-sm text-on-surface-variant mt-1">Configure os valores necessários para desbloquear cada nível de selo.</p>
                 </div>
                 <div className="flex gap-2">
-                  <button className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
+                  <button onClick={handleSave} className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-primary-hover transition-colors shadow-lg shadow-primary/20">
                     <Save className="w-4 h-4" /> Aplicar Configuração
                   </button>
                 </div>
