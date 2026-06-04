@@ -143,8 +143,8 @@ export default function AlchemistPanel() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-6 md:p-12 md:pt-24 no-scrollbar">
-        <div className="max-w-6xl mx-auto space-y-12">
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 md:pt-24 no-scrollbar">
+        <div className={`mx-auto space-y-12 ${activeTab === 'avatares' ? 'w-full max-w-[1600px]' : 'max-w-6xl'}`}>
           
           {activeTab === 'mercado' && (
             <>
@@ -310,18 +310,18 @@ export default function AlchemistPanel() {
                   <thead>
                     <tr className="bg-surface-container-lowest">
                       <th className="p-4 border-b border-r border-surface-container font-black text-xs uppercase tracking-widest text-on-surface-variant text-center w-20">Selo ID</th>
-                      <th className="p-4 border-b border-r border-surface-container font-black text-xs uppercase tracking-widest text-on-surface-variant w-48">Tipo de Interação</th>
+                      <th className="p-4 border-b border-r border-surface-container font-black text-xs uppercase tracking-widest text-on-surface-variant w-auto min-w-[250px]">Tipo de Interação</th>
                       
                       {/* Headers dos Níveis */}
-                      <th className="p-4 border-b border-r border-surface-container text-center bg-orange-900/10">
+                      <th className="p-4 border-b border-r border-surface-container text-center bg-orange-900/10 w-56">
                         <div className="font-black text-sm text-orange-700 dark:text-orange-500 uppercase tracking-wider mb-1">Nível Bronze</div>
                         <div className="text-[10px] text-orange-600/70 uppercase">Coluna</div>
                       </th>
-                      <th className="p-4 border-b border-r border-surface-container text-center bg-stone-300/20 dark:bg-stone-700/20">
+                      <th className="p-4 border-b border-r border-surface-container text-center bg-stone-300/20 dark:bg-stone-700/20 w-56">
                         <div className="font-black text-sm text-stone-600 dark:text-stone-300 uppercase tracking-wider mb-1">Nível Prata</div>
                         <div className="text-[10px] text-stone-500/70 uppercase">Coluna</div>
                       </th>
-                      <th className="p-4 border-b border-surface-container text-center bg-amber-500/10">
+                      <th className="p-4 border-b border-surface-container text-center bg-amber-500/10 w-56">
                         <div className="font-black text-sm text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Nível Ouro</div>
                         <div className="text-[10px] text-amber-500/70 uppercase">Coluna</div>
                       </th>
@@ -343,16 +343,16 @@ export default function AlchemistPanel() {
                         <td className="p-4 border-b border-r border-surface-container bg-orange-900/5 group-hover:bg-orange-900/10 transition-colors">
                           <div className="flex items-center gap-3">
                             <img src={`/medalhas/b${row.index}.512.Webp`} alt={`Bronze ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md" />
-                            <div className="flex-1 flex items-center bg-background rounded-lg border border-orange-500/20 overflow-hidden">
+                            <div className="flex-1 flex items-stretch bg-background rounded-xl border border-orange-500/30 overflow-hidden shadow-sm">
                               <input 
                                 type="text" 
                                 value={row.bronze + (row.isXP ? ' XP' : '')} 
                                 onChange={(e) => handleMatrixInputChange(row.id, 'bronze', e.target.value)}
-                                className="w-full px-3 py-2 text-center font-bold text-orange-700 dark:text-orange-400 bg-transparent outline-none" 
+                                className="w-full min-w-[70px] px-2 py-3 text-center text-sm font-bold text-orange-700 dark:text-orange-400 bg-transparent outline-none" 
                               />
-                              <div className="flex flex-col border-l border-orange-500/20">
-                                <button onClick={() => updateMatrixValue(row.id, 'bronze', 1)} className="px-2 py-0.5 hover:bg-orange-500/10 text-orange-600 text-xs font-bold border-b border-orange-500/20">+</button>
-                                <button onClick={() => updateMatrixValue(row.id, 'bronze', -1)} className="px-2 py-0.5 hover:bg-orange-500/10 text-orange-600 text-xs font-bold">-</button>
+                              <div className="flex flex-col border-l border-orange-500/20 bg-orange-50/50 dark:bg-orange-900/10 shrink-0">
+                                <button onClick={() => updateMatrixValue(row.id, 'bronze', 1)} className="px-3 py-1.5 flex-1 hover:bg-orange-500/20 text-orange-700 font-black border-b border-orange-500/20 transition-colors">+</button>
+                                <button onClick={() => updateMatrixValue(row.id, 'bronze', -1)} className="px-3 py-1.5 flex-1 hover:bg-orange-500/20 text-orange-700 font-black transition-colors">-</button>
                               </div>
                             </div>
                           </div>
@@ -362,16 +362,16 @@ export default function AlchemistPanel() {
                         <td className="p-4 border-b border-r border-surface-container bg-stone-300/10 dark:bg-stone-700/10 group-hover:bg-stone-300/20 transition-colors">
                           <div className="flex items-center gap-3">
                             <img src={`/medalhas/p${row.index}.512.Webp`} alt={`Prata ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md" />
-                            <div className="flex-1 flex items-center bg-background rounded-lg border border-stone-500/20 overflow-hidden">
+                            <div className="flex-1 flex items-stretch bg-background rounded-xl border border-stone-500/30 overflow-hidden shadow-sm">
                               <input 
                                 type="text" 
                                 value={row.prata + (row.isXP ? ' XP' : '')} 
                                 onChange={(e) => handleMatrixInputChange(row.id, 'prata', e.target.value)}
-                                className="w-full px-3 py-2 text-center font-bold text-stone-600 dark:text-stone-300 bg-transparent outline-none" 
+                                className="w-full min-w-[70px] px-2 py-3 text-center text-sm font-bold text-stone-600 dark:text-stone-300 bg-transparent outline-none" 
                               />
-                              <div className="flex flex-col border-l border-stone-500/20">
-                                <button onClick={() => updateMatrixValue(row.id, 'prata', 1)} className="px-2 py-0.5 hover:bg-stone-500/10 text-stone-500 text-xs font-bold border-b border-stone-500/20">+</button>
-                                <button onClick={() => updateMatrixValue(row.id, 'prata', -1)} className="px-2 py-0.5 hover:bg-stone-500/10 text-stone-500 text-xs font-bold">-</button>
+                              <div className="flex flex-col border-l border-stone-500/20 bg-stone-100/50 dark:bg-stone-800/20 shrink-0">
+                                <button onClick={() => updateMatrixValue(row.id, 'prata', 1)} className="px-3 py-1.5 flex-1 hover:bg-stone-500/20 text-stone-700 dark:text-stone-300 font-black border-b border-stone-500/20 transition-colors">+</button>
+                                <button onClick={() => updateMatrixValue(row.id, 'prata', -1)} className="px-3 py-1.5 flex-1 hover:bg-stone-500/20 text-stone-700 dark:text-stone-300 font-black transition-colors">-</button>
                               </div>
                             </div>
                           </div>
@@ -381,16 +381,16 @@ export default function AlchemistPanel() {
                         <td className="p-4 border-b border-surface-container bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors">
                           <div className="flex items-center gap-3">
                             <img src={`/medalhas/o${row.index}.512.Webp`} alt={`Ouro ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md" />
-                            <div className="flex-1 flex items-center bg-background rounded-lg border border-amber-500/20 overflow-hidden">
+                            <div className="flex-1 flex items-stretch bg-background rounded-xl border border-amber-500/30 overflow-hidden shadow-sm">
                               <input 
                                 type="text" 
                                 value={row.ouro + (row.isXP ? ' XP' : '')} 
                                 onChange={(e) => handleMatrixInputChange(row.id, 'ouro', e.target.value)}
-                                className="w-full px-3 py-2 text-center font-bold text-amber-600 dark:text-amber-400 bg-transparent outline-none" 
+                                className="w-full min-w-[70px] px-2 py-3 text-center text-sm font-bold text-amber-700 dark:text-amber-400 bg-transparent outline-none" 
                               />
-                              <div className="flex flex-col border-l border-amber-500/20">
-                                <button onClick={() => updateMatrixValue(row.id, 'ouro', 1)} className="px-2 py-0.5 hover:bg-amber-500/10 text-amber-600 text-xs font-bold border-b border-amber-500/20">+</button>
-                                <button onClick={() => updateMatrixValue(row.id, 'ouro', -1)} className="px-2 py-0.5 hover:bg-amber-500/10 text-amber-600 text-xs font-bold">-</button>
+                              <div className="flex flex-col border-l border-amber-500/20 bg-amber-50/50 dark:bg-amber-900/10 shrink-0">
+                                <button onClick={() => updateMatrixValue(row.id, 'ouro', 1)} className="px-3 py-1.5 flex-1 hover:bg-amber-500/20 text-amber-700 font-black border-b border-amber-500/20 transition-colors">+</button>
+                                <button onClick={() => updateMatrixValue(row.id, 'ouro', -1)} className="px-3 py-1.5 flex-1 hover:bg-amber-500/20 text-amber-700 font-black transition-colors">-</button>
                               </div>
                             </div>
                           </div>

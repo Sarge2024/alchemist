@@ -11,13 +11,20 @@ import { MuralDeAtas } from '../components/MuralDeAtas';
 import { ActiveCollaborators } from '../components/ActiveCollaborators';
 import { ChefList } from '../components/ChefList';
 import { MessageSquare, BookOpen, UtensilsCrossed } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 /**
  * Página do Lounge Gastronômico (v2.1.0).
  * Integra o Chat em tempo real e o Mural de Atas.
  */
 const Lounge: React.FC = () => {
+  const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'chat' | 'atas'>('chat');
+
+  // Enquanto verifica estado de autenticação, pode exibir loading (ou nada)
+  if (loading) return null;
+  if (!user) return <Navigate to="/login" replace />;
 
   return (
     <div className="min-h-screen bg-background pb-20">

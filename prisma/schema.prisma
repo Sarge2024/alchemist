@@ -1,0 +1,114 @@
+datasource db {
+  provider = "postgresql"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                   String                  @id @default(uuid())
+  uid                  String                  @unique // Firebase Auth UID (legacy) ou Supabase Auth ID
+  displayName          String
+  email                String                  @unique
+  photoURL             String?
+  whatsapp             String?
+  state                String
+  country              String
+  role                 Role                    @default(USER)
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  
+  recipes              Recipe[]
+  gamificationProfile  UserGamificationProfile?
+  badges               UserBadge[]
+}
+
+enum Role {
+  USER
+  COLLABORATOR
+  ADMIN
+}
+
+model Recipe {
+  id              String         @id @default(uuid())
+  title           String
+  description     String?
+  image           String?
+  momento         String[]
+  tipo_prato      String[]
+  base_alimento   String[]
+  origem          String?
+  time            String?
+  prepTime        String?
+  dietType        String?
+  servings        String?
+  difficulty      String?
+  custo_estimado  String?
+  instructions    String[]
+  rating          Float          @default(4.5)
+  reviewsCount    Int            @default(0)
+  isClassic       Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  ownerId         String
+  owner           User           @relation(fields: [ownerId], references: [id])
+  ingredients     Ingredient[]
+}
+
+model Ingredient {
+  id        String   @id @default(uuid())
+  name      String
+  quantity  String
+  group     String?
+  recipeId  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+// Modelos de Gamificação (adicionados conforme pedido original)
+model UserGamificationProfile {
+  id        String   @id @default(uuid())
+  nivel     Int      @default(1)
+  grau      Grau     @default(I)
+  xp_total  Int      @default(0)
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Grau {
+  I
+  II
+  III
+}
+
+model Badge {
+  id              String      @id @default(uuid())
+  codigo_evento   String      @unique // Ex: 'lounge_mensagens_prata'
+  nome            String
+  descricao       String?
+  url_vercel_blob String?
+  userBadges      UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId   String
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+
+  @@unique([userId, badgeId]) // Previne duplicidade da mesma medalha pro mesmo usuário (Idempotência)
+}
+
+model AvatarOption {
+  id             String   @id @default(uuid())
+  codigoAvatar   String   @unique // Ex: "av_m_ad_pa_ini"
+  genero         String   // "m" ou "f"
+  faixaEtaria    String   // "ad" ou "id"
+  tomPele        String   // "cl", "pa", "es"
+  tierMinimo     String   // "ini", "av", "mes"
+  urlVercelBlob  String   // URL real gerada pelo storage da Vercel
+  criadoEm       DateTime @default(now())
+}

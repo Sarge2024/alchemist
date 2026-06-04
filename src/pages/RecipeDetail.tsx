@@ -236,7 +236,37 @@ export default function RecipeDetail() {
   const shareLinks = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
     twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
-    whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + shareUrl)}`
+    whatsapp: `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + '\n\n' + shareUrl)}`
+  };
+
+  const shareRecipeViaWhatsApp = () => {
+    if (!recipe) return;
+
+    let text = `🥘 *${recipe.title}*\n_${recipe.description}_\n\n`;
+    
+    text += `*Ingredientes:*\n`;
+    (recipe.ingredients || []).forEach(ing => {
+      if (typeof ing === 'string') {
+        text += `• ${ing}\n`;
+      } else {
+        text += `• ${ing.quantity ? ing.quantity + ' ' : ''}${ing.name}\n`;
+      }
+    });
+
+    text += `\n*Modo de Preparo:*\n`;
+    (recipe.instructions || []).forEach((step, i) => {
+      text += `${i + 1}. ${step}\n`;
+    });
+
+    if (recipe.chefTips) {
+      text += `\n*Dica do Chef:*\n${recipe.chefTips}\n`;
+    }
+
+    text += `\n🔗 *Veja com fotos e avaliações no app:*\n${window.location.href}`;
+
+    const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+    window.open(whatsappUrl, '_blank');
+    setShowShareMenu(false);
   };
 
   const copyToClipboard = async () => {
@@ -706,13 +736,21 @@ export default function RecipeDetail() {
 
                   <div className="h-px bg-surface-container-high my-1 mx-2"></div>
 
+                  <button 
+                    onClick={shareRecipeViaWhatsApp}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 text-green-700 transition-colors font-bold w-full text-left bg-green-50/50"
+                  >
+                    <MessageCircle className="w-5 h-5" /> WhatsApp (Receita Texto)
+                  </button>
+
                   <a 
                     href={shareLinks.whatsapp} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 text-green-600 transition-colors font-bold"
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 text-green-600 transition-colors font-bold w-full text-left"
+                    onClick={() => setShowShareMenu(false)}
                   >
-                    <MessageCircle className="w-5 h-5" /> WhatsApp (Link)
+                    <MessageCircle className="w-5 h-5" /> WhatsApp (Apenas Link)
                   </a>
                 </div>
               )}

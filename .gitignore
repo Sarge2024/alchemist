@@ -5,3 +5,8 @@ dist
 public/uploads
 *-firebase-adminsdk-*.json
 scratch/
+
+/src/generated/prisma
+
+# AI Agent configs
+.agents/

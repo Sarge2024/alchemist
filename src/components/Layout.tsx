@@ -6,8 +6,7 @@
  */
 import React, { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { auth } from '../lib/firebase';
-import { signOut, browserPopupRedirectResolver, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
 import { APP_VERSION } from '../constants';
 import { useAuth } from '../context/AuthContext';
 import { ThemeToggle } from './ThemeToggle';
@@ -38,51 +37,29 @@ export default function Layout({ children }: LayoutProps) {
   const handleLogin = async () => {
     setAuthError(null);
     setIsLoggingIn(true);
-    const provider = new GoogleAuthProvider();
-    provider.setCustomParameters({
-      prompt: 'select_account'
-    });
 
     try {
-      // Use browserPopupRedirectResolver to improve compatibility in iframe/popup environments
-      const result = await signInWithPopup(auth, provider, browserPopupRedirectResolver);
-      
-      // Sincroniza o perfil do usuário com o Firestore se for um novo login
-      if (result.user) {
-        const profile = await userService.getUserProfile(result.user.uid);
-        if (!profile) {
-          console.log('[Auth] Novo alquimista detectado. Criando perfil...');
-          await userService.createUserProfile({
-            uid: result.user.uid,
-            displayName: result.user.displayName || 'Alquimista',
-            email: result.user.email || '',
-            photoURL: result.user.photoURL || undefined,
-            role: 'member',
-            state: '',
-            country: 'Brasil'
-          });
-        }
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      });
+
+      if (error) throw error;
+      // Nota: o Supabase redirecionará a página para o Google e de volta para cá.
     } catch (error: any) {
       console.error('Login error:', error);
-      if (error.code === 'auth/popup-blocked') {
-        setAuthError('O popup foi blocked pelo seu navegador. Por favor, permita popups para este site.');
-      } else if (error.code === 'auth/cancelled-popup-request' || error.code === 'auth/popup-closed-by-user') {
-        // Just user closing the popup
-      } else if (error.code === 'auth/unauthorized-domain') {
-        const domain = window.location.hostname;
-        setAuthError(`Domínio não autorizado. O Firebase não reconhece "${domain}". No Console do Firebase (Authentication > Settings > Authorized Domains), certifique-se de adicionar EXATAMENTE: "${domain}" (sem https:// nem barras).`);
-      } else {
-        setAuthError(`Erro ao entrar: ${error.message} (Código: ${error.code})`);
-      }
-    } finally {
+      setAuthError(`Erro ao entrar: ${error.message}`);
       setIsLoggingIn(false);
     }
   };
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
     } catch (error) {
       console.error('Logout error:', error);
     }

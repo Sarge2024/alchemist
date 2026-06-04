@@ -1,0 +1,23 @@
+services:
+  # O Servidor Backend Node.js / Express
+  - type: web
+    name: alquimia-backend
+    env: node
+    buildCommand: npm install && npx prisma generate
+    startCommand: npm run start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: PORT
+        value: "8000"
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+    autoDeploy: false # O deploy será engatilhado via GitHub Actions
+
+  # (Opcional) Banco de dados Postgres no Render, caso não utilize Neon/Supabase DB
+  - type: psql
+    name: alquimia-db
+    plan: free
+    region: ohio

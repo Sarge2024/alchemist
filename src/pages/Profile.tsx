@@ -22,6 +22,8 @@ import { userService, UserProfile } from '../infra/services/userService';
 import { MemberService } from '../infra/services/MemberService';
 import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/Avatar';
+import { supabase } from '../lib/supabase';
+import { AvatarSelector, AvatarOptionData } from '../components/AvatarSelector';
 
 export default function Profile() {
   const { uid: paramUid } = useParams<{ uid: string }>();
@@ -36,6 +38,9 @@ export default function Profile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [gamification, setGamification] = useState<any>(null);
+  const [avatarsList, setAvatarsList] = useState<AvatarOptionData[]>([]);
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   
   const [formData, setFormData] = useState({
     displayName: '',
@@ -51,12 +56,46 @@ export default function Profile() {
   useEffect(() => {
     if (targetUid) {
       fetchProfile();
+      fetchAvatars();
     }
   }, [targetUid]);
 
+  const fetchAvatars = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: any = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/avatars/${targetUid}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          setAvatarsList(data.avatars);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching avatars:', err);
+    }
+  };
+
   const fetchProfile = async () => {
     try {
-      const data = await userService.getUserProfile(targetUid!);
+      let data = await userService.getUserProfile(targetUid!);
+      
+      // Fallback: se não achar no Firestore (banco antigo), mas for o usuário logado (novo Supabase)
+      if (!data && targetUid === user?.uid) {
+        data = {
+          uid: user.uid,
+          email: user.email || '',
+          displayName: user.displayName || 'Alquimista',
+          photoURL: user.photoURL || '',
+          state: '',
+          country: '',
+          role: 'member'
+        };
+      }
+
       if (data) {
         setProfile(data);
         setFormData({
@@ -68,6 +107,23 @@ export default function Profile() {
           role: data.role || 'member'
         });
       }
+
+      // Buscar perfil de Gamificação no Postgres (Prisma)
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
+        const headers: any = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const gRes = await fetch(`/api/gamification/profile/${targetUid}`, { headers });
+        if (gRes.ok) {
+          const gData = await gRes.json();
+          if (gData.success) setGamification(gData.profile);
+        }
+      } catch (gErr) {
+        console.error('Gamification fetch error:', gErr);
+      }
+
     } catch (err) {
       setError('Falha ao carregar perfil.');
     } finally {
@@ -160,58 +216,94 @@ export default function Profile() {
         </button>
 
         <div className="bg-surface-container-lowest rounded-[3rem] shadow-2xl border border-surface-container-high overflow-hidden">
-          {/* Header Banner */}
-          <div className="h-48 bg-on-surface relative">
-            <div className="absolute inset-0 opacity-20 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
-            <div className="absolute -bottom-16 left-12 flex items-end gap-6">
-              <div className="relative group">
-                <div className="w-40 h-40 rounded-[2.5rem] overflow-hidden border-8 border-surface-container-lowest bg-surface-container-lowest shadow-xl relative">
+          {/* Header Banner - Premium Design */}
+          <div className="relative h-48 sm:h-64 w-full overflow-hidden bg-on-surface">
+            {/* Cover Gradient & Texture */}
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/90 via-primary/70 to-secondary/80 mix-blend-multiply" />
+            <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/food.png')]" />
+            <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-surface-container-lowest to-transparent" />
+          </div>
+
+          <div className="px-6 sm:px-12 pb-12 relative -mt-20 sm:-mt-24">
+            <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start sm:items-end">
+              {/* Avatar Container */}
+              <div className="relative group shrink-0">
+                <div className="w-32 h-32 sm:w-44 sm:h-44 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden border-8 border-surface-container-lowest bg-surface-container-lowest shadow-2xl relative transition-transform duration-300 hover:scale-105">
                   <Avatar 
                     src={formData.photoURL} 
                     alt={profile.displayName} 
                     size="xl"
-                    className="w-full h-full"
+                    className="w-full h-full object-cover"
                   />
                   {isEditing && (
-                    <label className="absolute inset-0 bg-on-surface/40 backdrop-blur-sm flex flex-col items-center justify-center text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity">
-                      {uploadingImage ? (
-                        <Loader2 className="w-8 h-8 animate-spin" />
-                      ) : (
-                        <>
-                          <Camera className="w-8 h-8 mb-2" />
-                          <span className="text-[10px] font-bold uppercase tracking-widest">Alterar</span>
-                        </>
-                      )}
-                      <input type="file" className="hidden" accept="image/*" onChange={handleFileUpload} />
-                    </label>
+                    <button 
+                      type="button" 
+                      onClick={() => setShowAvatarSelector(true)}
+                      className="absolute inset-0 bg-on-surface/50 backdrop-blur-md flex flex-col items-center justify-center text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-300 border-none outline-none"
+                    >
+                      <Camera className="w-8 h-8 mb-2 drop-shadow-md" />
+                      <span className="text-[10px] font-black uppercase tracking-widest drop-shadow-md">Alterar Avatar</span>
+                    </button>
                   )}
                 </div>
                 {profile.role === 'admin' && (
-                  <div className="absolute -top-2 -right-2 bg-primary text-white p-2 rounded-2xl shadow-lg border-4 border-surface-container-lowest">
-                    <Shield className="w-5 h-5" />
+                  <div className="absolute -top-2 -right-2 bg-primary text-white p-2 sm:p-2.5 rounded-2xl shadow-xl border-4 border-surface-container-lowest">
+                    <Shield className="w-5 h-5 sm:w-6 sm:h-6" />
                   </div>
                 )}
               </div>
-              <div className="mb-4">
-                <h1 className="text-4xl font-bold text-on-surface tracking-tight leading-none mb-2">
+
+              <AnimatePresence>
+                {showAvatarSelector && (
+                  <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                  >
+                    <motion.div
+                      initial={{ scale: 0.95 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0.95 }}
+                      className="w-full max-w-4xl"
+                    >
+                      <AvatarSelector 
+                        avatares={avatarsList}
+                        avatarAtualUrl={formData.photoURL}
+                        onSelect={(url) => {
+                          setFormData(prev => ({ ...prev, photoURL: url }));
+                          setShowAvatarSelector(false);
+                        }}
+                        onClose={() => setShowAvatarSelector(false)}
+                      />
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* User Info Container */}
+              <div className="flex-1 pb-0 sm:pb-4">
+                <h1 className="text-3xl sm:text-5xl font-black text-on-surface tracking-tight leading-none mb-3 sm:mb-4">
                   {profile.displayName}
                 </h1>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                   <span className={`
-                    px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest
+                    px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-sm
                     ${profile.role === 'admin' ? 'bg-on-surface text-background' : 
-                      profile.role === 'chef' ? 'bg-amber-100 text-amber-700 border border-amber-200' :
-                      profile.role === 'collaborator' ? 'bg-emerald-100 text-emerald-700' : 'bg-surface-container-high text-on-surface-variant'}
+                      profile.role === 'chef' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
+                      profile.role === 'collaborator' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-surface-container-high text-on-surface-variant'}
                   `}>
                     {profile.role === 'admin' ? 'Admin' : 
-                     profile.role === 'chef' ? 'Chef' : 
+                     profile.role === 'chef' ? 'Chef Culinário' : 
                      profile.role === 'collaborator' ? 'Colaborador' : 'Membro'}
                   </span>
-                  <span className="text-on-surface-variant text-sm font-medium flex items-center gap-1.5">
+                  
+                  <span className="text-on-surface-variant text-xs sm:text-sm font-semibold flex items-center gap-1.5 bg-surface-container-low px-3 py-1.5 rounded-xl border border-surface-container">
                     <Mail className="w-4 h-4" /> {profile.email}
                   </span>
+                  
                   {profile.internalEmail && (
-                    <span className="text-secondary text-sm font-bold flex items-center gap-1.5 bg-secondary/5 px-3 py-1 rounded-full">
+                    <span className="text-secondary text-xs sm:text-sm font-bold flex items-center gap-1.5 bg-secondary/10 px-3 py-1.5 rounded-xl border border-secondary/20">
                       <Shield className="w-4 h-4" /> {profile.internalEmail}
                     </span>
                   )}
@@ -220,7 +312,7 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="pt-24 p-12">
+          <div className="px-6 sm:px-12 pb-12">
             <div className="flex justify-between items-start mb-12">
               <div>
                 <h2 className="text-2xl font-bold text-on-surface mb-2">Informações do Perfil</h2>
@@ -418,21 +510,33 @@ export default function Profile() {
                       <Award className="w-10 h-10 text-white" />
                     </div>
                     <div>
-                      <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1">Nível 3</div>
-                      <h3 className="text-3xl font-bold text-on-surface leading-none mb-1">Prata</h3>
-                      <p className="text-xs text-on-surface-variant font-medium">Cruzador de Conhecimento</p>
+                      <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1">
+                        Nível {gamification?.level || 1}
+                      </div>
+                      <h3 className="text-3xl font-bold text-on-surface leading-none mb-1">
+                        {gamification?.tier === 'BRONZE' ? 'Bronze' : 
+                         gamification?.tier === 'SILVER' ? 'Prata' : 
+                         gamification?.tier === 'GOLD' ? 'Ouro' : 
+                         gamification?.tier === 'PLATINUM' ? 'Platina' : 
+                         gamification?.tier === 'DIAMOND' ? 'Diamante' : 
+                         gamification?.tier === 'ALCHEMIST' ? 'Alquimista' : 'Iniciante'}
+                      </h3>
+                      <p className="text-xs text-on-surface-variant font-medium">Grau Culinário</p>
                     </div>
                   </div>
                   
                   <div className="mb-3 flex justify-between text-sm font-black text-on-surface-variant tracking-wider uppercase">
-                    <span>XP: 500</span>
-                    <span>Meta: 600</span>
+                    <span>XP: {gamification?.xp || 0}</span>
+                    <span>Meta: {gamification?.nextLevelXp || 100}</span>
                   </div>
                   <div className="w-full h-4 bg-surface-container-high rounded-full overflow-hidden shadow-inner">
-                    <div className="h-full bg-stone-400 dark:bg-stone-500 w-[83%] rounded-full shadow-lg" />
+                    <div 
+                      className="h-full bg-stone-400 dark:bg-stone-500 rounded-full shadow-lg transition-all duration-1000" 
+                      style={{ width: `${Math.min(100, Math.max(0, ((gamification?.xp || 0) / (gamification?.nextLevelXp || 100)) * 100))}%` }}
+                    />
                   </div>
                   <p className="text-xs text-on-surface-variant mt-5 font-medium flex items-center gap-2">
-                    <Star className="w-4 h-4 text-amber-500" /> Próximo: <strong className="text-on-surface">Nível 4 (Ouro)</strong>
+                    <Star className="w-4 h-4 text-amber-500" /> Próximo: <strong className="text-on-surface">Nível {(gamification?.level || 1) + 1}</strong>
                   </p>
                 </div>
 

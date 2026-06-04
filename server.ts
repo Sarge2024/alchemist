@@ -14,6 +14,7 @@ import { getStorage } from 'firebase-admin/storage';
 import { IdentityAccessService } from "./src/infra/auth/IdentityAccessService";
 import { ModerationService } from "./src/infra/services/ModerationService";
 import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
+import { GamificationService } from "./src/infra/services/GamificationService";
 import { geminiService } from "./src/infra/services/geminiService";
 import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
 import { put } from "@vercel/blob";
@@ -184,6 +185,30 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
 
 app.use(express.json());
+
+// Endpoint to update presence in Firestore (called from frontend AuthContext)
+app.post("/api/presence", async (req, res) => {
+  try {
+    const { uid, isOnline, displayName, email, photoURL } = req.body;
+    if (!uid) {
+      return res.status(400).json({ error: "uid is required" });
+    }
+    
+    const db = getFirestore();
+    await db.collection("users").doc(uid).set({
+      isOnline,
+      lastSeen: FieldValue.serverTimestamp(),
+      ...(displayName && { displayName }),
+      ...(email && { email }),
+      ...(photoURL && { photoURL })
+    }, { merge: true });
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[Presence API] Error updating presence:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // Serve static files from public/uploads
 const uploadsPath = path.resolve(process.cwd(), 'public', 'uploads');
@@ -500,11 +525,22 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
     });
     console.log(`[Lounge API] Mensagem salva com sucesso! ID: ${docRef.id}`);
 
+    // Integração da Gamificação: Dar XP pela mensagem no Lounge
+    let gamificationResult = null;
+    try {
+      // Assumindo que senderId corresponde ao Supabase/Firebase UID
+      gamificationResult = await GamificationService.processEvent(senderId, 'COLLABORATION_MESSAGE');
+      console.log(`[Lounge API] XP atribuído: +${gamificationResult.xpGained} XP. Nível Atual: ${gamificationResult.currentLevel}`);
+    } catch (gamiErr: any) {
+      console.warn("[Lounge API] Erro não fatal na gamificação (Usuário não cadastrado no Prisma?):", gamiErr.message);
+    }
+
     res.json({ 
       success: true, 
       id: docRef.id, 
       status,
-      message: status === 'approved' ? "Mensagem publicada!" : "Sua mensagem passará por revisão."
+      message: status === 'approved' ? "Mensagem publicada!" : "Sua mensagem passará por revisão.",
+      gamification: gamificationResult
     });
     
   } catch (error: any) {
@@ -526,6 +562,189 @@ app.post("/api/lounge/generate-ata", authenticateAPI, async (req, res) => {
   }
 });
 
+// Endpoint para retornar os avatares permitidos de acordo com o nível do usuário
+app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    
+    // 1. Busca o perfil de gamificação
+    const profile = await prisma.userGamificationProfile.findUnique({
+      where: { userId: uid }
+    });
+
+    if (!profile) {
+      return res.status(404).json({ error: "Perfil de gamificação não encontrado para este usuário." });
+    }
+
+    // 2. Define quais tiers ele pode acessar com base no nível (1 a 5)
+    let tiersPermitidos = ['ini'];
+    if (profile.nivel >= 3) tiersPermitidos.push('av');
+    if (profile.nivel === 5) tiersPermitidos.push('mes');
+
+    // 3. Busca os avatares do banco de dados
+    const todosAvatares = await prisma.avatarOption.findMany();
+
+    // 4. Retorna os avatares mapeando quais estão bloqueados
+    const avataresTratados = todosAvatares.map(avatar => ({
+      id: avatar.id,
+      codigo: avatar.codigoAvatar,
+      url: avatar.urlVercelBlob,
+      bloqueado: !tiersPermitidos.includes(avatar.tierMinimo),
+      config: {
+        genero: avatar.genero,
+        idade: avatar.faixaEtaria,
+        pele: avatar.tomPele
+      }
+    }));
+
+    res.json({ success: true, avatars: avataresTratados });
+  } catch (error) {
+    console.error("[Avatars API] Erro ao buscar avatares:", error);
+    res.status(500).json({ error: "Erro interno no servidor", details: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// Endpoint para buscar o Perfil de Gamificação do Usuário
+app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
+  const { uid } = req.params;
+  try {
+    const profile = await GamificationService.getProfile(uid);
+    if (!profile) {
+      return res.status(404).json({ error: "Perfil de gamificação não encontrado." });
+    }
+    res.json({ success: true, profile });
+  } catch (error: any) {
+    console.error("[Gamification API] Erro ao buscar perfil:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ======== ADMIN: Avatares e Selos ========
+
+// Listar todos os Avatares
+app.get("/api/admin/avatars", authenticateAPI, async (req, res) => {
+  try {
+    const avatars = await prisma.avatarOption.findMany({ orderBy: { criadoEm: 'desc' }});
+    res.json(avatars);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao buscar avatares" });
+  }
+});
+
+// Criar Avatar (com upload)
+app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (req, res) => {
+  try {
+    const { codigoAvatar, genero, faixaEtaria, tomPele, tierMinimo } = req.body;
+    let urlVercelBlob = `https://placehold.co/150x150?text=${codigoAvatar}`;
+
+    if (req.file) {
+      // Mock Vercel Blob by saving locally since we use local storage in dev
+      urlVercelBlob = `/uploads/${req.file.filename}`;
+    }
+
+    if (!codigoAvatar) {
+      return res.status(400).json({ error: "Código do avatar ausente." });
+    }
+
+    const newAvatar = await prisma.avatarOption.create({
+      data: {
+        codigoAvatar,
+        genero,
+        faixaEtaria,
+        tomPele,
+        tierMinimo,
+        urlVercelBlob
+      }
+    });
+    res.json({ success: true, avatar: newAvatar });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao criar avatar" });
+  }
+});
+
+// Deletar Avatar
+app.delete("/api/admin/avatars/:id", authenticateAPI, async (req, res) => {
+  try {
+    await prisma.avatarOption.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao deletar avatar" });
+  }
+});
+
+// Editar Avatar (atualizar imagem)
+app.put("/api/admin/avatars/:id", authenticateAPI, upload.single("image"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhuma imagem enviada." });
+    }
+    const urlVercelBlob = `/uploads/${req.file.filename}`;
+    const updated = await prisma.avatarOption.update({
+      where: { id },
+      data: { urlVercelBlob }
+    });
+    res.json({ success: true, avatar: updated });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao atualizar avatar" });
+  }
+});
+
+// Listar todos os Selos
+app.get("/api/admin/badges", authenticateAPI, async (req, res) => {
+  try {
+    const badges = await prisma.badge.findMany();
+    res.json(badges);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao buscar selos" });
+  }
+});
+
+// Criar Selo (com upload)
+app.post("/api/admin/badges", authenticateAPI, upload.single("image"), async (req, res) => {
+  try {
+    const { codigo_evento, nome, descricao } = req.body;
+    let url_vercel_blob = "";
+
+    if (req.file) {
+      url_vercel_blob = `/uploads/${req.file.filename}`;
+    }
+
+    if (!codigo_evento || !nome) {
+      return res.status(400).json({ error: "Dados incompletos." });
+    }
+
+    const newBadge = await prisma.badge.create({
+      data: {
+        codigo_evento,
+        nome,
+        descricao,
+        url_vercel_blob
+      }
+    });
+    res.json({ success: true, badge: newBadge });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao criar selo" });
+  }
+});
+
+// Deletar Selo
+app.delete("/api/admin/badges/:id", authenticateAPI, async (req, res) => {
+  try {
+    await prisma.badge.delete({ where: { id: req.params.id } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao deletar selo" });
+  }
+});
+
 async function startServer() {
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
@@ -538,7 +757,9 @@ async function startServer() {
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
+
+
+app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }

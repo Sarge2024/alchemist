@@ -2,11 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Camera, Mail, User, Phone, MapPin, Globe, CheckCircle2, ArrowRight, Lock, ArrowLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
 import { useAuth } from '../context/AuthContext';
 import { userService, UserProfile } from '../infra/services/userService';
 import { ASSETS, getAssetUrl } from '../lib/assets';
-import { auth, googleProvider } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
 type AuthMethod = 'select' | 'email-login' | 'email-register';
 
@@ -45,10 +44,17 @@ export default function RegisterCollaborator() {
     setLoading(true);
     setError(null);
     try {
-      await signInWithPopup(auth, googleProvider);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          queryParams: {
+            prompt: 'select_account',
+          },
+        },
+      });
+      if (error) throw error;
     } catch (err: any) {
       setError('Falha ao autenticar com Google: ' + err.message);
-    } finally {
       setLoading(false);
     }
   };
@@ -63,16 +69,21 @@ export default function RegisterCollaborator() {
     setError(null);
     try {
       if (isRegister) {
-        await createUserWithEmailAndPassword(auth, emailData.email, emailData.password);
+        const { error } = await supabase.auth.signUp({
+          email: emailData.email,
+          password: emailData.password,
+        });
+        if (error) throw error;
       } else {
-        await signInWithEmailAndPassword(auth, emailData.email, emailData.password);
+        const { error } = await supabase.auth.signInWithPassword({
+          email: emailData.email,
+          password: emailData.password,
+        });
+        if (error) throw error;
       }
     } catch (err: any) {
       let msg = 'Erro na autenticação: ';
-      if (err.code === 'auth/user-not-found') msg += 'Usuário não encontrado.';
-      else if (err.code === 'auth/wrong-password') msg += 'Senha incorreta.';
-      else if (err.code === 'auth/email-already-in-use') msg += 'Este e-mail já está em uso.';
-      else msg += err.message;
+      msg += err.message;
       setError(msg);
     } finally {
       setLoading(false);
