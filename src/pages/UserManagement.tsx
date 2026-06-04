@@ -19,6 +19,7 @@ import {
 import { MemberService } from '../infra/services/MemberService';
 import { UserProfile } from '../infra/services/userService';
 import { useAuth } from '../context/AuthContext';
+import { Avatar } from '../components/Avatar';
 
 export default function UserManagement() {
   const [members, setMembers] = useState<UserProfile[]>([]);
@@ -145,14 +146,8 @@ export default function UserManagement() {
                     >
                       <td className="px-8 py-6">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-2xl overflow-hidden bg-stone-100 border border-stone-200 shadow-sm group-hover:scale-105 transition-transform">
-                            {member.photoURL ? (
-                              <img src={member.photoURL} alt={member.displayName} className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center bg-stone-200 text-stone-400">
-                                <Users className="w-6 h-6" />
-                              </div>
-                            )}
+                          <div className="w-12 h-12 shadow-sm group-hover:scale-105 transition-transform">
+                            <Avatar src={member.photoURL} alt={member.displayName} size="lg" />
                           </div>
                           <div>
                             <div className="font-bold text-stone-900 flex items-center gap-2">

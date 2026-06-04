@@ -27,7 +27,7 @@ async function main() {
     for (const i of idades) {
       for (const p of tonsPele) {
         for (const t of tiers) {
-          const codigoAvatar = `av_${g}_${i}_${p}_${t}`;
+          const codigoAvatar = `${g[0]}${i[0]}${p[0]}${t[0]}`.toUpperCase();
           
           // Gera uma URL amigável usando placehold.co com o código do avatar gerado para identificação visual provisória
           const urlVercelBlob = `https://placehold.co/150x150?text=${codigoAvatar}`;

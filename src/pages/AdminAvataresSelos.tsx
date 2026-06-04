@@ -1,10 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Loader2, Plus, Trash2, Image as ImageIcon, Shield, Award, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Loader2, Plus, Trash2, Image as ImageIcon, Shield, Award, Upload, ArrowUpDown, Search } from 'lucide-react';
 
 export default function AdminAvataresSelos() {
   const [avatars, setAvatars] = useState<any[]>([]);
   const [badges, setBadges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchCode, setSearchCode] = useState('');
+
+  // Ordenação da tabela de avatares
+  const [sortField, setSortField] = useState<string>('codigoAvatar');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const toggleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
+
+  const sortedAvatars = useMemo(() => {
+    const filtered = searchCode
+      ? avatars.filter(a => a.codigoAvatar?.toLowerCase().includes(searchCode.toLowerCase()))
+      : avatars;
+    return [...filtered].sort((a, b) => {
+      const valA = (a[sortField] || '').toString().toLowerCase();
+      const valB = (b[sortField] || '').toString().toLowerCase();
+      if (valA < valB) return sortDir === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [avatars, sortField, sortDir, searchCode]);
+
+  const SortIcon = ({ field }: { field: string }) => (
+    <span className="inline-block ml-1 text-[10px] opacity-60">
+      {sortField === field ? (sortDir === 'asc' ? '▲' : '▼') : ''}
+    </span>
+  );
 
   // Formulário Avatar
   const [newAvatar, setNewAvatar] = useState({
@@ -52,7 +85,7 @@ export default function AdminAvataresSelos() {
 
     try {
       const formData = new FormData();
-      const codigoGerado = `av_${newAvatar.genero}_${newAvatar.faixaEtaria}_${newAvatar.tomPele}_${newAvatar.tierMinimo}`;
+      const codigoGerado = `${newAvatar.genero[0]}${newAvatar.faixaEtaria[0]}${newAvatar.tomPele[0]}${newAvatar.tierMinimo[0]}`.toUpperCase();
       formData.append('codigoAvatar', codigoGerado);
       formData.append('genero', newAvatar.genero);
       formData.append('faixaEtaria', newAvatar.faixaEtaria);
@@ -132,22 +165,54 @@ export default function AdminAvataresSelos() {
   };
 
   const editFileInputRef = useRef<HTMLInputElement>(null);
-  const [editingAvatarId, setEditingAvatarId] = useState<string | null>(null);
+  const editingAvatarIdRef = useRef<string | null>(null);
 
   const handleEditAvatarImage = (id: string) => {
-    setEditingAvatarId(id);
+    editingAvatarIdRef.current = id;
     editFileInputRef.current?.click();
   };
 
   const handleAvatarImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    const editingAvatarId = editingAvatarIdRef.current;
     if (!file || !editingAvatarId) return;
+
+    // Reseta o input para permitir selecionar a mesma imagem novamente caso cancele
+    if (editFileInputRef.current) editFileInputRef.current.value = '';
+
+    setAvatarPopupState({
+      isOpen: true,
+      file,
+      avatarId: editingAvatarId,
+      previewUrl: URL.createObjectURL(file),
+      isUploading: false,
+    });
+  };
+
+  const [avatarPopupState, setAvatarPopupState] = useState<{
+    isOpen: boolean;
+    file: File | null;
+    avatarId: string | null;
+    previewUrl: string | null;
+    isUploading: boolean;
+  }>({
+    isOpen: false,
+    file: null,
+    avatarId: null,
+    previewUrl: null,
+    isUploading: false,
+  });
+
+  const handleConfirmAvatarUpload = async () => {
+    if (!avatarPopupState.file || !avatarPopupState.avatarId) return;
+
+    setAvatarPopupState(prev => ({ ...prev, isUploading: true }));
 
     try {
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', avatarPopupState.file);
 
-      const res = await fetch(`/api/admin/avatars/${editingAvatarId}`, {
+      const res = await fetch(`/api/admin/avatars/${avatarPopupState.avatarId}`, {
         method: 'PUT',
         headers: { 'x-api-key': import.meta.env.VITE_APP_API_KEY || '' },
         body: formData
@@ -155,15 +220,24 @@ export default function AdminAvataresSelos() {
 
       if (res.ok) {
         fetchData();
+        handleCancelAvatarUpload();
       } else {
-        alert('Erro ao atualizar imagem do avatar');
+        const errData = await res.json().catch(() => ({}));
+        alert(`Erro ao atualizar imagem: ${errData.error || res.statusText}`);
+        setAvatarPopupState(prev => ({ ...prev, isUploading: false }));
       }
     } catch (err) {
       console.error(err);
-    } finally {
-      setEditingAvatarId(null);
-      if (editFileInputRef.current) editFileInputRef.current.value = '';
+      setAvatarPopupState(prev => ({ ...prev, isUploading: false }));
     }
+  };
+
+  const handleCancelAvatarUpload = () => {
+    if (avatarPopupState.previewUrl) {
+      URL.revokeObjectURL(avatarPopupState.previewUrl);
+    }
+    setAvatarPopupState({ isOpen: false, file: null, avatarId: null, previewUrl: null, isUploading: false });
+    editingAvatarIdRef.current = null;
   };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
@@ -181,12 +255,24 @@ export default function AdminAvataresSelos() {
       
       {/* SEÇÃO AVATARES */}
       <section className="bg-surface-container rounded-3xl p-6 shadow-sm border border-surface-container-high">
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><ImageIcon className="text-primary" /> Gestão de Avatares</h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-bold flex items-center gap-2"><ImageIcon className="text-primary" /> Gestão de Avatares</h2>
+          <div className="relative">
+            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+            <input
+              type="text"
+              placeholder="Pesquisar código..."
+              value={searchCode}
+              onChange={e => setSearchCode(e.target.value)}
+              className="pl-9 pr-3 py-2 rounded-lg bg-surface border border-outline text-sm outline-none focus:ring-2 focus:ring-primary w-48 font-mono"
+            />
+          </div>
+        </div>
         
         <form onSubmit={handleCreateAvatar} className="flex flex-wrap items-center gap-3 mb-8 bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high shadow-sm">
           <input 
             type="text" title="Código Gerado Automaticamente"
-            value={`av_${newAvatar.genero}_${newAvatar.faixaEtaria}_${newAvatar.tomPele}_${newAvatar.tierMinimo}`}
+            value={`${newAvatar.genero[0]}${newAvatar.faixaEtaria[0]}${newAvatar.tomPele[0]}${newAvatar.tierMinimo[0]}`.toUpperCase()}
             readOnly
             className="flex-1 min-w-[150px] p-2 rounded-lg bg-surface border border-outline text-sm outline-none text-on-surface-variant font-mono cursor-not-allowed opacity-80"
           />
@@ -221,16 +307,16 @@ export default function AdminAvataresSelos() {
             <thead className="bg-surface-container-low border-b border-outline text-xs uppercase font-black tracking-widest text-on-surface-variant">
               <tr>
                 <th className="p-3 w-16 text-center">Imagem</th>
-                <th className="p-3">Código</th>
-                <th className="p-3">Gênero</th>
-                <th className="p-3">Idade</th>
-                <th className="p-3">Pele</th>
-                <th className="p-3">Tier</th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('codigoAvatar')}>Código<SortIcon field="codigoAvatar" /></th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('genero')}>Gênero<SortIcon field="genero" /></th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('faixaEtaria')}>Idade<SortIcon field="faixaEtaria" /></th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('tomPele')}>Pele<SortIcon field="tomPele" /></th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('tierMinimo')}>Tier<SortIcon field="tierMinimo" /></th>
                 <th className="p-3 text-right">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-outline">
-              {avatars.map(avatar => (
+              {sortedAvatars.map(avatar => (
                 <tr key={avatar.id} className="hover:bg-surface-container-lowest transition-colors">
                   <td className="p-3 text-center">
                     <img src={avatar.urlVercelBlob} alt={avatar.codigoAvatar} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
@@ -316,6 +402,47 @@ export default function AdminAvataresSelos() {
         </div>
       </section>
 
+      {/* POPUP DE CONFIRMAÇÃO DE IMAGEM */}
+      {avatarPopupState.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-surface p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-surface-container-high animate-in fade-in zoom-in duration-200">
+            <h3 className="text-xl font-bold mb-4 text-on-surface">Confirmar Nova Imagem</h3>
+            {avatarPopupState.previewUrl && (
+              <div className="relative mx-auto w-32 h-32 mb-4">
+                <img 
+                  src={avatarPopupState.previewUrl} 
+                  alt="Preview" 
+                  className="w-full h-full object-cover rounded-xl border-4 border-surface shadow-md" 
+                />
+                <div className="absolute inset-0 rounded-xl ring-2 ring-primary ring-offset-2 pointer-events-none"></div>
+              </div>
+            )}
+            <p className="text-sm text-on-surface-variant mb-8">
+              Você selecionou uma nova imagem para este avatar. Deseja aplicar e salvar as alterações?
+            </p>
+            
+            <div className="flex gap-3 justify-center">
+              <button 
+                type="button"
+                onClick={handleCancelAvatarUpload}
+                disabled={avatarPopupState.isUploading}
+                className="flex-1 py-2.5 rounded-xl font-bold text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                onClick={handleConfirmAvatarUpload}
+                disabled={avatarPopupState.isUploading}
+                className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary-container transition-colors disabled:opacity-70 flex items-center justify-center gap-2 shadow-sm"
+              >
+                {avatarPopupState.isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {avatarPopupState.isUploading ? 'Salvando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

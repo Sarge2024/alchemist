@@ -572,14 +572,12 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
       where: { userId: uid }
     });
 
-    if (!profile) {
-      return res.status(404).json({ error: "Perfil de gamificação não encontrado para este usuário." });
-    }
-
-    // 2. Define quais tiers ele pode acessar com base no nível (1 a 5)
+    // Se não tiver perfil (usuário novo), assume nível 1 (apenas 'ini' liberado)
     let tiersPermitidos = ['ini'];
-    if (profile.nivel >= 3) tiersPermitidos.push('av');
-    if (profile.nivel === 5) tiersPermitidos.push('mes');
+    if (profile) {
+      if (profile.nivel >= 3) tiersPermitidos.push('av');
+      if (profile.nivel === 5) tiersPermitidos.push('mes');
+    }
 
     // 3. Busca os avatares do banco de dados
     const todosAvatares = await prisma.avatarOption.findMany();
@@ -639,8 +637,11 @@ app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (r
     let urlVercelBlob = `https://placehold.co/150x150?text=${codigoAvatar}`;
 
     if (req.file) {
-      // Mock Vercel Blob by saving locally since we use local storage in dev
-      urlVercelBlob = `/uploads/${req.file.filename}`;
+      const ext = path.extname(req.file.originalname);
+      const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+      const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
+      fs.writeFileSync(filepath, req.file.buffer);
+      urlVercelBlob = `/uploads/${filename}`;
     }
 
     if (!codigoAvatar) {
@@ -682,7 +683,12 @@ app.put("/api/admin/avatars/:id", authenticateAPI, upload.single("image"), async
     if (!req.file) {
       return res.status(400).json({ error: "Nenhuma imagem enviada." });
     }
-    const urlVercelBlob = `/uploads/${req.file.filename}`;
+    const ext = path.extname(req.file.originalname);
+    const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
+    fs.mkdirSync(path.dirname(filepath), { recursive: true });
+    fs.writeFileSync(filepath, req.file.buffer);
+    const urlVercelBlob = `/uploads/${filename}`;
     const updated = await prisma.avatarOption.update({
       where: { id },
       data: { urlVercelBlob }
@@ -712,7 +718,11 @@ app.post("/api/admin/badges", authenticateAPI, upload.single("image"), async (re
     let url_vercel_blob = "";
 
     if (req.file) {
-      url_vercel_blob = `/uploads/${req.file.filename}`;
+      const ext = path.extname(req.file.originalname);
+      const filename = `badge-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+      const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
+      fs.writeFileSync(filepath, req.file.buffer);
+      url_vercel_blob = `/uploads/${filename}`;
     }
 
     if (!codigo_evento || !nome) {

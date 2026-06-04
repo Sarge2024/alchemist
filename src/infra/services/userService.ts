@@ -90,10 +90,11 @@ export const userService = {
   async updateUserProfile(uid: string, profile: Partial<UserProfile>) {
     try {
       const docRef = doc(db, USERS_COLLECTION, uid);
-      await updateDoc(docRef, {
+      // Usamos setDoc com merge: true para evitar erro caso o documento não exista
+      await setDoc(docRef, {
         ...profile,
         updatedAt: serverTimestamp()
-      });
+      }, { merge: true });
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${USERS_COLLECTION}/${uid}`);
     }

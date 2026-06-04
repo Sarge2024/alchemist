@@ -6,6 +6,8 @@ import { useAuth } from '../context/AuthContext';
 import { userService, UserProfile } from '../infra/services/userService';
 import { ASSETS, getAssetUrl } from '../lib/assets';
 import { supabase } from '../lib/supabase';
+import { AvatarSelector, AvatarOptionData } from '../components/AvatarSelector';
+import { Avatar } from '../components/Avatar';
 
 type AuthMethod = 'select' | 'email-login' | 'email-register';
 
@@ -28,6 +30,35 @@ export default function RegisterCollaborator() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [avatarsList, setAvatarsList] = useState<AvatarOptionData[]>([]);
+
+  useEffect(() => {
+    fetchAvatars();
+  }, [user?.uid]);
+
+  const fetchAvatars = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: any = {
+        'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      // Usa um uid genérico 'new' caso não esteja logado, 
+      // o servidor irá retornar os avatares padrão do nível 1.
+      const res = await fetch(`/api/avatars/${user?.uid || 'new'}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && Array.isArray(data.avatars)) {
+          setAvatarsList(data.avatars);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching avatars:', err);
+    }
+  };
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -118,6 +149,14 @@ export default function RegisterCollaborator() {
       };
 
       await userService.createUserProfile(profile);
+
+      // Atualiza o perfil centralizado do Supabase para que o avatar mude no header em tempo real
+      await supabase.auth.updateUser({
+        data: {
+          avatar_url: formData.photoURL,
+          full_name: formData.displayName
+        }
+      });
       setSuccess(true);
       setTimeout(() => navigate('/'), 3000);
     } catch (err: any) {
@@ -127,40 +166,6 @@ export default function RegisterCollaborator() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 2 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 2MB');
-      return;
-    }
-
-    setUploadingImage(true);
-    const formDataUpload = new FormData();
-    formDataUpload.append('image', file);
-
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
-        },
-        body: formDataUpload,
-      });
-      const data = await response.json();
-      if (data.success) {
-        setFormData(prev => ({ ...prev, photoURL: data.imageUrl }));
-      } else {
-        alert('Erro ao carregar imagem: ' + (data.error || 'Erro desconhecido'));
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Falha ao enviar a imagem para o servidor.');
-    } finally {
-      setUploadingImage(false);
-    }
-  };
 
   if (authLoading) {
     return (
@@ -426,42 +431,33 @@ export default function RegisterCollaborator() {
                       </div>
                     </div>
 
-                    {/* Photo Upload */}
+                    {/* Avatar Selection */}
                     <div className="relative group">
-                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Foto de Perfil</label>
+                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Avatar de Perfil</label>
                       <div className="flex items-center gap-6 p-6 bg-stone-50 border border-stone-200 rounded-[2rem]">
-                        <div className="relative w-24 h-24 rounded-full overflow-hidden bg-white border-2 border-stone-100 shadow-sm shrink-0">
-                          {formData.photoURL ? (
-                            <img src={formData.photoURL} alt="Profile Preview" className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center text-stone-300">
-                              <User className="w-10 h-10" />
-                            </div>
-                          )}
-                          {uploadingImage && (
-                            <div className="absolute inset-0 bg-white/60 flex items-center justify-center">
-                              <div className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
-                            </div>
-                          )}
+                        <div className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden bg-white border-4 border-stone-100 shadow-sm shrink-0 transition-transform duration-300 group-hover:scale-105">
+                          <Avatar 
+                            src={formData.photoURL} 
+                            alt={formData.displayName || "Avatar"} 
+                            size="lg"
+                            className="w-full h-full object-cover"
+                          />
                         </div>
                         
                         <div className="flex-1">
                           <p className="text-sm text-stone-500 mb-4 leading-relaxed">
                             {formData.photoURL 
-                              ? "Foto carregada com sucesso! Deseja trocar?" 
-                              : "Escolha uma foto que represente sua identidade como alquimista."}
+                              ? "Avatar selecionado! Deseja trocar?" 
+                              : "Escolha um avatar que represente sua identidade como alquimista."}
                           </p>
-                          <label className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-stone-200 rounded-xl text-xs font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50 hover:border-stone-300 transition-all cursor-pointer shadow-sm active:scale-95">
-                            <Camera className="w-4 h-4 text-primary" />
-                            {formData.photoURL ? "Alterar Foto" : "Selecionar Foto"}
-                            <input 
-                              type="file" 
-                              className="hidden" 
-                              accept="image/*"
-                              onChange={handleFileUpload}
-                              disabled={uploadingImage}
-                            />
-                          </label>
+                          <button 
+                            type="button"
+                            onClick={() => setShowAvatarSelector(true)}
+                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-stone-200 rounded-xl text-xs font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50 hover:border-stone-300 transition-all cursor-pointer shadow-sm active:scale-95"
+                          >
+                            <User className="w-4 h-4 text-primary" />
+                            {formData.photoURL ? "Alterar Avatar" : "Selecionar Avatar"}
+                          </button>
                         </div>
                       </div>
                     </div>
@@ -534,6 +530,23 @@ export default function RegisterCollaborator() {
 
         </div>
       </div>
+
+      {/* Selector de Avatar */}
+      {showAvatarSelector && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="my-auto w-full max-w-4xl">
+            <AvatarSelector 
+              avatares={avatarsList}
+              avatarAtualUrl={formData.photoURL}
+              onSelect={(url) => {
+                setFormData(prev => ({ ...prev, photoURL: url }));
+                setShowAvatarSelector(false);
+              }}
+              onClose={() => setShowAvatarSelector(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

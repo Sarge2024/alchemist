@@ -64,7 +64,9 @@ export default function Profile() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
-      const headers: any = {};
+      const headers: any = {
+        'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+      };
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const res = await fetch(`/api/avatars/${targetUid}`, { headers });
@@ -131,32 +133,6 @@ export default function Profile() {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setUploadingImage(true);
-    const formDataUpload = new FormData();
-    formDataUpload.append('image', file);
-
-    try {
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        headers: {
-          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
-        },
-        body: formDataUpload,
-      });
-      const data = await response.json();
-      if (data.success) {
-        setFormData(prev => ({ ...prev, photoURL: data.imageUrl }));
-      }
-    } catch (err) {
-      console.error('Upload error:', err);
-    } finally {
-      setUploadingImage(false);
-    }
-  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -173,6 +149,16 @@ export default function Profile() {
       
       // Atualiza o restante do perfil
       await userService.updateUserProfile(targetUid, formData);
+
+      // Se o usuário estiver editando o próprio perfil, atualiza os dados centralizados no Supabase (AuthContext)
+      if (user?.uid === targetUid) {
+        await supabase.auth.updateUser({
+          data: {
+            avatar_url: formData.photoURL,
+            full_name: formData.displayName
+          }
+        });
+      }
       
       setProfile(prev => prev ? { ...prev, ...formData } : null);
       setIsEditing(false);
@@ -596,6 +582,23 @@ export default function Profile() {
           </div>
         </div>
       </motion.div>
+
+      {/* Selector de Avatar */}
+      {showAvatarSelector && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="my-auto w-full max-w-4xl">
+            <AvatarSelector 
+              avatares={avatarsList}
+              avatarAtualUrl={formData.photoURL}
+              onSelect={(url) => {
+                setFormData(prev => ({ ...prev, photoURL: url }));
+                setShowAvatarSelector(false);
+              }}
+              onClose={() => setShowAvatarSelector(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
