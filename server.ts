@@ -58,7 +58,17 @@ try {
 const serviceAccountPath = path.resolve(process.cwd(), 'sagacitas-financeiro-firebase-adminsdk-fbsvc-1298d3f890.json');
 let credential;
 
-if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
+  try {
+    const cleanBase64 = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64.replace(/\s+/g, '');
+    const decoded = Buffer.from(cleanBase64, 'base64').toString('utf8');
+    const serviceAccount = JSON.parse(decoded);
+    credential = cert(serviceAccount);
+    console.log(`[Admin] Service Account carregada via variável de ambiente BASE64 (Vercel).`);
+  } catch (e) {
+    console.warn(`[Admin] Erro ao fazer parse da FIREBASE_SERVICE_ACCOUNT_BASE64:`, e);
+  }
+} else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
   try {
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     credential = cert(serviceAccount);
