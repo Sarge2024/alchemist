@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:coverage": "vitest run --coverage",
     "build": "vite build",
+    "postinstall": "prisma generate",
     "prebuild": "rm -rf dist",
     "start": "node server.ts",
     "preview": "vite preview",
