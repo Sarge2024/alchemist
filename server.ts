@@ -572,11 +572,26 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
       where: { userId: uid }
     });
 
-    // Se não tiver perfil (usuário novo), assume nível 1 (apenas 'ini' liberado)
-    let tiersPermitidos = ['ini'];
+    // Se não tiver perfil (usuário novo), assume nível 1 (apenas '1' liberado, com fallback legado 'ini', 'apr')
+    let tiersPermitidos = ['1', 'ini', 'apr'];
     if (profile) {
-      if (profile.nivel >= 3) tiersPermitidos.push('av');
-      if (profile.nivel === 5) tiersPermitidos.push('mes');
+      if (profile.nivel >= 2) {
+        tiersPermitidos.push('2');
+        tiersPermitidos.push('ast'); // legado
+      }
+      if (profile.nivel >= 3) {
+        tiersPermitidos.push('3');
+        tiersPermitidos.push('alq'); // legado
+        tiersPermitidos.push('av'); // legado
+      }
+      if (profile.nivel >= 4) {
+        tiersPermitidos.push('4');
+        tiersPermitidos.push('per'); // legado
+      }
+      if (profile.nivel >= 5) {
+        tiersPermitidos.push('5');
+        tiersPermitidos.push('mes'); // legado
+      }
     }
 
     // 3. Busca os avatares do banco de dados

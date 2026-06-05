@@ -41,10 +41,10 @@ export default function AdminAvataresSelos() {
 
   // Formulário Avatar
   const [newAvatar, setNewAvatar] = useState({
-    genero: 'm',
-    faixaEtaria: 'ad',
-    tomPele: 'pa',
-    tierMinimo: 'ini'
+    genero: 'h',
+    faixaEtaria: 'jo',
+    tomPele: 'cl',
+    tierMinimo: '1'
   });
   const [avatarImage, setAvatarImage] = useState<File | null>(null);
 
@@ -291,9 +291,11 @@ export default function AdminAvataresSelos() {
             <option value="es">Escura</option>
           </select>
           <select value={newAvatar.tierMinimo} onChange={e => setNewAvatar({...newAvatar, tierMinimo: e.target.value})} className="p-2 rounded-lg bg-surface border border-outline text-sm">
-            <option value="ini">Iniciante</option>
-            <option value="av">Avançado</option>
-            <option value="mes">Mestre</option>
+            <option value="1">Aprendiz</option>
+            <option value="2">Assistente</option>
+            <option value="3">Alquimista</option>
+            <option value="4">Perito</option>
+            <option value="5">Mestre Alquimista</option>
           </select>
           
           <input type="file" accept="image/*" onChange={e => setAvatarImage(e.target.files?.[0] || null)} className="w-56 p-1.5 text-sm bg-surface rounded-lg border border-outline" />
@@ -316,26 +318,37 @@ export default function AdminAvataresSelos() {
               </tr>
             </thead>
             <tbody className="divide-y divide-outline">
-              {sortedAvatars.map(avatar => (
-                <tr key={avatar.id} className="hover:bg-surface-container-lowest transition-colors">
-                  <td className="p-3 text-center">
-                    <img src={avatar.urlVercelBlob} alt={avatar.codigoAvatar} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
-                  </td>
-                  <td className="p-3 font-mono font-bold text-on-surface">{avatar.codigoAvatar}</td>
-                  <td className="p-3 uppercase text-xs font-semibold">{avatar.genero}</td>
-                  <td className="p-3 uppercase text-xs font-semibold">{avatar.faixaEtaria}</td>
-                  <td className="p-3 uppercase text-xs font-semibold">{avatar.tomPele}</td>
-                  <td className="p-3 uppercase text-xs font-black text-primary">{avatar.tierMinimo}</td>
-                  <td className="p-3 text-right flex items-center justify-end gap-1">
-                    <button onClick={() => handleEditAvatarImage(avatar.id)} title="Enviar imagem" className="p-2 bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-colors">
-                      <Upload className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDeleteAvatar(avatar.id)} className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {sortedAvatars.map(avatar => {
+                const getNumericTier = (tier: string) => {
+                  const map: Record<string, string> = { 'ini': '1', 'apr': '1', 'ast': '2', 'av': '3', 'alq': '3', 'per': '4', 'mes': '5' };
+                  return map[tier.toLowerCase()] || tier;
+                };
+                const numericTier = getNumericTier(avatar.tierMinimo);
+                const displayCode = avatar.codigoAvatar.length === 4 
+                  ? avatar.codigoAvatar.substring(0, 3) + numericTier 
+                  : avatar.codigoAvatar;
+
+                return (
+                  <tr key={avatar.id} className="hover:bg-surface-container-lowest transition-colors">
+                    <td className="p-3 text-center">
+                      <img src={avatar.urlVercelBlob} alt={displayCode} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
+                    </td>
+                    <td className="p-3 font-mono font-bold text-on-surface">{displayCode}</td>
+                    <td className="p-3 uppercase text-xs font-semibold">{avatar.genero}</td>
+                    <td className="p-3 uppercase text-xs font-semibold">{avatar.faixaEtaria}</td>
+                    <td className="p-3 uppercase text-xs font-semibold">{avatar.tomPele}</td>
+                    <td className="p-3 uppercase text-xs font-black text-primary text-center">{numericTier}</td>
+                    <td className="p-3 text-right flex items-center justify-end gap-1">
+                      <button onClick={() => handleEditAvatarImage(avatar.id)} title="Enviar imagem" className="p-2 bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-colors">
+                        <Upload className="w-4 h-4" />
+                      </button>
+                      <button onClick={() => handleDeleteAvatar(avatar.id)} className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors">
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
           {avatars.length === 0 && <div className="p-6 text-center text-on-surface-variant">Nenhum avatar cadastrado no banco de dados.</div>}
