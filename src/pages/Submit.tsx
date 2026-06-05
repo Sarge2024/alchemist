@@ -9,6 +9,7 @@ import { getAssetUrl } from '../lib/assets';
 import { userService } from '../infra/services/userService';
 import { AnimatePresence } from 'motion/react';
 import { UserPlus, CheckCircle2, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function Submit() {
   const { id } = useParams();
@@ -18,6 +19,7 @@ export default function Submit() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEditing);
+  const { user: authUser, isAdmin } = useAuth();
   const [user, setUser] = useState(auth.currentUser);
   const [imageOptions, setImageOptions] = useState<string[]>([]);
   const [hasProfile, setHasProfile] = useState(false);
@@ -102,7 +104,6 @@ export default function Submit() {
       if (recipe) {
         // Double check permissions with current user
         const currentUser = auth.currentUser;
-        const isAdmin = currentUser?.email === 'sagacitas.sistemas@gmail.com';
         
         if (currentUser && recipe.ownerId !== currentUser.uid && !isAdmin) {
           alert('Você não tem permissão para editar esta receita.');

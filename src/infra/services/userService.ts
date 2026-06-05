@@ -22,6 +22,7 @@ export interface UserProfile {
   email: string;
   photoURL?: string;
   whatsapp?: string;
+  city?: string;
   state: string;
   country: string;
   role: UserRole;

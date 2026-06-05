@@ -24,6 +24,7 @@ model User {
   recipes              Recipe[]
   gamificationProfile  UserGamificationProfile?
   badges               UserBadge[]
+  interactions         UserInteraction[]
 }
 
 enum Role {
@@ -76,6 +77,17 @@ model UserGamificationProfile {
   xp_total  Int      @default(0)
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserInteraction {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eventType String   // e.g., 'COLLABORATION_MESSAGE', 'RECIPE_PUBLISHED_PHOTO'
+  count     Int      @default(0)
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, eventType])
 }
 
 enum Grau {

@@ -148,6 +148,7 @@ const MOCK_RECIPES_DETAIL: Record<string, Recipe> = {
 export default function RecipeDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -279,15 +280,11 @@ export default function RecipeDetail() {
     }
   };
 
-  const [user, setUser] = useState(auth.currentUser);
-
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, u => setUser(u));
     if (id) {
       loadRecipe(id);
       loadReviews(id);
     }
-    return () => unsubscribe();
   }, [id]);
 
   const loadReviews = async (recipeId: string) => {
@@ -516,7 +513,6 @@ export default function RecipeDetail() {
   }
 
   const isOwner = user && recipe.ownerId === user.uid;
-  const isAdmin = user && user.email === 'sagacitas.sistemas@gmail.com';
   const canManage = isOwner || isAdmin;
 
   // Sauce Context Detection

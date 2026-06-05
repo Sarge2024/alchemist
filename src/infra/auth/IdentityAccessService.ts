@@ -11,7 +11,7 @@ import { getAuth } from 'firebase-admin/auth';
 export class IdentityAccessService {
   
   // Roles permitidas conforme definido no Agentes_Personas.md e PRD
-  private readonly allowedRoles = ['visitante', 'colaborador', 'editor', 'admin'];
+  private readonly allowedRoles = ['member', 'collaborator', 'chef', 'admin'];
 
   /**
    * Atribui uma função (role) administrativa ao usuário no Firebase Auth.

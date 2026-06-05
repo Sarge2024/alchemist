@@ -6,6 +6,7 @@ export interface AvatarOptionData {
   codigo: string;
   url: string;
   bloqueado: boolean;
+  tierMinimo: string;
 }
 
 interface AvatarSelectorProps {

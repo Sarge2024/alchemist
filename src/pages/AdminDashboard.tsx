@@ -12,10 +12,9 @@ import { recipeService, Recipe } from '../infra/services/recipeService';
 import { loungeService, LoungeMessage } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
 import { getAssetUrl } from '../lib/assets';
-import AdminAvataresSelos from './AdminAvataresSelos';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'recipes' | 'lounge' | 'avatars'>('recipes');
+  const [activeTab, setActiveTab] = useState<'recipes' | 'lounge'>('recipes');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [messages, setMessages] = useState<LoungeMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -152,19 +151,11 @@ export default function AdminDashboard() {
         >
           Mensagens do Lounge
         </button>
-        <button
-          onClick={() => { setActiveTab('avatars'); setSearchTerm(''); }}
-          className={`px-8 py-3 rounded-2xl font-bold text-sm transition-all ${activeTab === 'avatars' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
-        >
-          Avatares e Selos
-        </button>
       </div>
 
-      <div className={activeTab === 'avatars' ? "" : "bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high overflow-hidden"}>
+      <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high overflow-hidden">
         <div className="overflow-x-auto">
-          {activeTab === 'avatars' ? (
-            <AdminAvataresSelos />
-          ) : activeTab === 'recipes' ? (
+          {activeTab === 'recipes' ? (
             <table className="w-full text-left">
               <thead>
                 <tr className="bg-surface-container-low/50 border-b border-surface-container-high">

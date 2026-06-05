@@ -176,54 +176,61 @@ export default function AdminAvataresSelos() {
   };
 
   const editFileInputRef = useRef<HTMLInputElement>(null);
-  const editingAvatarIdRef = useRef<string | null>(null);
+  const editingItemIdRef = useRef<{ id: string, type: 'avatar' | 'badge' } | null>(null);
 
-  const handleEditAvatarImage = (id: string) => {
-    editingAvatarIdRef.current = id;
+  const handleEditImage = (id: string, type: 'avatar' | 'badge') => {
+    editingItemIdRef.current = { id, type };
     editFileInputRef.current?.click();
   };
 
-  const handleAvatarImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    const editingAvatarId = editingAvatarIdRef.current;
-    if (!file || !editingAvatarId) return;
+    const editingItem = editingItemIdRef.current;
+    if (!file || !editingItem) return;
 
     // Reseta o input para permitir selecionar a mesma imagem novamente caso cancele
     if (editFileInputRef.current) editFileInputRef.current.value = '';
 
-    setAvatarPopupState({
+    setPopupState({
       isOpen: true,
       file,
-      avatarId: editingAvatarId,
+      itemId: editingItem.id,
+      type: editingItem.type,
       previewUrl: URL.createObjectURL(file),
       isUploading: false,
     });
   };
 
-  const [avatarPopupState, setAvatarPopupState] = useState<{
+  const [popupState, setPopupState] = useState<{
     isOpen: boolean;
     file: File | null;
-    avatarId: string | null;
+    itemId: string | null;
+    type: 'avatar' | 'badge' | null;
     previewUrl: string | null;
     isUploading: boolean;
   }>({
     isOpen: false,
     file: null,
-    avatarId: null,
+    itemId: null,
+    type: null,
     previewUrl: null,
     isUploading: false,
   });
 
-  const handleConfirmAvatarUpload = async () => {
-    if (!avatarPopupState.file || !avatarPopupState.avatarId) return;
+  const handleConfirmUpload = async () => {
+    if (!popupState.file || !popupState.itemId || !popupState.type) return;
 
-    setAvatarPopupState(prev => ({ ...prev, isUploading: true }));
+    setPopupState(prev => ({ ...prev, isUploading: true }));
 
     try {
       const formData = new FormData();
-      formData.append('image', avatarPopupState.file);
+      formData.append('image', popupState.file);
 
-      const res = await fetch(`/api/admin/avatars/${avatarPopupState.avatarId}`, {
+      const endpoint = popupState.type === 'avatar' 
+        ? `/api/admin/avatars/${popupState.itemId}`
+        : `/api/admin/badges/${popupState.itemId}`;
+
+      const res = await fetch(endpoint, {
         method: 'PUT',
         headers: { 'x-api-key': import.meta.env.VITE_APP_API_KEY || '' },
         body: formData
@@ -231,37 +238,36 @@ export default function AdminAvataresSelos() {
 
       if (res.ok) {
         fetchData();
-        handleCancelAvatarUpload();
+        handleCancelUpload();
       } else {
         const errData = await res.json().catch(() => ({}));
         alert(`Erro ao atualizar imagem: ${errData.error || res.statusText}`);
-        setAvatarPopupState(prev => ({ ...prev, isUploading: false }));
+        setPopupState(prev => ({ ...prev, isUploading: false }));
       }
     } catch (err) {
       console.error(err);
-      setAvatarPopupState(prev => ({ ...prev, isUploading: false }));
+      setPopupState(prev => ({ ...prev, isUploading: false }));
     }
   };
 
-  const handleCancelAvatarUpload = () => {
-    if (avatarPopupState.previewUrl) {
-      URL.revokeObjectURL(avatarPopupState.previewUrl);
+  const handleCancelUpload = () => {
+    if (popupState.previewUrl) {
+      URL.revokeObjectURL(popupState.previewUrl);
     }
-    setAvatarPopupState({ isOpen: false, file: null, avatarId: null, previewUrl: null, isUploading: false });
-    editingAvatarIdRef.current = null;
+    setPopupState({ isOpen: false, file: null, itemId: null, type: null, previewUrl: null, isUploading: false });
   };
 
   if (loading) return <div className="flex justify-center p-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   return (
     <div className="space-y-12">
-      {/* Input file oculto para edição de avatar */}
+      {/* Input oculto compartilhado para edição de imagens (avatares e selos) */}
       <input
-        ref={editFileInputRef}
         type="file"
-        accept="image/*"
+        ref={editFileInputRef}
         className="hidden"
-        onChange={handleAvatarImageSelected}
+        accept="image/*"
+        onChange={handleImageSelected}
       />
       
       {/* TABS INTERNAS */}
@@ -342,14 +348,19 @@ export default function AdminAvataresSelos() {
                 return (
                   <tr key={avatar.id} className="hover:bg-surface-container-lowest transition-colors">
                     <td className="p-3 text-center">
-                      <img src={avatar.urlVercelBlob} alt={avatar.codigoAvatar} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
+                      <div className="relative group w-10 h-10 mx-auto">
+                        <img src={avatar.urlVercelBlob} alt={avatar.codigoAvatar} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
+                        <button 
+                          onClick={() => handleEditImage(avatar.id, 'avatar')}
+                          className="absolute inset-0 bg-black/50 text-white rounded-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Upload className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                     <td className="p-3 font-mono font-bold text-on-surface">{avatar.codigoAvatar}</td>
                     <td className="p-3 uppercase text-xs font-black text-primary">Nível {numericTier}</td>
                     <td className="p-3 text-right flex items-center justify-end gap-1">
-                      <button onClick={() => handleEditAvatarImage(avatar.id)} title="Enviar imagem" className="p-2 bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-colors">
-                        <Upload className="w-4 h-4" />
-                      </button>
                       <button onClick={() => handleDeleteAvatar(avatar.id)} className="p-2 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -407,7 +418,15 @@ export default function AdminAvataresSelos() {
               {badges.map(badge => (
                 <tr key={badge.id} className="hover:bg-surface-container-lowest transition-colors">
                   <td className="p-3 text-center">
-                    <img src={badge.url_vercel_blob} alt={badge.nome} className="w-10 h-10 object-cover rounded-full border border-outline mx-auto" />
+                    <div className="relative group w-10 h-10 mx-auto">
+                      <img src={badge.url_vercel_blob} alt={badge.nome} className="w-10 h-10 object-cover rounded-full border border-outline bg-surface" />
+                      <button 
+                        onClick={() => handleEditImage(badge.id, 'badge')}
+                        className="absolute inset-0 bg-black/50 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <Upload className="w-4 h-4" />
+                      </button>
+                    </div>
                   </td>
                   <td className="p-3 font-bold text-on-surface">{badge.nome}</td>
                   <td className="p-3 font-mono text-xs">{badge.codigo_evento}</td>
@@ -427,14 +446,14 @@ export default function AdminAvataresSelos() {
       )}
 
       {/* POPUP DE CONFIRMAÇÃO DE IMAGEM */}
-      {avatarPopupState.isOpen && (
+      {popupState.isOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-surface p-6 rounded-3xl shadow-2xl max-w-sm w-full text-center border border-surface-container-high animate-in fade-in zoom-in duration-200">
             <h3 className="text-xl font-bold mb-4 text-on-surface">Confirmar Nova Imagem</h3>
-            {avatarPopupState.previewUrl && (
+            {popupState.previewUrl && (
               <div className="relative mx-auto w-32 h-32 mb-4">
                 <img 
-                  src={avatarPopupState.previewUrl} 
+                  src={popupState.previewUrl} 
                   alt="Preview" 
                   className="w-full h-full object-cover rounded-xl border-4 border-surface shadow-md" 
                 />
@@ -442,26 +461,26 @@ export default function AdminAvataresSelos() {
               </div>
             )}
             <p className="text-sm text-on-surface-variant mb-8">
-              Você selecionou uma nova imagem para este avatar. Deseja aplicar e salvar as alterações?
+              Você selecionou uma nova imagem para este {popupState.type === 'avatar' ? 'avatar' : 'selo'}. Deseja aplicar e salvar as alterações?
             </p>
             
             <div className="flex gap-3 justify-center">
               <button 
                 type="button"
-                onClick={handleCancelAvatarUpload}
-                disabled={avatarPopupState.isUploading}
-                className="flex-1 py-2.5 rounded-xl font-bold text-on-surface hover:bg-surface-container-high transition-colors disabled:opacity-50"
+                onClick={handleCancelUpload}
+                disabled={popupState.isUploading}
+                className="px-6 py-2 rounded-xl text-on-surface-variant font-bold hover:bg-surface-container-high transition-colors disabled:opacity-50"
               >
                 Cancelar
               </button>
+              
               <button 
-                type="button"
-                onClick={handleConfirmAvatarUpload}
-                disabled={avatarPopupState.isUploading}
-                className="flex-1 py-2.5 rounded-xl font-bold bg-primary text-white hover:bg-primary-container transition-colors disabled:opacity-70 flex items-center justify-center gap-2 shadow-sm"
+                onClick={handleConfirmUpload}
+                disabled={popupState.isUploading}
+                className="px-6 py-2 rounded-xl bg-primary text-white font-bold hover:bg-primary-container transition-colors flex items-center justify-center min-w-[140px] gap-2"
               >
-                {avatarPopupState.isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                {avatarPopupState.isUploading ? 'Salvando...' : 'Confirmar'}
+                {popupState.isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {popupState.isUploading ? 'Salvando...' : 'Confirmar'}
               </button>
             </div>
           </div>

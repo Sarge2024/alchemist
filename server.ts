@@ -90,11 +90,11 @@ if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
 
 try {
   initializeAdminApp({
-    projectId: firebaseConfig.projectId,
+    projectId: firebaseConfig.projectId || "sagacitas-financeiro",
     storageBucket: "sagacitas-financeiro.appspot.com",
     ...(credential ? { credential } : {})
   });
-  console.log(`[Admin] Firebase Admin initialized for project: ${firebaseConfig.projectId}`);
+  console.log(`[Admin] Firebase Admin initialized for project: ${firebaseConfig.projectId || "sagacitas-financeiro"}`);
   console.log(`[Admin] Storage Bucket padrão: ${getStorage().bucket().name}`);
 } catch (e) {
   // Already initialized
@@ -585,6 +585,60 @@ app.post("/api/lounge/generate-ata", authenticateAPI, async (req, res) => {
   }
 });
 
+// Endpoint para buscar as interações de um usuário
+app.get("/api/gamification/interactions/:uid", authenticateAPI, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const interactions = await prisma.userInteraction.findMany({
+      where: { userId: user.id }
+    });
+    
+    res.json({ success: true, interactions });
+  } catch (error: any) {
+    console.error("Erro ao buscar interações:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para atualizar/lançar uma interação manual
+app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { eventType, count } = req.body;
+    
+    const user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) return res.status(404).json({ error: "User not found" });
+
+    const interaction = await prisma.userInteraction.upsert({
+      where: {
+        userId_eventType: {
+          userId: user.id,
+          eventType: eventType
+        }
+      },
+      update: {
+        count: count
+      },
+      create: {
+        userId: user.id,
+        eventType: eventType,
+        count: count
+      }
+    });
+
+    // Option: Integrar com a GamificationService para dar XP a cada atualização? 
+    // Deixaremos para o futuro ou manual.
+
+    res.json({ success: true, interaction });
+  } catch (error: any) {
+    console.error("Erro ao atualizar interação:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Endpoint para retornar os avatares permitidos de acordo com o nível do usuário
 app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
   try {
@@ -625,6 +679,7 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
       id: avatar.id,
       codigo: avatar.codigoAvatar,
       url: avatar.urlVercelBlob,
+      tierMinimo: avatar.tierMinimo,
       bloqueado: !tiersPermitidos.includes(avatar.tierMinimo)
     }));
 
@@ -789,6 +844,30 @@ app.delete("/api/admin/badges/:id", authenticateAPI, async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro ao deletar selo" });
+  }
+});
+
+// Editar Selo (atualizar imagem)
+app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhuma imagem enviada." });
+    }
+    const ext = path.extname(req.file.originalname);
+    const filename = `badge-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
+    const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
+    fs.mkdirSync(path.dirname(filepath), { recursive: true });
+    fs.writeFileSync(filepath, req.file.buffer);
+    const urlVercelBlob = `/uploads/${filename}`;
+    const updated = await prisma.badge.update({
+      where: { id },
+      data: { url_vercel_blob: urlVercelBlob }
+    });
+    res.json({ success: true, badge: updated });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Erro ao atualizar selo" });
   }
 });
 

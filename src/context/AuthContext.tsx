@@ -45,6 +45,7 @@ const hasAuthToken = () => {
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [dbRole, setDbRole] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(hasAuthToken());
 
   const ADMIN_EMAIL = 'sagacitas.sistemas@gmail.com';
@@ -55,6 +56,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user]);
 
   useEffect(() => {
+    // Busca o role do usuário no Firestore para definir permissões administrativas.
+    // Suporta fallback por email para cobrir migração Firebase Auth → Supabase Auth
+    // (os UIDs mudaram, mas os documentos legados contêm o role correto).
+    const fetchUserRole = async (uid: string, email: string | null) => {
+      try {
+        const { doc, getDoc, collection, query, where, getDocs, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+
+        // 1. Tentar pelo documento com o UID atual (Supabase)
+        const docSnap = await getDoc(doc(db, "users", uid));
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          const role = data.role || null;
+          if (role && role !== 'member') {
+            console.log('[Auth] Role from UID doc:', role);
+            setDbRole(role);
+            return;
+          }
+        }
+
+        // 2. Fallback: buscar por email (cobre documentos legados com UID do Firebase Auth)
+        if (email) {
+          const q = query(collection(db, "users"), where("email", "==", email));
+          const snapshot = await getDocs(q);
+          for (const d of snapshot.docs) {
+            const data = d.data();
+            if (data.role && data.role !== 'member') {
+              console.log('[Auth] Role from email fallback:', data.role, '(doc:', d.id, ')');
+              setDbRole(data.role);
+
+              // Migrar o role para o documento com UID do Supabase para futuras consultas
+              if (d.id !== uid && docSnap.exists()) {
+                await updateDoc(doc(db, "users", uid), { role: data.role });
+                console.log('[Auth] Role migrated to Supabase UID doc');
+              }
+              return;
+            }
+          }
+        }
+
+        // 3. Nenhum role privilegiado encontrado
+        const finalRole = docSnap.exists() ? (docSnap.data().role || null) : null;
+        console.log('[Auth] Final role resolved:', finalRole);
+        setDbRole(finalRole);
+      } catch (err) {
+        console.error('[Auth] Error fetching user role:', err);
+      }
+    };
+
     const updatePresence = async (appUser: AppUser | null, isOnline: boolean) => {
       if (appUser?.uid) {
         try {
@@ -68,6 +118,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             ...(appUser.email && { email: appUser.email }),
             ...(appUser.photoURL && { photoURL: appUser.photoURL })
           }, { merge: true });
+
+          // Buscar role APÓS garantir que o documento existe
+          await fetchUserRole(appUser.uid, appUser.email);
         } catch (err) {
           console.error("Error updating presence directly:", err);
         }
@@ -90,11 +143,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     // Busca a sessão inicial
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         const appUser = mapSupabaseUserToAppUser(session.user);
         setUser(appUser);
-        updatePresence(appUser, true);
+        await updatePresence(appUser, true);
       } else {
         setUser(null);
       }
@@ -106,12 +159,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         const appUser = mapSupabaseUserToAppUser(session.user);
         setUser(appUser);
-        updatePresence(appUser, true);
+        await updatePresence(appUser, true);
       } else {
         if (userRef.current) {
           updatePresence(userRef.current, false);
         }
         setUser(null);
+        setDbRole(null);
       }
       setLoading(false);
     });
@@ -149,7 +203,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   };
 
-  const isAdmin = !!user && user.email === ADMIN_EMAIL && user.emailVerified;
+  const role = dbRole?.toLowerCase() || '';
+  const isAdmin = !!user && (
+    user.email === ADMIN_EMAIL || 
+    role === 'admin' || 
+    role === 'mestre alquimista' || 
+    role === 'alquimista master'
+  );
 
   return (
     <AuthContext.Provider value={{ user, loading, isAdmin }}>

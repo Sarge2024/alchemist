@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { 
   LayoutDashboard, 
@@ -25,12 +25,14 @@ import {
   Upload,
   Save
 } from 'lucide-react';
+import AdminAvataresSelos from './AdminAvataresSelos';
 
 // Dados baseados no JSON fornecido
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard do Alquimista', icon: LayoutDashboard },
   { id: 'mercado', label: 'Mercado de Permuta (Loja)', icon: ShoppingBag },
   { id: 'avatares', label: 'Avatares & Selos', icon: Shield },
+  { id: 'matriz', label: 'Matriz de Valoração', icon: Star },
   { id: 'conquistas', label: 'Conquistas Culinárias', icon: Award },
   { id: 'membros', label: 'Membros do Clã', icon: Users },
 ];
@@ -78,8 +80,63 @@ const matrixInteracoes = [
 ];
 
 export default function AlchemistPanel() {
-  const [activeTab, setActiveTab] = useState('avatares');
-  const [matrix, setMatrix] = useState(matrixInteracoes);
+  const [activeTab, setActiveTab] = useState('matriz');
+  const [matrix, setMatrix] = useState<any[]>(matrixInteracoes);
+  const [isUploading, setIsUploading] = useState(false);
+
+  useEffect(() => {
+    const loadMatrix = async () => {
+      try {
+        const docRef = doc(db, 'config', 'matrix');
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists() && docSnap.data().matrix) {
+          setMatrix(docSnap.data().matrix);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar matriz:", e);
+      }
+    };
+    loadMatrix();
+  }, []);
+
+  const handleImageUpload = async (rowId: string, level: 'bronze' | 'prata' | 'ouro', file: File) => {
+    if (!file) return;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'x-api-key': import.meta.env.VITE_APP_API_KEY || ''
+        },
+        body: formData
+      });
+      
+      const data = await res.json();
+      if (data.success && data.imageUrl) {
+        const newMatrix = matrix.map(row => {
+          if (row.id === rowId) {
+            return { ...row, [`${level}Img`]: data.imageUrl };
+          }
+          return row;
+        });
+        
+        setMatrix(newMatrix);
+        
+        // Auto-save no Firebase para não perder a imagem
+        await setDoc(doc(db, 'config', 'matrix'), { matrix: newMatrix });
+      } else {
+        alert("Erro no upload da imagem");
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Falha ao enviar a imagem");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const updateMatrixValue = (id: string, level: 'bronze' | 'prata' | 'ouro', delta: number) => {
     setMatrix(prev => prev.map(row => {
@@ -291,7 +348,8 @@ export default function AlchemistPanel() {
             </>
           )}
 
-          {activeTab === 'avatares' && (
+          {activeTab === 'matriz' && (
+            <>
             <section className="bg-surface-container-low p-8 rounded-[2rem] border border-surface-container-high shadow-xl animate-in fade-in slide-in-from-bottom-4 duration-300">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                 <div>
@@ -342,8 +400,17 @@ export default function AlchemistPanel() {
                         {/* Célula Bronze */}
                         <td className="p-4 border-b border-r border-surface-container bg-orange-900/5 group-hover:bg-orange-900/10 transition-colors">
                           <div className="flex items-center gap-3">
-                            <img src={`/medalhas/b${row.index}.512.Webp`} alt={`Bronze ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md" />
-                            <div className="flex-1 flex items-stretch bg-background rounded-xl border border-orange-500/30 overflow-hidden shadow-sm">
+                            <div className="relative group/img cursor-pointer">
+                              <input type="file" accept="image/*" className="hidden" id={`img-upload-${row.id}-bronze`}
+                                onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(row.id, 'bronze', e.target.files[0]); }} />
+                              <label htmlFor={`img-upload-${row.id}-bronze`} className="cursor-pointer">
+                                <img src={row.bronzeImg || `/medalhas/b${row.index}.512.Webp`} alt={`Bronze ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md transition-opacity group-hover/img:opacity-50" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/40 rounded-full">
+                                  <Upload className="w-4 h-4 text-white" />
+                                </div>
+                              </label>
+                            </div>
+                            <div className="flex-1 flex items-stretch bg-background rounded-none border border-orange-500/30 overflow-hidden shadow-sm">
                               <input 
                                 type="text" 
                                 value={row.bronze + (row.isXP ? ' XP' : '')} 
@@ -361,8 +428,17 @@ export default function AlchemistPanel() {
                         {/* Célula Prata */}
                         <td className="p-4 border-b border-r border-surface-container bg-stone-300/10 dark:bg-stone-700/10 group-hover:bg-stone-300/20 transition-colors">
                           <div className="flex items-center gap-3">
-                            <img src={`/medalhas/p${row.index}.512.Webp`} alt={`Prata ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md" />
-                            <div className="flex-1 flex items-stretch bg-background rounded-xl border border-stone-500/30 overflow-hidden shadow-sm">
+                            <div className="relative group/img cursor-pointer">
+                              <input type="file" accept="image/*" className="hidden" id={`img-upload-${row.id}-prata`}
+                                onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(row.id, 'prata', e.target.files[0]); }} />
+                              <label htmlFor={`img-upload-${row.id}-prata`} className="cursor-pointer">
+                                <img src={row.prataImg || `/medalhas/p${row.index}.512.Webp`} alt={`Prata ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md transition-opacity group-hover/img:opacity-50" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/40 rounded-full">
+                                  <Upload className="w-4 h-4 text-white" />
+                                </div>
+                              </label>
+                            </div>
+                            <div className="flex-1 flex items-stretch bg-background rounded-none border border-stone-500/30 overflow-hidden shadow-sm">
                               <input 
                                 type="text" 
                                 value={row.prata + (row.isXP ? ' XP' : '')} 
@@ -380,8 +456,17 @@ export default function AlchemistPanel() {
                         {/* Célula Ouro */}
                         <td className="p-4 border-b border-surface-container bg-amber-500/5 group-hover:bg-amber-500/10 transition-colors">
                           <div className="flex items-center gap-3">
-                            <img src={`/medalhas/o${row.index}.512.Webp`} alt={`Ouro ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md" />
-                            <div className="flex-1 flex items-stretch bg-background rounded-xl border border-amber-500/30 overflow-hidden shadow-sm">
+                            <div className="relative group/img cursor-pointer">
+                              <input type="file" accept="image/*" className="hidden" id={`img-upload-${row.id}-ouro`}
+                                onChange={(e) => { if (e.target.files?.[0]) handleImageUpload(row.id, 'ouro', e.target.files[0]); }} />
+                              <label htmlFor={`img-upload-${row.id}-ouro`} className="cursor-pointer">
+                                <img src={row.ouroImg || `/medalhas/o${row.index}.512.Webp`} alt={`Ouro ${row.index}`} className="w-10 h-10 object-contain drop-shadow-md transition-opacity group-hover/img:opacity-50" />
+                                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/img:opacity-100 bg-black/40 rounded-full">
+                                  <Upload className="w-4 h-4 text-white" />
+                                </div>
+                              </label>
+                            </div>
+                            <div className="flex-1 flex items-stretch bg-background rounded-none border border-amber-500/30 overflow-hidden shadow-sm">
                               <input 
                                 type="text" 
                                 value={row.ouro + (row.isXP ? ' XP' : '')} 
@@ -402,6 +487,13 @@ export default function AlchemistPanel() {
                 </table>
               </div>
             </section>
+            </>
+          )}
+
+          {activeTab === 'avatares' && (
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+              <AdminAvataresSelos />
+            </div>
           )}
 
         </div>

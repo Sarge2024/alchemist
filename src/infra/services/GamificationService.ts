@@ -116,7 +116,15 @@ export class GamificationService {
       },
       include: {
         user: {
-          select: { displayName: true, photoURL: true }
+          select: { 
+            displayName: true, 
+            photoURL: true,
+            badges: {
+              include: {
+                badge: true
+              }
+            }
+          }
         }
       }
     });

@@ -16,7 +16,21 @@ import {
   X,
   Trophy,
   Star,
-  Award
+  Award,
+  Utensils,
+  Lock,
+  ChefHat,
+  BookOpen,
+  Flame,
+  Leaf,
+  MessageCircle,
+  Users,
+  Crown,
+  Search,
+  Sparkles,
+  Target,
+  PlusCircle,
+  MinusCircle
 } from 'lucide-react';
 import { userService, UserProfile } from '../infra/services/userService';
 import { MemberService } from '../infra/services/MemberService';
@@ -25,6 +39,86 @@ import { Avatar } from '../components/Avatar';
 import { supabase } from '../lib/supabase';
 import { AvatarSelector, AvatarOptionData } from '../components/AvatarSelector';
 import { LevelUpPopup } from '../components/LevelUpPopup';
+
+const BRAZILIAN_STATES = [
+  { value: 'AC', label: 'Acre' },
+  { value: 'AL', label: 'Alagoas' },
+  { value: 'AP', label: 'Amapá' },
+  { value: 'AM', label: 'Amazonas' },
+  { value: 'BA', label: 'Bahia' },
+  { value: 'CE', label: 'Ceará' },
+  { value: 'DF', label: 'Distrito Federal' },
+  { value: 'ES', label: 'Espírito Santo' },
+  { value: 'GO', label: 'Goiás' },
+  { value: 'MA', label: 'Maranhão' },
+  { value: 'MT', label: 'Mato Grosso' },
+  { value: 'MS', label: 'Mato Grosso do Sul' },
+  { value: 'MG', label: 'Minas Gerais' },
+  { value: 'PA', label: 'Pará' },
+  { value: 'PB', label: 'Paraíba' },
+  { value: 'PR', label: 'Paraná' },
+  { value: 'PE', label: 'Pernambuco' },
+  { value: 'PI', label: 'Piauí' },
+  { value: 'RJ', label: 'Rio de Janeiro' },
+  { value: 'RN', label: 'Rio Grande do Norte' },
+  { value: 'RS', label: 'Rio Grande do Sul' },
+  { value: 'RO', label: 'Rondônia' },
+  { value: 'RR', label: 'Roraima' },
+  { value: 'SC', label: 'Santa Catarina' },
+  { value: 'SP', label: 'São Paulo' },
+  { value: 'SE', label: 'Sergipe' },
+  { value: 'TO', label: 'Tocantins' },
+];
+
+const MOCK_LEVELS = [
+  {
+    id: 1,
+    title: 'Aprendiz',
+    avatar: 'https://placehold.co/400x400/e7e5e4/a8a29e?text=Aprendiz',
+    badges: [
+      { id: 'b1', name: 'Primeiros Passos', icon: <Utensils className="w-5 h-5" />, xp: '160XP', bgColor: 'bg-stone-200', textColor: 'text-stone-600' },
+      { id: 'b2', name: 'Explorador', icon: <Search className="w-5 h-5" />, xp: '220XP', bgColor: 'bg-stone-300', textColor: 'text-stone-700' },
+    ]
+  },
+  {
+    id: 2,
+    title: 'Assistente',
+    avatar: 'https://placehold.co/400x400/d6d3d1/78716c?text=Assistente',
+    badges: [
+      { id: 'b3', name: 'Mão na Massa', icon: <ChefHat className="w-5 h-5" />, xp: '340XP', bgColor: 'bg-emerald-100', textColor: 'text-emerald-600' },
+      { id: 'b4', name: 'Receita Certa', icon: <BookOpen className="w-5 h-5" />, xp: '410XP', bgColor: 'bg-emerald-200', textColor: 'text-emerald-700' },
+    ]
+  },
+  {
+    id: 3,
+    title: 'Alquimista',
+    avatar: 'https://placehold.co/400x400/a8a29e/57534e?text=Alquimista',
+    badges: [
+      { id: 'b5', name: 'Transmutação', icon: <Flame className="w-5 h-5" />, xp: '600XP', bgColor: 'bg-amber-100', textColor: 'text-amber-600' },
+      { id: 'b6', name: 'Mestre dos Temperos', icon: <Leaf className="w-5 h-5" />, xp: '850XP', bgColor: 'bg-amber-200', textColor: 'text-amber-700' },
+    ]
+  },
+  {
+    id: 4,
+    title: 'Perito',
+    avatar: 'https://placehold.co/400x400/78716c/44403c?text=Perito',
+    badges: [
+      { id: 'b7', name: 'Inovador', icon: <Sparkles className="w-5 h-5" />, xp: '1200XP', bgColor: 'bg-blue-100', textColor: 'text-blue-600' },
+      { id: 'b8', name: 'Crítico Culinário', icon: <MessageCircle className="w-5 h-5" />, xp: '950XP', bgColor: 'bg-blue-200', textColor: 'text-blue-700' },
+      { id: 'b9', name: 'Engajador', icon: <Users className="w-5 h-5" />, xp: '1100XP', bgColor: 'bg-blue-300', textColor: 'text-blue-800' },
+    ]
+  },
+  {
+    id: 5,
+    title: 'Mestre Alquimista',
+    avatar: 'https://placehold.co/400x400/57534e/292524?text=Mestre',
+    badges: [
+      { id: 'b10', name: 'Mestre Fundador', icon: <Trophy className="w-5 h-5" />, xp: '2500XP', bgColor: 'bg-purple-100', textColor: 'text-purple-600' },
+      { id: 'b11', name: 'Guardião do Lounge', icon: <Shield className="w-5 h-5" />, xp: '3100XP', bgColor: 'bg-purple-200', textColor: 'text-purple-700' },
+      { id: 'b12', name: 'Criador Supremo', icon: <Crown className="w-5 h-5" />, xp: '5000XP', bgColor: 'bg-purple-300', textColor: 'text-purple-800' },
+    ]
+  }
+];
 
 export default function Profile() {
   const { uid: paramUid } = useParams<{ uid: string }>();
@@ -41,15 +135,34 @@ export default function Profile() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [gamification, setGamification] = useState<any>(null);
   const [avatarsList, setAvatarsList] = useState<AvatarOptionData[]>([]);
-  const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [activeAvatarSelector, setActiveAvatarSelector] = useState<'profile' | number | null>(null);
+  const [certAvatars, setCertAvatars] = useState<Record<number, string>>(() => {
+    const saved = localStorage.getItem(`cert_avatars_${targetUid}`);
+    return saved ? JSON.parse(saved) : {};
+  });
   const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
   const [unlockedLevel, setUnlockedLevel] = useState<number>(0);
+  const [showInteractionsPopup, setShowInteractionsPopup] = useState(false);
+  const [userInteractions, setUserInteractions] = useState<Record<string, number>>({});
+
+  const INTERACTION_MATRIX = [
+    { id: 'COLLABORATION_MESSAGE', label: 'Mensagens no Lounge', required: 50 },
+    { id: 'PROFILE_PARTIAL', label: 'Cadastro Parcial', required: 1 },
+    { id: 'PROFILE_COMPLETE', label: 'Cadastro Completo', required: 1 },
+    { id: 'PROFILE_QUIZ', label: 'Quiz de Preferências', required: 1 },
+    { id: 'ARTICLE_PUBLISHED', label: 'Artigos Publicados', required: 5 },
+    { id: 'RECIPE_PUBLISHED_PHOTO', label: 'Receitas Publicadas (c/ Foto)', required: 10 },
+    { id: 'RECIPE_UPVOTE_RECEIVED', label: 'Avaliações Positivas Recebidas', required: 20 },
+    { id: 'REVIEW_WITH_PHOTO', label: 'Avaliações Feitas (c/ Foto)', required: 15 },
+    { id: 'PRODUCT_PURCHASED', label: 'Produtos Comprados', required: 3 }
+  ];
   
   const [formData, setFormData] = useState({
     displayName: '',
     whatsapp: '',
+    city: '',
     state: '',
-    country: '',
+    country: 'Brasil',
     photoURL: '',
     role: 'member' as UserProfile['role']
   });
@@ -60,8 +173,15 @@ export default function Profile() {
     if (targetUid) {
       fetchProfile();
       fetchAvatars();
+      fetchInteractions();
     }
   }, [targetUid]);
+
+  useEffect(() => {
+    if (targetUid) {
+      localStorage.setItem(`cert_avatars_${targetUid}`, JSON.stringify(certAvatars));
+    }
+  }, [certAvatars, targetUid]);
 
   const fetchAvatars = async () => {
     try {
@@ -81,6 +201,66 @@ export default function Profile() {
       }
     } catch (err) {
       console.error('Error fetching avatars:', err);
+    }
+  };
+
+  const fetchInteractions = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: any = {
+        'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/gamification/interactions/${targetUid}`, { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.interactions) {
+          const mapping: Record<string, number> = {};
+          data.interactions.forEach((i: any) => {
+            mapping[i.eventType] = i.count;
+          });
+          setUserInteractions(mapping);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching interactions:', err);
+    }
+  };
+
+  const handleUpdateInteraction = async (eventType: string, increment: number) => {
+    if (!canEdit) return;
+    
+    const currentCount = userInteractions[eventType] || 0;
+    const newCount = Math.max(0, currentCount + increment);
+
+    // Optimistic UI update
+    setUserInteractions(prev => ({ ...prev, [eventType]: newCount }));
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      const headers: any = {
+        'Content-Type': 'application/json',
+        'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+      };
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const res = await fetch(`/api/gamification/interactions/${targetUid}`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ eventType, count: newCount })
+      });
+      
+      if (!res.ok) {
+        // Revert on failure
+        setUserInteractions(prev => ({ ...prev, [eventType]: currentCount }));
+        console.error("Failed to update interaction on server");
+      }
+    } catch (err) {
+      console.error("Error updating interaction:", err);
+      setUserInteractions(prev => ({ ...prev, [eventType]: currentCount }));
     }
   };
 
@@ -106,8 +286,9 @@ export default function Profile() {
         setFormData({
           displayName: data.displayName || '',
           whatsapp: data.whatsapp || '',
+          city: data.city || '',
           state: data.state || '',
-          country: data.country || '',
+          country: data.country || 'Brasil',
           photoURL: data.photoURL || '',
           role: data.role || 'member'
         });
@@ -117,7 +298,9 @@ export default function Profile() {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         const token = session?.access_token;
-        const headers: any = {};
+        const headers: any = {
+          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+        };
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
         const gRes = await fetch(`/api/gamification/profile/${targetUid}`, { headers });
@@ -160,9 +343,7 @@ export default function Profile() {
   };
 
   const handleChooseNewAvatar = () => {
-    handleCloseLevelUpPopup();
-    setIsEditing(true);
-    setShowAvatarSelector(true);
+    setActiveAvatarSelector('profile');
   };
 
 
@@ -256,7 +437,7 @@ export default function Profile() {
                   {isEditing && (
                     <button 
                       type="button" 
-                      onClick={() => setShowAvatarSelector(true)}
+                      onClick={() => setActiveAvatarSelector('profile')}
                       className="absolute inset-0 bg-on-surface/50 backdrop-blur-md flex flex-col items-center justify-center text-background cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-300 border-none outline-none"
                     >
                       <Camera className="w-8 h-8 mb-2 drop-shadow-md" />
@@ -272,27 +453,33 @@ export default function Profile() {
               </div>
 
               <AnimatePresence>
-                {showAvatarSelector && (
+                {activeAvatarSelector !== null && (
                   <motion.div 
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+                    className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+                    onClick={() => setActiveAvatarSelector(null)}
                   >
-                    <motion.div
+                    <motion.div 
+                      onClick={e => e.stopPropagation()}
                       initial={{ scale: 0.95 }}
                       animate={{ scale: 1 }}
                       exit={{ scale: 0.95 }}
                       className="w-full max-w-4xl"
                     >
                       <AvatarSelector 
-                        avatares={avatarsList}
-                        avatarAtualUrl={formData.photoURL}
+                        avatares={activeAvatarSelector === 'profile' ? avatarsList : avatarsList.filter(a => a.tierMinimo === activeAvatarSelector.toString() || a.codigo.toUpperCase().includes(`TIER${activeAvatarSelector}`))}
+                        avatarAtualUrl={activeAvatarSelector === 'profile' ? formData.photoURL : (certAvatars[activeAvatarSelector] || '')}
                         onSelect={(url) => {
-                          setFormData(prev => ({ ...prev, photoURL: url }));
-                          setShowAvatarSelector(false);
+                          if (activeAvatarSelector === 'profile') {
+                            setFormData(prev => ({ ...prev, photoURL: url }));
+                          } else if (typeof activeAvatarSelector === 'number') {
+                            setCertAvatars(prev => ({ ...prev, [activeAvatarSelector]: url }));
+                          }
+                          setActiveAvatarSelector(null);
                         }}
-                        onClose={() => setShowAvatarSelector(false)}
+                        onClose={() => setActiveAvatarSelector(null)}
                       />
                     </motion.div>
                   </motion.div>
@@ -336,14 +523,24 @@ export default function Profile() {
                 <h2 className="text-2xl font-bold text-on-surface mb-2">Informações do Perfil</h2>
                 <p className="text-on-surface-variant">Detalhes da sua identidade na Alquimia do Prato.</p>
               </div>
-              {canEdit && !isEditing && (
+              <div className="flex gap-3">
                 <button 
-                  onClick={() => setIsEditing(true)}
-                  className="px-8 py-3 bg-on-surface text-background rounded-2xl font-bold hover:bg-on-surface-variant transition-all shadow-lg active:scale-95"
+                  onClick={() => setShowInteractionsPopup(true)}
+                  className="px-6 py-3 bg-primary-container text-on-primary-container rounded-2xl font-bold hover:bg-primary/20 transition-all shadow-sm active:scale-95 flex items-center gap-2"
+                  title="Matriz de Gamificação"
                 >
-                  Editar Perfil
+                  <Target className="w-5 h-5" />
+                  Progresso
                 </button>
-              )}
+                {canEdit && !isEditing && (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="px-8 py-3 bg-on-surface text-background rounded-2xl font-bold hover:bg-on-surface-variant transition-all shadow-lg active:scale-95"
+                  >
+                    Editar Perfil
+                  </button>
+                )}
+              </div>
             </div>
 
             {error && (
@@ -386,28 +583,43 @@ export default function Profile() {
               <div className="space-y-6">
                 <div>
                   <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Localização</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="relative">
-                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
-                      <input 
-                        type="text"
-                        placeholder="Estado"
-                        disabled={!isEditing}
-                        value={formData.state}
-                        onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
-                      />
-                    </div>
+                  <div className="space-y-4">
                     <div className="relative">
                       <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
                       <input 
                         type="text"
                         placeholder="País"
-                        disabled={!isEditing}
-                        value={formData.country}
-                        onChange={(e) => setFormData(prev => ({ ...prev, country: e.target.value }))}
-                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                        disabled={true}
+                        value="Brasil"
+                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all opacity-70 cursor-not-allowed text-on-surface"
                       />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
+                        <select 
+                          disabled={!isEditing}
+                          value={formData.state}
+                          onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                          className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 appearance-none text-on-surface"
+                        >
+                          <option value="" disabled>Selecione um Estado</option>
+                          {BRAZILIAN_STATES.map(state => (
+                            <option key={state.value} value={state.value}>{state.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
+                        <input 
+                          type="text"
+                          placeholder="Cidade"
+                          disabled={!isEditing}
+                          value={formData.city}
+                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                          className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -507,129 +719,256 @@ export default function Profile() {
               </AnimatePresence>
             </form>
 
-            {/* Seção de Gamificação & Conquistas */}
-            <div className="mt-16 pt-16 border-t border-surface-container-high">
-              <div className="flex justify-between items-start mb-8">
-                <div>
-                  <h2 className="text-2xl font-bold text-on-surface mb-2 flex items-center gap-3">
-                    <Trophy className="w-6 h-6 text-primary" />
-                    Progresso & Conquistas
-                  </h2>
-                  <p className="text-on-surface-variant">Sua jornada culinária, nível atual e itens exclusivos desbloqueados.</p>
-                </div>
+            {/* Seção de Gamificação & Conquistas (Certificado) */}
+            <div className="mt-12 pt-12 border-t border-surface-container-high">
+              <div className="mb-8 text-center">
+                <h2 className="text-3xl font-black text-on-surface mb-3 flex items-center justify-center gap-3">
+                  <Award className="w-8 h-8 text-primary" />
+                  Certificado de Conquistas
+                  <Award className="w-8 h-8 text-primary" />
+                </h2>
+                <p className="text-on-surface-variant text-base font-medium">Sua jornada culinária e maestria, faixa a faixa.</p>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Nível Atual */}
-                <div className="p-8 bg-surface-container-low rounded-[2rem] border border-surface-container-high relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 w-32 h-32 bg-stone-300/20 dark:bg-stone-700/20 rounded-bl-[100px] transition-transform group-hover:scale-110" />
-                  <div className="flex items-center gap-5 mb-8 relative">
-                    <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-stone-300 to-stone-500 flex items-center justify-center shadow-2xl border-4 border-background">
-                      <Award className="w-10 h-10 text-white" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-1">
-                        Nível {gamification?.level || 1}
-                      </div>
-                      <h3 className="text-3xl font-bold text-on-surface leading-none mb-1">
-                        {gamification?.tier === 'APRENDIZ' ? 'Aprendiz' : 
-                         gamification?.tier === 'ASSISTENTE' ? 'Assistente' : 
-                         gamification?.tier === 'ALQUIMISTA' ? 'Alquimista' : 
-                         gamification?.tier === 'PERITO' ? 'Perito' : 
-                         gamification?.tier === 'MESTRE_ALQUIMISTA' ? 'Mestre Alquimista' : 'Aprendiz'}
-                      </h3>
-                      <p className="text-xs text-on-surface-variant font-medium">Grau Culinário</p>
-                    </div>
-                  </div>
-                  
-                  <div className="mb-3 flex justify-between text-sm font-black text-on-surface-variant tracking-wider uppercase">
-                    <span>XP: {gamification?.xp || 0}</span>
-                    <span>Meta: {gamification?.nextLevelXp || 100}</span>
-                  </div>
-                  <div className="w-full h-4 bg-surface-container-high rounded-full overflow-hidden shadow-inner">
-                    <div 
-                      className="h-full bg-stone-400 dark:bg-stone-500 rounded-full shadow-lg transition-all duration-1000" 
-                      style={{ width: `${Math.min(100, Math.max(0, ((gamification?.xp || 0) / (gamification?.nextLevelXp || 100)) * 100))}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-on-surface-variant mt-5 font-medium flex items-center gap-2">
-                    <Star className="w-4 h-4 text-amber-500" /> Próximo: <strong className="text-on-surface">Nível {(gamification?.level || 1) + 1}</strong>
-                  </p>
-                </div>
+              <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+                {MOCK_LEVELS.map(level => {
+                   const isUnlocked = (gamification?.level || 1) >= level.id;
+                   
+                   return (
+                     <div key={level.id} className={`relative p-5 md:p-6 rounded-3xl border-2 overflow-hidden flex flex-col sm:flex-row gap-6 md:gap-8 items-center sm:items-start transition-all duration-500 ${isUnlocked ? 'bg-surface-container-lowest border-primary/20 shadow-lg' : 'bg-surface-container/30 border-surface-container-high opacity-70 grayscale'}`}>
+                       
+                       {/* Background decoration */}
+                       {isUnlocked && (
+                         <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-primary/5 rounded-full blur-[60px] -mr-20 -mt-20 pointer-events-none"></div>
+                       )}
 
-                {/* Itens Equipados / Loja */}
-                <div className="lg:col-span-2 p-8 bg-surface-container-low rounded-[2rem] border border-surface-container-high">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-on-surface-variant mb-6">Inventário & Itens Ativos</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Item 1 */}
-                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-amber-200 transition-colors">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center shrink-0 border border-amber-100 dark:border-amber-900/50">
-                        <Trophy className="w-7 h-7 text-amber-500" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-500 mb-1">Título • Mestre</div>
-                        <div className="text-base font-bold text-on-surface leading-tight">Mestre da Colaboração</div>
-                      </div>
-                    </div>
-                    
-                    {/* Item 2 */}
-                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-purple-200 transition-colors">
-                      <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-900/20 flex items-center justify-center shrink-0 border border-purple-100 dark:border-purple-900/50">
-                        <User className="w-7 h-7 text-purple-500" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-500 mb-1">Avatar • Avatar</div>
-                        <div className="text-base font-bold text-on-surface leading-tight">Moldura de Avatar Exclusiva</div>
-                      </div>
-                    </div>
+                       {/* Left: Avatar */}
+                       <div className="shrink-0 relative z-10 flex flex-col items-center">
+                          {(() => {
+                               const matchingAvatar = avatarsList.find(a => 
+                                 a.codigo.toUpperCase().includes(`TIER${level.id}`) || 
+                                 a.tierMinimo === level.id.toString()
+                               );
+                               // Se está bloqueado, mostra o placeholder liso
+                               // Se está desbloqueado, pega o avatar preferido do usuário ou o primeiro que bater
+                               const avatarUrl = isUnlocked 
+                                 ? (certAvatars[level.id] || (matchingAvatar ? matchingAvatar.url : level.avatar))
+                                 : level.avatar;
+                                 
+                               const isClickable = isUnlocked && canEdit;
 
-                    {/* Item 3 */}
-                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-stone-200 transition-colors">
-                      <div className="w-14 h-14 rounded-2xl bg-stone-900 flex items-center justify-center shrink-0 border border-stone-800">
-                        <Shield className="w-7 h-7 text-stone-300" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-stone-400 mb-1">Tema • Premium</div>
-                        <div className="text-base font-bold text-on-surface leading-tight">Tema Dark Premium</div>
-                      </div>
-                    </div>
-                    
-                    {/* Item 4 */}
-                    <div className="p-5 bg-background rounded-2xl border border-surface-container flex gap-5 items-center hover:border-primary/20 transition-colors opacity-60 grayscale hover:grayscale-0 cursor-not-allowed">
-                      <div className="w-14 h-14 rounded-2xl bg-surface-container-high flex items-center justify-center shrink-0 border border-surface-container">
-                        <Award className="w-7 h-7 text-on-surface-variant" />
-                      </div>
-                      <div>
-                        <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Crachá • Gold</div>
-                        <div className="text-base font-bold text-on-surface leading-tight">Crachá Gold do Perfil</div>
-                        <div className="text-xs text-on-surface-variant mt-1">Desbloqueia no Nível 4 (600 XP)</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                               return (
+                                 <div 
+                                   className={`w-32 h-32 md:w-40 md:h-40 rounded-full border-4 shadow-xl overflow-hidden relative group/cert-avatar ${isUnlocked ? 'border-primary/30 bg-primary/5' : 'border-surface-container bg-surface-container'} ${isClickable ? 'cursor-pointer' : ''}`}
+                                   onClick={() => {
+                                     if (isClickable) {
+                                       setActiveAvatarSelector(level.id);
+                                     }
+                                   }}
+                                 >
+                                   <img 
+                                     src={avatarUrl} 
+                                     alt={level.title} 
+                                     className={`w-full h-full object-cover transition-transform duration-300 ${isClickable ? 'group-hover/cert-avatar:scale-110' : ''} ${(!isUnlocked || avatarUrl === level.avatar) ? 'mix-blend-multiply' : ''}`} 
+                                   />
+                                   
+                                   {isClickable && (
+                                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/cert-avatar:opacity-100 transition-opacity flex flex-col items-center justify-center text-white backdrop-blur-[2px]">
+                                       <Camera className="w-8 h-8 mb-1" />
+                                       <span className="text-[10px] font-black tracking-widest uppercase text-center px-2 leading-tight">Trocar<br/>Avatar</span>
+                                     </div>
+                                   )}
+
+                                   {!isUnlocked && (
+                                     <div className="absolute inset-0 flex items-center justify-center bg-background/20 backdrop-blur-[1px]">
+                                       <Lock className="w-10 h-10 text-on-surface-variant/40" />
+                                     </div>
+                                   )}
+                                 </div>
+                               );
+                             })()}
+                          {/* Level Badge */}
+                          <div className={`absolute -bottom-3 px-6 py-1.5 rounded-full font-black uppercase tracking-widest text-xs shadow-md border-2 border-background ${isUnlocked ? 'bg-primary text-white' : 'bg-surface-container-high text-on-surface-variant'}`}>
+                             Nível {level.id}
+                          </div>
+                       </div>
+
+                       {/* Right: Medals & XP */}
+                       <div className="flex-1 flex flex-col justify-center gap-4 z-10 w-full pt-4 sm:pt-0">
+                          <h3 className="text-2xl font-black text-on-surface tracking-tight text-center sm:text-left">
+                            {level.title}
+                          </h3>
+                          
+                          <div className="flex flex-col gap-3">
+                            {(() => {
+                              // Filter real badges from DB that belong to this level
+                              const userBadges = gamification?.user?.badges || [];
+                              const levelBadges = userBadges.filter((ub: any) => {
+                                // Hardcoded mapping for the existing DB badges to their levels
+                                const map: Record<string, number> = {
+                                  'mestre_fundador': 5,
+                                  'guardiao_lounge': 5,
+                                  'criador_supremo': 5,
+                                  'degustador_elite': 5
+                                };
+                                const badgeLevel = map[ub.badge.codigo_evento] || 1; // Default to 1 if unknown
+                                return badgeLevel === level.id;
+                              });
+
+                              if (!isUnlocked) return null;
+
+                              if (levelBadges.length === 0) {
+                                // If no real badges for this level yet, show a placeholder
+                                return (
+                                  <div className="flex items-center gap-4 p-2.5 rounded-2xl bg-background border border-surface-container-high opacity-50">
+                                    <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2 border-background bg-surface-container-high text-on-surface-variant">
+                                      <Award className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-bold text-sm text-on-surface-variant">Nenhuma conquista registrada nesta faixa.</div>
+                                    </div>
+                                  </div>
+                                );
+                              }
+
+                              return levelBadges.map((ub: any) => {
+                                const b = ub.badge;
+                                // Determine colors based on level
+                                const colors = [
+                                  'bg-stone-200 text-stone-600', // Level 1
+                                  'bg-emerald-100 text-emerald-600', // Level 2
+                                  'bg-amber-100 text-amber-600', // Level 3
+                                  'bg-blue-100 text-blue-600', // Level 4
+                                  'bg-purple-100 text-purple-600' // Level 5
+                                ];
+                                const colorClass = colors[level.id - 1] || colors[0];
+
+                                return (
+                                 <div key={b.id} className="flex items-center gap-4 p-2.5 rounded-2xl bg-background border shadow-sm hover:shadow transition-all border-surface-container hover:border-primary/30">
+                                   <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-inner border-2 border-background overflow-hidden relative ${colorClass}`}>
+                                      {b.url_vercel_blob ? (
+                                        <img src={b.url_vercel_blob} alt={b.nome} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <Award className="w-5 h-5" />
+                                      )}
+                                   </div>
+                                   <div className="flex-1">
+                                      <div className="font-black text-base text-on-surface leading-tight">{b.nome}</div>
+                                      {b.descricao && (
+                                        <div className="text-[10px] text-on-surface-variant leading-tight mt-0.5">{b.descricao}</div>
+                                      )}
+                                   </div>
+                                   <div className="text-xl font-black italic text-primary/80 pr-4 drop-shadow-sm">
+                                      {/* Mocked XP for now, or could come from DB if added later */}
+                                      {level.id * 500}XP
+                                   </div>
+                                 </div>
+                                );
+                              });
+                            })()}
+                          </div>
+                       </div>
+
+                       {!isUnlocked && (
+                         <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/20 backdrop-blur-[1px]">
+                           <div className="bg-surface-container-high text-on-surface px-6 py-3 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center gap-2 shadow-xl">
+                             <Shield className="w-5 h-5" />
+                             Bloqueado
+                           </div>
+                         </div>
+                       )}
+                     </div>
+                   );
+                })}
               </div>
             </div>
           </div>
         </div>
       </motion.div>
 
-      {/* Selector de Avatar */}
-      {showAvatarSelector && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-          <div className="my-auto w-full max-w-4xl">
-            <AvatarSelector 
-              avatares={avatarsList}
-              avatarAtualUrl={formData.photoURL}
-              onSelect={(url) => {
-                setFormData(prev => ({ ...prev, photoURL: url }));
-                setShowAvatarSelector(false);
-              }}
-              onClose={() => setShowAvatarSelector(false)}
-            />
-          </div>
-        </div>
-      )}
+
+      {/* Interactions Matrix Popup */}
+      <AnimatePresence>
+        {showInteractionsPopup && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+            onClick={() => setShowInteractionsPopup(false)}
+          >
+            <motion.div 
+              onClick={e => e.stopPropagation()}
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="bg-surface rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl border border-surface-container-high my-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div>
+                  <h3 className="text-2xl font-black text-on-surface flex items-center gap-2">
+                    <Target className="w-6 h-6 text-primary" />
+                    Progresso de Gamificação
+                  </h3>
+                  <p className="text-sm text-on-surface-variant mt-1">Acompanhe e lance seus valores atingidos na matriz de interações.</p>
+                </div>
+                <button onClick={() => setShowInteractionsPopup(false)} className="p-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors">
+                  <X className="w-5 h-5 text-on-surface-variant" />
+                </button>
+              </div>
+
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2 scrollbar-thin">
+                {INTERACTION_MATRIX.map(interaction => {
+                  const current = userInteractions[interaction.id] || 0;
+                  const progress = Math.min(100, (current / interaction.required) * 100);
+                  const isCompleted = current >= interaction.required;
+
+                  return (
+                    <div key={interaction.id} className="bg-surface-container-lowest border border-surface-container-high p-4 rounded-2xl flex flex-col sm:flex-row gap-4 items-center justify-between">
+                      <div className="flex-1 w-full">
+                        <div className="flex justify-between mb-1">
+                          <span className="font-bold text-on-surface text-sm flex items-center gap-2">
+                            {interaction.label}
+                            {isCompleted && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                          </span>
+                          <span className="text-xs font-mono font-bold text-on-surface-variant">
+                            {current} / {interaction.required}
+                          </span>
+                        </div>
+                        <div className="h-2 w-full bg-surface-container-high rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full rounded-full transition-all duration-500 ${isCompleted ? 'bg-emerald-500' : 'bg-primary'}`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {canEdit && (
+                        <div className="flex items-center gap-2 shrink-0">
+                          <button 
+                            onClick={() => handleUpdateInteraction(interaction.id, -1)}
+                            disabled={current <= 0}
+                            className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-on-surface-variant disabled:opacity-50 transition-colors"
+                          >
+                            <MinusCircle className="w-5 h-5" />
+                          </button>
+                          <span className="font-mono font-bold w-6 text-center">{current}</span>
+                          <button 
+                            onClick={() => handleUpdateInteraction(interaction.id, 1)}
+                            className="p-1.5 rounded-lg bg-surface-container hover:bg-surface-container-high text-primary transition-colors"
+                          >
+                            <PlusCircle className="w-5 h-5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Level Up Popup */}
       <LevelUpPopup
