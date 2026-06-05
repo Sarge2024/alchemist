@@ -1,4 +1,5 @@
 import { prisma } from '../prisma/client';
+import { Grau } from '@prisma/client';
 
 export class GamificationService {
   private static readonly XP_PER_LEVEL = 100;
@@ -15,6 +16,17 @@ export class GamificationService {
     REVIEW_WITH_PHOTO: 30,            // Postagem de Avaliação com foto
     PRODUCT_PURCHASED: 25,            // Compras de Produtos
   };
+
+  /**
+   * Mapeia o nível numérico para o Grau correspondente.
+   */
+  static getGrauForLevel(level: number): Grau {
+    if (level <= 1) return Grau.APRENDIZ;
+    if (level === 2) return Grau.ASSISTENTE;
+    if (level === 3) return Grau.ALQUIMISTA;
+    if (level === 4) return Grau.PERITO;
+    return Grau.MESTRE_ALQUIMISTA;
+  }
 
   /**
    * Atribui XP ao usuário por um evento e verifica se ele subiu de nível.
@@ -46,7 +58,7 @@ export class GamificationService {
           userId: user.id,
           xp_total: xpGained,
           nivel: 1,
-          grau: 'I'
+          grau: Grau.APRENDIZ
         }
       });
 
@@ -62,9 +74,13 @@ export class GamificationService {
       };
 
       if (expectedLevel > currentLevel) {
+        const newGrau = this.getGrauForLevel(expectedLevel);
         await prisma.userGamificationProfile.update({
           where: { id: profile.id },
-          data: { nivel: expectedLevel }
+          data: { 
+            nivel: expectedLevel,
+            grau: newGrau
+          }
         });
         result.currentLevel = expectedLevel;
         result.leveledUp = true;
@@ -89,8 +105,15 @@ export class GamificationService {
 
     if (!user) return null;
 
-    return prisma.userGamificationProfile.findUnique({
+    return prisma.userGamificationProfile.upsert({
       where: { userId: user.id },
+      update: {},
+      create: {
+        userId: user.id,
+        nivel: 1,
+        grau: 'APRENDIZ',
+        xp_total: 0
+      },
       include: {
         user: {
           select: { displayName: true, photoURL: true }

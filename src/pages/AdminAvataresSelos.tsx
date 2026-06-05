@@ -6,6 +6,7 @@ export default function AdminAvataresSelos() {
   const [badges, setBadges] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchCode, setSearchCode] = useState('');
+  const [activeInnerTab, setActiveInnerTab] = useState<'avatars' | 'badges'>('avatars');
 
   // Ordenação da tabela de avatares
   const [sortField, setSortField] = useState<string>('codigoAvatar');
@@ -41,12 +42,9 @@ export default function AdminAvataresSelos() {
 
   // Formulário Avatar
   const [newAvatar, setNewAvatar] = useState({
-    genero: 'h',
-    faixaEtaria: 'jo',
-    tomPele: 'cl',
     tierMinimo: '1'
   });
-  const [avatarImage, setAvatarImage] = useState<File | null>(null);
+  const [avatarImages, setAvatarImages] = useState<File[]>([]);
 
   // Formulário Selo
   const [newBadge, setNewBadge] = useState({
@@ -82,31 +80,44 @@ export default function AdminAvataresSelos() {
 
   const handleCreateAvatar = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (avatarImages.length === 0) {
+      alert("Selecione pelo menos uma imagem!");
+      return;
+    }
 
     try {
-      const formData = new FormData();
-      const codigoGerado = `${newAvatar.genero[0]}${newAvatar.faixaEtaria[0]}${newAvatar.tomPele[0]}${newAvatar.tierMinimo[0]}`.toUpperCase();
-      formData.append('codigoAvatar', codigoGerado);
-      formData.append('genero', newAvatar.genero);
-      formData.append('faixaEtaria', newAvatar.faixaEtaria);
-      formData.append('tomPele', newAvatar.tomPele);
-      formData.append('tierMinimo', newAvatar.tierMinimo);
-      if (avatarImage) formData.append('image', avatarImage);
+      let successCount = 0;
+      for (let i = 0; i < avatarImages.length; i++) {
+        const file = avatarImages[i];
+        const formData = new FormData();
+        const baseCode = `TIER${newAvatar.tierMinimo}`;
+        const codigoGerado = `${baseCode}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+        
+        formData.append('codigoAvatar', codigoGerado);
+        formData.append('tierMinimo', newAvatar.tierMinimo);
+        formData.append('image', file);
 
-      const res = await fetch('/api/admin/avatars', {
-        method: 'POST',
-        headers: { 'x-api-key': import.meta.env.VITE_APP_API_KEY || '' },
-        body: formData
-      });
+        const res = await fetch('/api/admin/avatars', {
+          method: 'POST',
+          headers: { 'x-api-key': import.meta.env.VITE_APP_API_KEY || '' },
+          body: formData
+        });
 
-      if (res.ok) {
-        alert("Avatar criado!");
+        if (res.ok) {
+          successCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        alert(`${successCount} Avatar(es) criado(s) com sucesso!`);
+        setAvatarImages([]);
         fetchData();
       } else {
-        alert("Erro ao criar avatar");
+        alert("Erro ao criar avatares.");
       }
     } catch (err) {
       console.error(err);
+      alert("Erro ao criar avatares.");
     }
   };
 
@@ -253,10 +264,27 @@ export default function AdminAvataresSelos() {
         onChange={handleAvatarImageSelected}
       />
       
+      {/* TABS INTERNAS */}
+      <div className="flex gap-2 mb-6 bg-surface-container-high p-1.5 rounded-3xl w-fit">
+        <button
+          onClick={() => setActiveInnerTab('avatars')}
+          className={`px-6 py-2 rounded-2xl font-bold text-sm transition-all ${activeInnerTab === 'avatars' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          Cadastro de Avatares
+        </button>
+        <button
+          onClick={() => setActiveInnerTab('badges')}
+          className={`px-6 py-2 rounded-2xl font-bold text-sm transition-all ${activeInnerTab === 'badges' ? 'bg-amber-500 text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          Matriz de Interações para Conquista de Selos
+        </button>
+      </div>
+
       {/* SEÇÃO AVATARES */}
+      {activeInnerTab === 'avatars' && (
       <section className="bg-surface-container rounded-3xl p-6 shadow-sm border border-surface-container-high">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2"><ImageIcon className="text-primary" /> Gestão de Avatares</h2>
+          <h2 className="text-2xl font-bold flex items-center gap-2"><ImageIcon className="text-primary" /> UI de Cadastro de Avatares</h2>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
             <input
@@ -272,33 +300,22 @@ export default function AdminAvataresSelos() {
         <form onSubmit={handleCreateAvatar} className="flex flex-wrap items-center gap-3 mb-8 bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high shadow-sm">
           <input 
             type="text" title="Código Gerado Automaticamente"
-            value={`${newAvatar.genero[0]}${newAvatar.faixaEtaria[0]}${newAvatar.tomPele[0]}${newAvatar.tierMinimo[0]}`.toUpperCase()}
+            value={`TIER${newAvatar.tierMinimo}_...`}
             readOnly
             className="flex-1 min-w-[150px] p-2 rounded-lg bg-surface border border-outline text-sm outline-none text-on-surface-variant font-mono cursor-not-allowed opacity-80"
           />
-          <select value={newAvatar.genero} onChange={e => setNewAvatar({...newAvatar, genero: e.target.value})} className="p-2 rounded-lg bg-surface border border-outline text-sm">
-            <option value="m">Masc</option>
-            <option value="f">Fem</option>
-          </select>
-          <select value={newAvatar.faixaEtaria} onChange={e => setNewAvatar({...newAvatar, faixaEtaria: e.target.value})} className="p-2 rounded-lg bg-surface border border-outline text-sm">
-            <option value="jo">Jovem</option>
-            <option value="ad">Adulto</option>
-            <option value="id">Idoso</option>
-          </select>
-          <select value={newAvatar.tomPele} onChange={e => setNewAvatar({...newAvatar, tomPele: e.target.value})} className="p-2 rounded-lg bg-surface border border-outline text-sm">
-            <option value="cl">Clara</option>
-            <option value="pa">Parda</option>
-            <option value="es">Escura</option>
-          </select>
           <select value={newAvatar.tierMinimo} onChange={e => setNewAvatar({...newAvatar, tierMinimo: e.target.value})} className="p-2 rounded-lg bg-surface border border-outline text-sm">
-            <option value="1">Aprendiz</option>
-            <option value="2">Assistente</option>
-            <option value="3">Alquimista</option>
-            <option value="4">Perito</option>
-            <option value="5">Mestre Alquimista</option>
+            <option value="1">Nível 1 - Aprendiz</option>
+            <option value="2">Nível 2 - Assistente</option>
+            <option value="3">Nível 3 - Alquimista</option>
+            <option value="4">Nível 4 - Perito</option>
+            <option value="5">Nível 5 - Mestre</option>
           </select>
           
-          <input type="file" accept="image/*" onChange={e => setAvatarImage(e.target.files?.[0] || null)} className="w-56 p-1.5 text-sm bg-surface rounded-lg border border-outline" />
+          <input type="file" accept="image/*" multiple onChange={e => setAvatarImages(Array.from(e.target.files || []))} className="w-56 p-1.5 text-sm bg-surface rounded-lg border border-outline" />
+          <div className="text-xs text-on-surface-variant w-full -mt-2 ml-1">
+            {avatarImages.length > 0 ? `${avatarImages.length} arquivo(s) selecionado(s)` : 'Nenhuma imagem selecionada'}
+          </div>
           <button type="submit" className="bg-primary text-white font-bold rounded-lg px-4 py-2 hover:bg-primary-container flex items-center gap-2 text-sm shrink-0">
             <Plus className="w-4 h-4" /> Adicionar
           </button>
@@ -309,11 +326,8 @@ export default function AdminAvataresSelos() {
             <thead className="bg-surface-container-low border-b border-outline text-xs uppercase font-black tracking-widest text-on-surface-variant">
               <tr>
                 <th className="p-3 w-16 text-center">Imagem</th>
-                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('codigoAvatar')}>Código<SortIcon field="codigoAvatar" /></th>
-                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('genero')}>Gênero<SortIcon field="genero" /></th>
-                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('faixaEtaria')}>Idade<SortIcon field="faixaEtaria" /></th>
-                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('tomPele')}>Pele<SortIcon field="tomPele" /></th>
-                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('tierMinimo')}>Tier<SortIcon field="tierMinimo" /></th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('codigoAvatar')}>Código Único<SortIcon field="codigoAvatar" /></th>
+                <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('tierMinimo')}>Nível (Tier) Liberado<SortIcon field="tierMinimo" /></th>
                 <th className="p-3 text-right">Ações</th>
               </tr>
             </thead>
@@ -324,20 +338,14 @@ export default function AdminAvataresSelos() {
                   return map[tier.toLowerCase()] || tier;
                 };
                 const numericTier = getNumericTier(avatar.tierMinimo);
-                const displayCode = avatar.codigoAvatar.length === 4 
-                  ? avatar.codigoAvatar.substring(0, 3) + numericTier 
-                  : avatar.codigoAvatar;
 
                 return (
                   <tr key={avatar.id} className="hover:bg-surface-container-lowest transition-colors">
                     <td className="p-3 text-center">
-                      <img src={avatar.urlVercelBlob} alt={displayCode} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
+                      <img src={avatar.urlVercelBlob} alt={avatar.codigoAvatar} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
                     </td>
-                    <td className="p-3 font-mono font-bold text-on-surface">{displayCode}</td>
-                    <td className="p-3 uppercase text-xs font-semibold">{avatar.genero}</td>
-                    <td className="p-3 uppercase text-xs font-semibold">{avatar.faixaEtaria}</td>
-                    <td className="p-3 uppercase text-xs font-semibold">{avatar.tomPele}</td>
-                    <td className="p-3 uppercase text-xs font-black text-primary text-center">{numericTier}</td>
+                    <td className="p-3 font-mono font-bold text-on-surface">{avatar.codigoAvatar}</td>
+                    <td className="p-3 uppercase text-xs font-black text-primary">Nível {numericTier}</td>
                     <td className="p-3 text-right flex items-center justify-end gap-1">
                       <button onClick={() => handleEditAvatarImage(avatar.id)} title="Enviar imagem" className="p-2 bg-blue-50 text-blue-500 hover:bg-blue-500 hover:text-white rounded-lg transition-colors">
                         <Upload className="w-4 h-4" />
@@ -354,10 +362,12 @@ export default function AdminAvataresSelos() {
           {avatars.length === 0 && <div className="p-6 text-center text-on-surface-variant">Nenhum avatar cadastrado no banco de dados.</div>}
         </div>
       </section>
+      )}
 
       {/* SEÇÃO SELOS */}
+      {activeInnerTab === 'badges' && (
       <section className="bg-surface-container rounded-3xl p-6 shadow-sm border border-surface-container-high">
-        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Award className="text-amber-500" /> Gestão de Selos (Gamificação)</h2>
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2"><Award className="text-amber-500" /> Matriz de Interações para Conquista de Selos</h2>
         
         <form onSubmit={handleCreateBadge} className="flex flex-wrap items-center gap-3 mb-8 bg-surface-container-lowest p-3 rounded-xl border border-surface-container-high shadow-sm">
           <input 
@@ -414,6 +424,7 @@ export default function AdminAvataresSelos() {
           {badges.length === 0 && <div className="p-6 text-center text-on-surface-variant">Nenhum selo cadastrado no banco de dados.</div>}
         </div>
       </section>
+      )}
 
       {/* POPUP DE CONFIRMAÇÃO DE IMAGEM */}
       {avatarPopupState.isOpen && (

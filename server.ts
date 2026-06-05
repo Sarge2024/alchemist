@@ -19,6 +19,8 @@ import { geminiService } from "./src/infra/services/geminiService";
 import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
 import { put } from "@vercel/blob";
 import cron from "node-cron";
+import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
+import { RagBackendService } from "./src/infra/services/ragBackendService";
 
 // Removed __filename and __dirname to prevent import.meta.url SyntaxError
 
@@ -185,6 +187,7 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
 
 app.use(express.json());
+registerMcpRoutes(app);
 
 // Endpoint to update presence in Firestore (called from frontend AuthContext)
 app.post("/api/presence", async (req, res) => {
@@ -567,30 +570,30 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
   try {
     const { uid } = req.params;
     
-    // 1. Busca o perfil de gamificação
-    const profile = await prisma.userGamificationProfile.findUnique({
-      where: { userId: uid }
+    // 1. Busca o usuário pelo UID
+    const user = await prisma.user.findUnique({
+      where: { uid }
     });
+    
+    // 2. Busca o perfil de gamificação usando o ID interno do usuário
+    const profile = user ? await prisma.userGamificationProfile.findUnique({
+      where: { userId: user.id }
+    }) : null;
 
-    // Se não tiver perfil (usuário novo), assume nível 1 (apenas '1' liberado, com fallback legado 'ini', 'apr')
-    let tiersPermitidos = ['1', 'ini', 'apr'];
+    // Se não tiver perfil (usuário novo), assume nível 1 (apenas '1'/'APRENDIZ' liberado, com fallback legado 'ini', 'apr')
+    let tiersPermitidos = ['1', 'ini', 'apr', 'APRENDIZ'];
     if (profile) {
       if (profile.nivel >= 2) {
-        tiersPermitidos.push('2');
-        tiersPermitidos.push('ast'); // legado
+        tiersPermitidos.push('2', 'ast', 'ASSISTENTE');
       }
       if (profile.nivel >= 3) {
-        tiersPermitidos.push('3');
-        tiersPermitidos.push('alq'); // legado
-        tiersPermitidos.push('av'); // legado
+        tiersPermitidos.push('3', 'alq', 'av', 'ALQUIMISTA');
       }
       if (profile.nivel >= 4) {
-        tiersPermitidos.push('4');
-        tiersPermitidos.push('per'); // legado
+        tiersPermitidos.push('4', 'per', 'PERITO');
       }
       if (profile.nivel >= 5) {
-        tiersPermitidos.push('5');
-        tiersPermitidos.push('mes'); // legado
+        tiersPermitidos.push('5', 'mes', 'MESTRE_ALQUIMISTA');
       }
     }
 
@@ -602,12 +605,7 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
       id: avatar.id,
       codigo: avatar.codigoAvatar,
       url: avatar.urlVercelBlob,
-      bloqueado: !tiersPermitidos.includes(avatar.tierMinimo),
-      config: {
-        genero: avatar.genero,
-        idade: avatar.faixaEtaria,
-        pele: avatar.tomPele
-      }
+      bloqueado: !tiersPermitidos.includes(avatar.tierMinimo)
     }));
 
     res.json({ success: true, avatars: avataresTratados });
@@ -625,7 +623,14 @@ app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
     if (!profile) {
       return res.status(404).json({ error: "Perfil de gamificação não encontrado." });
     }
-    res.json({ success: true, profile });
+    const mappedProfile = {
+      ...profile,
+      level: profile.nivel,
+      tier: profile.grau,
+      xp: profile.xp_total % 100,
+      nextLevelXp: 100
+    };
+    res.json({ success: true, profile: mappedProfile });
   } catch (error: any) {
     console.error("[Gamification API] Erro ao buscar perfil:", error);
     res.status(500).json({ error: error.message });
@@ -648,7 +653,7 @@ app.get("/api/admin/avatars", authenticateAPI, async (req, res) => {
 // Criar Avatar (com upload)
 app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (req, res) => {
   try {
-    const { codigoAvatar, genero, faixaEtaria, tomPele, tierMinimo } = req.body;
+    const { codigoAvatar, tierMinimo } = req.body;
     let urlVercelBlob = `https://placehold.co/150x150?text=${codigoAvatar}`;
 
     if (req.file) {
@@ -666,9 +671,6 @@ app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (r
     const newAvatar = await prisma.avatarOption.create({
       data: {
         codigoAvatar,
-        genero,
-        faixaEtaria,
-        tomPele,
         tierMinimo,
         urlVercelBlob
       }
@@ -811,6 +813,17 @@ if (process.env.VERCEL !== "1") {
       }
     } catch (error) {
       console.error("[Cron] Falha na transmutação da Ata:", error);
+    }
+  });
+
+  // Agendamento RAG: Todo dia às 03:00 da manhã
+  // Sincroniza mensagens do Firebase para o PostgreSQL/pgvector para busca semântica
+  cron.schedule("0 3 * * *", async () => {
+    console.log("[Cron] Iniciando sincronização RAG: Firebase -> PostgreSQL...");
+    try {
+      await RagBackendService.syncChatsToPostgreSQL();
+    } catch (error) {
+      console.error("[Cron] Falha na sincronização RAG:", error);
     }
   });
 }

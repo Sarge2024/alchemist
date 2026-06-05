@@ -75,7 +75,7 @@ describe('Lounge Gastronômico - Validação e Estresse', () => {
     expect(updateDoc).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
-        [`topicVotes.${topicIndex}.${userId}`]: true
+        [`topics.${topicIndex}.votes.${userId}`]: true
       })
     );
   });

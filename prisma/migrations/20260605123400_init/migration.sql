@@ -1,8 +1,23 @@
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
+
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "vector";
+
+-- CreateExtension
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
 -- CreateEnum
 CREATE TYPE "Role" AS ENUM ('USER', 'COLLABORATOR', 'ADMIN');
 
 -- CreateEnum
-CREATE TYPE "Grau" AS ENUM ('I', 'II', 'III');
+CREATE TYPE "Grau" AS ENUM ('APRENDIZ', 'ASSISTENTE', 'ALQUIMISTA', 'PERITO', 'MESTRE_ALQUIMISTA');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -63,7 +78,7 @@ CREATE TABLE "Ingredient" (
 CREATE TABLE "UserGamificationProfile" (
     "id" TEXT NOT NULL,
     "nivel" INTEGER NOT NULL DEFAULT 1,
-    "grau" "Grau" NOT NULL DEFAULT 'I',
+    "grau" "Grau" NOT NULL DEFAULT 'APRENDIZ',
     "xp_total" INTEGER NOT NULL DEFAULT 0,
     "userId" TEXT NOT NULL,
 
@@ -91,6 +106,33 @@ CREATE TABLE "UserBadge" (
     CONSTRAINT "UserBadge_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "AvatarOption" (
+    "id" TEXT NOT NULL,
+    "codigoAvatar" TEXT NOT NULL,
+    "genero" TEXT NOT NULL,
+    "faixaEtaria" TEXT NOT NULL,
+    "tomPele" TEXT NOT NULL,
+    "tierMinimo" TEXT NOT NULL,
+    "urlVercelBlob" TEXT NOT NULL,
+    "criadoEm" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "AvatarOption_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "SemanticDocument" (
+    "id" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "embedding" vector(768),
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "SemanticDocument_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_uid_key" ON "User"("uid");
 
@@ -105,6 +147,12 @@ CREATE UNIQUE INDEX "Badge_codigo_evento_key" ON "Badge"("codigo_evento");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "UserBadge_userId_badgeId_key" ON "UserBadge"("userId", "badgeId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "AvatarOption_codigoAvatar_key" ON "AvatarOption"("codigoAvatar");
+
+-- CreateIndex
+CREATE INDEX "SemanticDocument_type_idx" ON "SemanticDocument"("type");
 
 -- AddForeignKey
 ALTER TABLE "Recipe" ADD CONSTRAINT "Recipe_ownerId_fkey" FOREIGN KEY ("ownerId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;

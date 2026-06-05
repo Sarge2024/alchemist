@@ -426,9 +426,9 @@ function SauceSpotlight({ sauce }: { sauce: any }) {
                 font: { size: 12, family: "'Inter', sans-serif", weight: 'bold' },
                 color: '#2C3E50'
               },
+              min: 0,
+              max: 10,
               ticks: {
-                beginAtZero: true,
-                max: 10,
                 stepSize: 2,
                 display: false 
               }

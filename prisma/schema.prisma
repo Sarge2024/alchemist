@@ -1,9 +1,11 @@
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [pgvector(map: "vector"), pgcrypto, uuid_ossp(map: "uuid-ossp"), pg_stat_statements]
 }
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 model User {
@@ -70,16 +72,18 @@ model Ingredient {
 model UserGamificationProfile {
   id        String   @id @default(uuid())
   nivel     Int      @default(1)
-  grau      Grau     @default(I)
+  grau      Grau     @default(APRENDIZ)
   xp_total  Int      @default(0)
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Grau {
-  I
-  II
-  III
+  APRENDIZ
+  ASSISTENTE
+  ALQUIMISTA
+  PERITO
+  MESTRE_ALQUIMISTA
 }
 
 model Badge {
@@ -104,11 +108,20 @@ model UserBadge {
 
 model AvatarOption {
   id             String   @id @default(uuid())
-  codigoAvatar   String   @unique // Ex: "av_m_ad_pa_ini"
-  genero         String   // "m" ou "f"
-  faixaEtaria    String   // "ad" ou "id"
-  tomPele        String   // "cl", "pa", "es"
-  tierMinimo     String   // "ini", "av", "mes"
+  codigoAvatar   String   @unique // Ex: "TIER2_8A2BD"
+  tierMinimo     String   // "1", "2", "3", "4", "5"
   urlVercelBlob  String   // URL real gerada pelo storage da Vercel
   criadoEm       DateTime @default(now())
+}
+
+model SemanticDocument {
+  id        String                      @id @default(uuid())
+  title     String
+  content   String                      // Text content of the chunk/chat/article
+  type      String                      // 'article' | 'presentation' | 'chat_summary'
+  embedding Unsupported("vector(768)")? // Vector output from text-embedding-004
+  createdAt DateTime                    @default(now())
+  updatedAt DateTime                    @updatedAt
+
+  @@index([type])
 }

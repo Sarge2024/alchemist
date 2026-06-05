@@ -1,6 +1,7 @@
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { GoogleGenAI } from "@google/genai";
 import { getAvailableGeminiKeys, isQuotaExhaustedError } from "./geminiKeyManager";
+import { RagBackendService } from "./ragBackendService";
 
 /**
  * AtaGeneratorService
@@ -50,10 +51,23 @@ export const AtaGeneratorService = {
         })
         .join('\n---\n');
 
+      // Busca contexto histórico relacionado às mensagens do dia
+      let semanticContext = "";
+      try {
+        // Usa as primeiras mensagens (até 800 chars) como query para buscar temas relacionados no RAG
+        semanticContext = await RagBackendService.getSemanticContext(messagesContent.substring(0, 800), 3);
+      } catch (e) {
+        console.warn("[AtaGenerator] Não foi possível buscar contexto semântico:", e);
+      }
+
       const prompt = `
         Você é o Cronista Oficial da Alquimia do Prato. Sua missão é ler as mensagens do Lounge Gastronômico 
         e sintetizar uma "Ata de Interação Comunitária" que inspire a nossa comunidade.
+        Você pode usar o "Contexto Histórico do Acervo" para conectar as discussões atuais com receitas ou temas do passado.
         
+        CONTEXTO HISTÓRICO DO ACERVO (Para referência e conexões na seção de Insights):
+        ${semanticContext || "Nenhum contexto relacionado encontrado."}
+
         MENSAGENS APROVADAS (ÚLTIMAS 24H):
         ${messagesContent}
         

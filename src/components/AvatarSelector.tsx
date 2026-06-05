@@ -6,11 +6,6 @@ export interface AvatarOptionData {
   codigo: string;
   url: string;
   bloqueado: boolean;
-  config: {
-    genero: string;
-    idade: string;
-    pele: string;
-  };
 }
 
 interface AvatarSelectorProps {
@@ -21,91 +16,30 @@ interface AvatarSelectorProps {
 }
 
 export const AvatarSelector: React.FC<AvatarSelectorProps> = ({ avatares, avatarAtualUrl, onSelect, onClose }) => {
-  const [generoFilter, setGeneroFilter] = useState<string | null>(null);
-  const [peleFilter, setPeleFilter] = useState<string | null>(null);
-
-  const filteredAvatars = avatares.filter(avatar => {
-    if (generoFilter && avatar.config.genero !== generoFilter) return false;
-    if (peleFilter && avatar.config.pele !== peleFilter) return false;
-    return true;
-  });
-
   return (
     <div className="bg-surface-container-low rounded-3xl p-6 border border-surface-container-high shadow-xl max-w-4xl mx-auto w-full">
       <div className="flex justify-between items-center mb-6">
-        <h3 className="text-xl font-bold text-on-surface">Escolha seu Avatar</h3>
+        <div>
+          <h3 className="text-xl font-bold text-on-surface">Escolha seu Avatar</h3>
+          <p className="text-sm text-on-surface-variant mt-1">
+            Selecione a imagem que melhor representa você. Novos avatares são liberados ao subir de nível!
+          </p>
+        </div>
         {onClose && (
-          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-2">
+          <button onClick={onClose} className="text-on-surface-variant hover:text-on-surface p-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors">
             X
           </button>
         )}
       </div>
 
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-6 mb-8">
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider text-[10px]">Gênero</p>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setGeneroFilter(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${generoFilter === null ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Todos
-            </button>
-            <button 
-              onClick={() => setGeneroFilter('m')}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${generoFilter === 'm' ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Masculino
-            </button>
-            <button 
-              onClick={() => setGeneroFilter('f')}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${generoFilter === 'f' ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Feminino
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-sm font-bold text-on-surface-variant uppercase tracking-wider text-[10px]">Tom de Pele</p>
-          <div className="flex gap-2">
-            <button 
-              onClick={() => setPeleFilter(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${peleFilter === null ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Todos
-            </button>
-            <button 
-              onClick={() => setPeleFilter('cl')}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${peleFilter === 'cl' ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Clara
-            </button>
-            <button 
-              onClick={() => setPeleFilter('pa')}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${peleFilter === 'pa' ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Parda
-            </button>
-            <button 
-              onClick={() => setPeleFilter('es')}
-              className={`px-3 py-1.5 rounded-full text-xs font-bold transition-colors ${peleFilter === 'es' ? 'bg-primary text-white' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'}`}
-            >
-              Escura
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Grid de Avatares */}
-      {filteredAvatars.length === 0 ? (
+      {avatares.length === 0 ? (
         <div className="text-center py-12 text-on-surface-variant">
           Nenhum avatar encontrado com esses filtros.
         </div>
       ) : (
         <div className="grid grid-cols-3 gap-4 md:grid-cols-4 lg:grid-cols-6 max-h-[50vh] overflow-y-auto p-2 scrollbar-thin">
-          {filteredAvatars.map((avatar) => {
+          {avatares.map((avatar) => {
             const isSelected = avatar.url === avatarAtualUrl;
             
             return (

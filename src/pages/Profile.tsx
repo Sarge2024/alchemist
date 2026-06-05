@@ -41,6 +41,8 @@ export default function Profile() {
   const [gamification, setGamification] = useState<any>(null);
   const [avatarsList, setAvatarsList] = useState<AvatarOptionData[]>([]);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
+  const [showLevelUpPopup, setShowLevelUpPopup] = useState(false);
+  const [unlockedLevel, setUnlockedLevel] = useState<number>(0);
   
   const [formData, setFormData] = useState({
     displayName: '',
@@ -120,7 +122,23 @@ export default function Profile() {
         const gRes = await fetch(`/api/gamification/profile/${targetUid}`, { headers });
         if (gRes.ok) {
           const gData = await gRes.json();
-          if (gData.success) setGamification(gData.profile);
+          if (gData.success) {
+            setGamification(gData.profile);
+            
+            if (user?.uid === targetUid) {
+              const storedLevelStr = localStorage.getItem(`gamification_level_${user.uid}`);
+              const storedLevel = storedLevelStr ? parseInt(storedLevelStr, 10) : gData.profile.level;
+              
+              if (gData.profile.level > storedLevel) {
+                setUnlockedLevel(gData.profile.level);
+                setShowLevelUpPopup(true);
+              }
+              
+              if (!storedLevelStr) {
+                localStorage.setItem(`gamification_level_${user.uid}`, gData.profile.level.toString());
+              }
+            }
+          }
         }
       } catch (gErr) {
         console.error('Gamification fetch error:', gErr);
@@ -131,6 +149,19 @@ export default function Profile() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleCloseLevelUpPopup = () => {
+    setShowLevelUpPopup(false);
+    if (user?.uid && gamification) {
+      localStorage.setItem(`gamification_level_${user.uid}`, gamification.level.toString());
+    }
+  };
+
+  const handleChooseNewAvatar = () => {
+    handleCloseLevelUpPopup();
+    setIsEditing(true);
+    setShowAvatarSelector(true);
   };
 
 
@@ -500,12 +531,11 @@ export default function Profile() {
                         Nível {gamification?.level || 1}
                       </div>
                       <h3 className="text-3xl font-bold text-on-surface leading-none mb-1">
-                        {gamification?.tier === 'BRONZE' ? 'Bronze' : 
-                         gamification?.tier === 'SILVER' ? 'Prata' : 
-                         gamification?.tier === 'GOLD' ? 'Ouro' : 
-                         gamification?.tier === 'PLATINUM' ? 'Platina' : 
-                         gamification?.tier === 'DIAMOND' ? 'Diamante' : 
-                         gamification?.tier === 'ALCHEMIST' ? 'Alquimista' : 'Iniciante'}
+                        {gamification?.tier === 'APRENDIZ' ? 'Aprendiz' : 
+                         gamification?.tier === 'ASSISTENTE' ? 'Assistente' : 
+                         gamification?.tier === 'ALQUIMISTA' ? 'Alquimista' : 
+                         gamification?.tier === 'PERITO' ? 'Perito' : 
+                         gamification?.tier === 'MESTRE_ALQUIMISTA' ? 'Mestre Alquimista' : 'Aprendiz'}
                       </h3>
                       <p className="text-xs text-on-surface-variant font-medium">Grau Culinário</p>
                     </div>

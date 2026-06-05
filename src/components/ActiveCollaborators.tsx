@@ -13,7 +13,7 @@ import { Avatar } from './Avatar';
  * @layer UI (Lounge Sidebar)
  */
 export const ActiveCollaborators: React.FC = () => {
-  const [collaborators, setCollaborators] = useState<UserProfile[]>([]);
+  const [collaborators, setCollaborators] = useState<(UserProfile & { isOnline?: boolean })[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Subscreve à coleção de usuários em tempo real
