@@ -78,6 +78,7 @@ export default function RegisterCollaborator() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
+          redirectTo: window.location.origin,
           queryParams: {
             prompt: 'select_account',
           },
