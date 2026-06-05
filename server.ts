@@ -55,17 +55,27 @@ try {
   console.warn(`[Admin] Erro lendo firebase-applet-config.json:`, e);
 }
 
-// Tenta carregar o Service Account se disponível (necessário para rodar localmente sem emuladores)
 const serviceAccountPath = path.resolve(process.cwd(), 'sagacitas-financeiro-firebase-adminsdk-fbsvc-1298d3f890.json');
 let credential;
-try {
-  if (fs.existsSync(serviceAccountPath)) {
-    const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+
+if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+  try {
+    const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
     credential = cert(serviceAccount);
-    console.log(`[Admin] Service Account Key carregada: ${serviceAccount.project_id}`);
+    console.log(`[Admin] Service Account carregada via variável de ambiente (Vercel).`);
+  } catch (e) {
+    console.warn(`[Admin] Erro ao fazer parse da FIREBASE_SERVICE_ACCOUNT:`, e);
   }
-} catch (e) {
-  console.warn(`[Admin] Aviso: Não foi possível carregar a Service Account Key:`, e);
+} else {
+  try {
+    if (fs.existsSync(serviceAccountPath)) {
+      const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+      credential = cert(serviceAccount);
+      console.log(`[Admin] Service Account Key carregada: ${serviceAccount.project_id}`);
+    }
+  } catch (e) {
+    console.warn(`[Admin] Aviso: Não foi possível carregar a Service Account Key local:`, e);
+  }
 }
 
 try {
