@@ -58,19 +58,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatePresence = async (appUser: AppUser | null, isOnline: boolean) => {
       if (appUser?.uid) {
         try {
-          await fetch('/api/presence', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              uid: appUser.uid,
-              isOnline,
-              displayName: appUser.displayName,
-              email: appUser.email,
-              photoURL: appUser.photoURL
-            })
-          });
+          // Gravação direta via SDK Cliente (imediato, sem depender do backend da Vercel)
+          const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
+          const { db } = await import('../lib/firebase');
+          await setDoc(doc(db, "users", appUser.uid), {
+            isOnline,
+            lastSeen: serverTimestamp(),
+            ...(appUser.displayName && { displayName: appUser.displayName }),
+            ...(appUser.email && { email: appUser.email }),
+            ...(appUser.photoURL && { photoURL: appUser.photoURL })
+          }, { merge: true });
         } catch (err) {
-          console.error("Error updating presence:", err);
+          console.error("Error updating presence directly:", err);
         }
       }
     };
