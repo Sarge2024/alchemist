@@ -508,7 +508,7 @@ export default function RecipeDetail() {
 
   if (!recipe) {
     return (
-      <div className="max-w-5xl mx-auto px-6 py-20 text-center">
+      <div className="max-w-7xl mx-auto px-6 py-20 text-center">
         <h2 className="text-3xl font-bold text-on-surface mb-4">Receita não encontrada</h2>
         <Link to="/explore" className="text-primary font-bold hover:underline">Voltar para Explorar</Link>
       </div>
@@ -548,7 +548,7 @@ export default function RecipeDetail() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="max-w-5xl mx-auto px-6 pb-xl"
+      className="max-w-7xl mx-auto px-6 pb-xl pt-6 md:pt-10"
     >
       {/* Top Bar */}
       <div className="flex items-center justify-between mb-8 no-print">

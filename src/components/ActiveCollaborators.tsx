@@ -21,9 +21,31 @@ export const ActiveCollaborators: React.FC = () => {
     const q = query(collection(db, 'users'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      const now = new Date().getTime();
+      const FIVE_MINUTES = 5 * 60 * 1000;
+
       const users = snapshot.docs
-        .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile & { isOnline?: boolean }))
-        .filter(user => user.role !== 'chef'); // Chefs têm lista própria à esquerda
+        .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile & { isOnline?: boolean, lastSeen?: any }))
+        .filter(user => {
+          if (user.role === 'chef') return false;
+          if (!user.isOnline) return false;
+
+          // Usuários sem lastSeen são zumbis de versões anteriores (ficaram presos antes do patch)
+          if (!user.lastSeen) return false;
+
+          // lastSeen pode ser um Timestamp do Firestore ou uma string/Date dependendo da serialização
+          const lastSeenTime = user.lastSeen?.toDate ? user.lastSeen.toDate().getTime() : new Date(user.lastSeen).getTime();
+          
+          // Se a data for inválida, é um zumbi
+          if (isNaN(lastSeenTime)) return false;
+
+          // Tolerância de 5 minutos
+          if (now - lastSeenTime > FIVE_MINUTES) {
+            return false; 
+          }
+          
+          return true;
+        });
 
       // Ordena: Online primeiro, depois ordem alfabética
       users.sort((a, b) => {
@@ -128,6 +150,12 @@ export const ActiveCollaborators: React.FC = () => {
               </div>
             </div>
           ))
+        ) : collaborators.length === 0 ? (
+          <div className="text-center py-6">
+            <p className="text-xs font-bold text-amber-900/40 dark:text-amber-500/40 uppercase tracking-widest">
+              Nenhum membro online
+            </p>
+          </div>
         ) : (
           <AnimatePresence>
             {collaborators.map((collab, index) => (

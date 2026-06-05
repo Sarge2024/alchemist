@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext';
 import { Avatar } from '../components/Avatar';
 import { supabase } from '../lib/supabase';
 import { AvatarSelector, AvatarOptionData } from '../components/AvatarSelector';
+import { LevelUpPopup } from '../components/LevelUpPopup';
 
 export default function Profile() {
   const { uid: paramUid } = useParams<{ uid: string }>();
@@ -219,7 +220,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-6 pb-24 pt-12">
+    <div className="max-w-6xl mx-auto px-6 pb-24 pt-8 md:pt-12">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -629,6 +630,15 @@ export default function Profile() {
           </div>
         </div>
       )}
+
+      {/* Level Up Popup */}
+      <LevelUpPopup
+        isOpen={showLevelUpPopup}
+        newLevel={gamification?.level || 1}
+        newTier={gamification?.tier || 'APRENDIZ'}
+        onClose={handleCloseLevelUpPopup}
+        onChooseAvatar={handleChooseNewAvatar}
+      />
     </div>
   );
 }

@@ -29,7 +29,7 @@ const Lounge: React.FC = () => {
   return (
     <div className="min-h-screen bg-background pb-20">
       {/* Hero Section */}
-      <section className="pt-8 pb-8 px-4 md:px-8">
+      <section className="pt-8 pb-6 px-4 md:px-8 max-w-[1600px] mx-auto w-full">
         <div className="w-full">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -75,7 +75,7 @@ const Lounge: React.FC = () => {
       </section>
 
       {/* Main Content */}
-      <main className="px-4 md:px-8">
+      <main className="px-4 md:px-8 pb-12 max-w-[1600px] mx-auto w-full">
         <div className="w-full">
           {activeTab === 'chat' ? (
             <motion.div

@@ -106,7 +106,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Navbar */}
       <nav className="fixed top-0 w-full z-50 glass border-b border-surface-container-high/50">
-        <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-2 md:py-3">
+        <div className="max-w-[1600px] mx-auto flex items-center justify-between px-4 py-2 md:py-3">
           
           {/* LADO ESQUERDO: Logo e Toggle Mobile */}
           <div className="flex-1 flex items-center gap-2 md:gap-4">
@@ -334,7 +334,7 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* Footer */}
       <footer className="bg-surface-container-lowest border-t border-surface-container-high mt-12">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="max-w-[1600px] mx-auto px-6 py-8">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
             <div className="flex flex-col items-center md:items-start gap-2">
               <span className="text-xl font-bold text-primary">Alquimia do Prato</span>

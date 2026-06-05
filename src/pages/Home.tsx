@@ -76,7 +76,7 @@ export default function Home() {
       const usedCategories = new Set<string>();
 
       for (const recipe of shuffled) {
-        if (selectedRecipes.length >= 6) break;
+        if (selectedRecipes.length >= 8) break;
         
         const typeField = (recipe as any).tipo_prato;
         const momentField = (recipe as any).momento;
@@ -88,10 +88,10 @@ export default function Home() {
         }
       }
 
-      // Fill remaining slots if we couldn't find 6 distinct categories
-      if (selectedRecipes.length < 6) {
+      // Fill remaining slots if we couldn't find 8 distinct categories
+      if (selectedRecipes.length < 8) {
         for (const recipe of shuffled) {
-          if (selectedRecipes.length >= 6) break;
+          if (selectedRecipes.length >= 8) break;
           if (!selectedRecipes.some(r => r.id === recipe.id)) {
             selectedRecipes.push(recipe);
           }
@@ -110,7 +110,7 @@ export default function Home() {
   return (
     <div className="pb-xl">
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 md:px-6 mb-xl">
+      <section className="max-w-[1600px] w-full mx-auto px-4 md:px-6 mb-xl">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -169,7 +169,7 @@ export default function Home() {
       </section>
 
       {/* Popular Categories */}
-      <section className="max-w-7xl mx-auto px-6 mb-xl">
+      <section className="max-w-[1600px] w-full mx-auto px-6 mb-xl">
         <div className="mb-lg">
           <div className="flex items-center justify-between">
             <div>
@@ -217,7 +217,7 @@ export default function Home() {
       </section>
 
       {/* Recent Recipes */}
-      <section className="max-w-7xl mx-auto px-6 mb-xl">
+      <section className="max-w-[1600px] w-full mx-auto px-6 mb-xl">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl md:text-3xl font-bold text-on-surface">Receitas Recentes</h2>
           <Link to="/explore" className="text-primary font-bold flex items-center gap-2 hover:underline">
@@ -231,7 +231,7 @@ export default function Home() {
             <p className="text-sm text-on-surface-variant">Carregando novidades...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-8">
             {recipes.map((recipe) => (
               <RecipeCard key={recipe.id || `home-recipe-${Math.random()}`} recipe={recipe} />
             ))}
@@ -240,7 +240,7 @@ export default function Home() {
       </section>
 
       {/* Community Section */}
-      <section className="bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 backdrop-blur-md py-12 md:py-16 mt-8 rounded-3xl max-w-7xl mx-auto overflow-hidden border border-amber-100 dark:border-amber-900/50 shadow-xl shadow-amber-500/5">
+      <section className="bg-gradient-to-br from-amber-50/50 to-orange-50/50 dark:from-amber-950/20 dark:to-orange-950/20 backdrop-blur-md py-12 md:py-16 mt-8 rounded-3xl max-w-[1600px] w-full mx-auto overflow-hidden border border-amber-100 dark:border-amber-900/50 shadow-xl shadow-amber-500/5">
         <div className="px-6 md:px-12 grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 items-center">
           <div className="rounded-2xl overflow-hidden shadow-2xl">
             <img 

@@ -12,7 +12,22 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
   const { user, loading, isAdmin } = useAuth();
   const location = useLocation();
 
+  const [showSpinner, setShowSpinner] = React.useState(false);
+
+  React.useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (loading) {
+      // Aguarda 300ms antes de mostrar o spinner para evitar flashes rápidos (flicker)
+      timer = setTimeout(() => setShowSpinner(true), 300);
+    } else {
+      setShowSpinner(false);
+    }
+    return () => clearTimeout(timer);
+  }, [loading]);
+
   if (loading) {
+    if (!showSpinner) return null; // Retorna nulo no início para uma transição suave
+
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-4">
         <Loader2 className="w-12 h-12 text-primary animate-spin" />

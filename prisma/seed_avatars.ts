@@ -9,10 +9,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
-const generos = ['m', 'f'];
-const idades = ['jo', 'ad', 'id'];
-const tonsPele = ['cl', 'pa', 'es'];
-const tiers = ['ini', 'av', 'mes'];
+const tiers = ['1', '2', '3', '4', '5'];
 
 async function main() {
   console.log('Iniciando o Seed de Avatares...');
@@ -23,29 +20,22 @@ async function main() {
 
   let criados = 0;
 
-  for (const g of generos) {
-    for (const i of idades) {
-      for (const p of tonsPele) {
-        for (const t of tiers) {
-          const codigoAvatar = `${g[0]}${i[0]}${p[0]}${t[0]}`.toUpperCase();
-          
-          // Gera uma URL amigável usando placehold.co com o código do avatar gerado para identificação visual provisória
-          const urlVercelBlob = `https://placehold.co/150x150?text=${codigoAvatar}`;
+  for (const t of tiers) {
+    for (let i = 1; i <= 5; i++) {
+      const codigoAvatar = `TIER${t}_OPT${i}`.toUpperCase();
+      
+      // Gera uma URL amigável
+      const urlVercelBlob = `https://placehold.co/150x150?text=T${t}A${i}`;
 
-          await prisma.avatarOption.create({
-            data: {
-              codigoAvatar,
-              genero: g,
-              faixaEtaria: i,
-              tomPele: p,
-              tierMinimo: t,
-              urlVercelBlob,
-            }
-          });
-          criados++;
-          console.log(`✅ Criado: ${codigoAvatar}`);
+      await prisma.avatarOption.create({
+        data: {
+          codigoAvatar,
+          tierMinimo: t,
+          urlVercelBlob,
         }
-      }
+      });
+      criados++;
+      console.log(`✅ Criado: ${codigoAvatar}`);
     }
   }
 

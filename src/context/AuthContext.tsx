@@ -24,9 +24,28 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true, isAdmin: false });
 
+// Helper para descobrir se precisamos aguardar o Supabase
+const hasAuthToken = () => {
+  if (typeof window === 'undefined') return false;
+  const hash = window.location.hash;
+  const search = window.location.search;
+  
+  // Se está voltando do Google OAuth (tem hash de access_token ou code de redirecionamento)
+  if (hash.includes('access_token') || search.includes('code=')) return true;
+  
+  // Procura pela chave do token do supabase no localStorage
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i);
+    if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
+      return true; // Tem token salvo
+    }
+  }
+  return false; // Não tem token, não precisa esperar o auth inicializar para saber que está deslogado
+};
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<AppUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(hasAuthToken());
 
   const ADMIN_EMAIL = 'sagacitas.sistemas@gmail.com';
   const userRef = useRef<AppUser | null>(null);
@@ -53,6 +72,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         } catch (err) {
           console.error("Error updating presence:", err);
         }
+      }
+    };
+
+    // Usar sendBeacon para quando a página for fechada
+    const sendBeaconPresence = (isOnline: boolean) => {
+      if (userRef.current?.uid) {
+        const data = JSON.stringify({
+          uid: userRef.current.uid,
+          isOnline,
+          displayName: userRef.current.displayName,
+          email: userRef.current.email,
+          photoURL: userRef.current.photoURL
+        });
+        const blob = new Blob([data], { type: 'application/json' });
+        navigator.sendBeacon('/api/presence', blob);
       }
     };
 
@@ -83,20 +117,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        if (userRef.current) updatePresence(userRef.current, false);
-      } else if (document.visibilityState === 'visible') {
-        if (userRef.current) updatePresence(userRef.current, true);
-      }
+    const handleBeforeUnload = () => {
+      sendBeaconPresence(false);
     };
     
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    // Heartbeat: atualiza o lastSeen a cada 3 minutos para manter a sessão ativa
+    const heartbeat = setInterval(() => {
+      if (userRef.current) {
+        updatePresence(userRef.current, true);
+      }
+    }, 3 * 60 * 1000);
 
     // Limpeza ao desmontar
     return () => {
       if (userRef.current) updatePresence(userRef.current, false);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      clearInterval(heartbeat);
       subscription.unsubscribe();
     };
   }, []);

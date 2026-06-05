@@ -126,7 +126,7 @@ export const LoungeChat: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-280px)] min-h-[500px] max-h-[800px] bg-surface-container backdrop-blur-md rounded-2xl border border-surface-container-high overflow-hidden shadow-2xl transition-all">
+    <div className="flex flex-col h-[calc(100vh-220px)] min-h-[600px] max-h-[1200px] bg-surface-container backdrop-blur-md rounded-2xl border border-surface-container-high overflow-hidden shadow-2xl transition-all">
       {/* Header */}
       <div className="p-4 border-b border-surface-container-high flex items-center justify-between bg-surface-container-low/30">
         <div className="flex items-center gap-3">
