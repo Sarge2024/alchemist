@@ -234,47 +234,6 @@ app.post("/api/presence", async (req, res) => {
   }
 });
 
-// Diagnostic routes for Vercel Serverless environment
-app.get("/api/db-test", async (req, res) => {
-  try {
-    console.log("[Diagnostic] Database connectivity test started...");
-    const result = await Promise.race([
-      prisma.$queryRaw`SELECT 1 as connected`,
-      new Promise((_, reject) => setTimeout(() => reject(new Error("Database connection timeout (2s)")), 2000))
-    ]);
-    res.json({ success: true, result });
-  } catch (error: any) {
-    console.error("[Diagnostic] Database connectivity test failed:", error);
-    res.status(500).json({ 
-      success: false, 
-      error: error.message || String(error), 
-      stack: error.stack 
-    });
-  }
-});
-
-app.get("/api/env-test", (req, res) => {
-  const dbUrl = process.env.DATABASE_URL || "";
-  let dbUrlParsed = "Not Defined";
-  if (dbUrl) {
-    try {
-      const url = new URL(dbUrl.replace("postgresql://", "http://"));
-      dbUrlParsed = `Host: ${url.hostname}, Port: ${url.port}, DB: ${url.pathname}, Params: ${url.search}`;
-    } catch (e: any) {
-      dbUrlParsed = `Error parsing URL structure: ${e.message}`;
-    }
-  }
-  res.json({
-    VERCEL: process.env.VERCEL || "Not defined",
-    NODE_ENV: process.env.NODE_ENV || "Not defined",
-    DATABASE_URL_DEFINED: !!process.env.DATABASE_URL,
-    DATABASE_URL_STRUCTURE: dbUrlParsed,
-    FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || "Not defined",
-    HAS_FIREBASE_KEY: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
-    HAS_BLOB_TOKEN: !!process.env.BLOB_READ_WRITE_TOKEN
-  });
-});
-
 // Serve static files from public/uploads
 const uploadsPath = path.resolve(process.cwd(), 'public', 'uploads');
 console.log(`Configuring static serving for /uploads from: ${uploadsPath}`);
