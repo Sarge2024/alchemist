@@ -21,6 +21,7 @@ import { put } from "@vercel/blob";
 import cron from "node-cron";
 import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
 import { RagBackendService } from "./src/infra/services/ragBackendService";
+import { prisma } from "./src/infra/prisma/client";
 
 // Removed __filename and __dirname to prevent import.meta.url SyntaxError
 

@@ -14,6 +14,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import html2pdf from 'html2pdf.js';
 import { reviewService, Review as ReviewType } from '../infra/services/reviewService';
 import { ChefHat, Info as InfoIcon, Lightbulb } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 import { ASSETS, getAssetUrl } from '../lib/assets';
 
