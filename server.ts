@@ -735,9 +735,18 @@ app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (r
     if (req.file) {
       const ext = path.extname(req.file.originalname);
       const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-      const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
-      fs.writeFileSync(filepath, req.file.buffer);
-      urlVercelBlob = `/uploads/${filename}`;
+      
+      try {
+        const blob = await put(filename, req.file.buffer, {
+          access: 'public',
+          contentType: req.file.mimetype,
+          token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        urlVercelBlob = blob.url;
+      } catch (uploadError) {
+        console.error("Erro no upload do avatar para o Vercel Blob:", uploadError);
+        return res.status(500).json({ error: "Falha ao enviar a imagem para o Vercel Blob." });
+      }
     }
 
     if (!codigoAvatar) {
@@ -778,10 +787,20 @@ app.put("/api/admin/avatars/:id", authenticateAPI, upload.single("image"), async
     }
     const ext = path.extname(req.file.originalname);
     const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-    const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
-    fs.mkdirSync(path.dirname(filepath), { recursive: true });
-    fs.writeFileSync(filepath, req.file.buffer);
-    const urlVercelBlob = `/uploads/${filename}`;
+    
+    let urlVercelBlob = "";
+    try {
+      const blob = await put(filename, req.file.buffer, {
+        access: 'public',
+        contentType: req.file.mimetype,
+        token: process.env.BLOB_READ_WRITE_TOKEN
+      });
+      urlVercelBlob = blob.url;
+    } catch (uploadError) {
+      console.error("Erro no upload do avatar para o Vercel Blob:", uploadError);
+      return res.status(500).json({ error: "Falha ao enviar a imagem atualizada para o Vercel Blob." });
+    }
+    
     const updated = await prisma.avatarOption.update({
       where: { id },
       data: { urlVercelBlob }
@@ -813,9 +832,18 @@ app.post("/api/admin/badges", authenticateAPI, upload.single("image"), async (re
     if (req.file) {
       const ext = path.extname(req.file.originalname);
       const filename = `badge-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-      const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
-      fs.writeFileSync(filepath, req.file.buffer);
-      url_vercel_blob = `/uploads/${filename}`;
+      
+      try {
+        const blob = await put(filename, req.file.buffer, {
+          access: 'public',
+          contentType: req.file.mimetype,
+          token: process.env.BLOB_READ_WRITE_TOKEN
+        });
+        url_vercel_blob = blob.url;
+      } catch (uploadError) {
+        console.error("Erro no upload do selo para o Vercel Blob:", uploadError);
+        return res.status(500).json({ error: "Falha ao enviar a imagem para o Vercel Blob." });
+      }
     }
 
     if (!codigo_evento || !nome) {
@@ -857,10 +885,20 @@ app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async 
     }
     const ext = path.extname(req.file.originalname);
     const filename = `badge-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-    const filepath = path.join(process.cwd(), 'public', 'uploads', filename);
-    fs.mkdirSync(path.dirname(filepath), { recursive: true });
-    fs.writeFileSync(filepath, req.file.buffer);
-    const urlVercelBlob = `/uploads/${filename}`;
+    
+    let urlVercelBlob = "";
+    try {
+      const blob = await put(filename, req.file.buffer, {
+        access: 'public',
+        contentType: req.file.mimetype,
+        token: process.env.BLOB_READ_WRITE_TOKEN
+      });
+      urlVercelBlob = blob.url;
+    } catch (uploadError) {
+      console.error("Erro no upload do selo para o Vercel Blob:", uploadError);
+      return res.status(500).json({ error: "Falha ao enviar a imagem atualizada para o Vercel Blob." });
+    }
+    
     const updated = await prisma.badge.update({
       where: { id },
       data: { url_vercel_blob: urlVercelBlob }
