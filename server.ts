@@ -11,17 +11,17 @@ import { initializeApp as initializeAdminApp, cert } from 'firebase-admin/app';
 import { getAuth as getAdminAuth } from 'firebase-admin/auth';
 import { getFirestore, FieldValue } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
-import { IdentityAccessService } from "../src/infra/auth/IdentityAccessService";
-import { ModerationService } from "../src/infra/services/ModerationService";
-import { AtaGeneratorService } from "../src/infra/services/AtaGeneratorService";
-import { GamificationService } from "../src/infra/services/GamificationService";
-import { geminiService } from "../src/infra/services/geminiService";
-import { getAvailableGeminiKeys } from "../src/infra/services/geminiKeyManager";
+import { IdentityAccessService } from "./src/infra/auth/IdentityAccessService";
+import { ModerationService } from "./src/infra/services/ModerationService";
+import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
+import { GamificationService } from "./src/infra/services/GamificationService";
+import { geminiService } from "./src/infra/services/geminiService";
+import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
 import { put } from "@vercel/blob";
 import cron from "node-cron";
-import { registerMcpRoutes } from "../src/infra/mcp/mcpServer";
-import { RagBackendService } from "../src/infra/services/ragBackendService";
-import { prisma } from "../src/infra/prisma/client";
+import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
+import { RagBackendService } from "./src/infra/services/ragBackendService";
+import { prisma } from "./src/infra/prisma/client";
 
 // Removed __filename and __dirname to prevent import.meta.url SyntaxError
 

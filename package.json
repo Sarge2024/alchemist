@@ -4,7 +4,7 @@
   "version": "2.1.1k",
   "type": "module",
   "scripts": {
-    "dev": "tsx api/index.ts",
+    "dev": "tsx server.ts",
     "dev:emulators": "firebase emulators:start --import=./firebase-data --export-on-exit",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:emulators\"",
     "set-admin": "tsx src/infra/scripts/set-admin-claim.ts",
@@ -13,7 +13,7 @@
     "build": "vite build",
     "postinstall": "prisma generate",
     "prebuild": "rm -rf dist",
-    "start": "node api/index.ts",
+    "start": "node server.ts",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
