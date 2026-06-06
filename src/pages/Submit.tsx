@@ -3,8 +3,6 @@ import { Upload, Plus, Trash2, Loader2, Play, AlertTriangle } from 'lucide-react
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { recipeService, Recipe, Ingredient } from '../infra/services/recipeService';
-import { auth } from '../lib/firebase';
-import { onAuthStateChanged } from 'firebase/auth';
 import { getAssetUrl } from '../lib/assets';
 import { userService } from '../infra/services/userService';
 import { AnimatePresence } from 'motion/react';
@@ -19,8 +17,7 @@ export default function Submit() {
 
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEditing);
-  const { user: authUser, isAdmin } = useAuth();
-  const [user, setUser] = useState(auth.currentUser);
+  const { user, isAdmin } = useAuth();
   const [imageOptions, setImageOptions] = useState<string[]>([]);
   const [hasProfile, setHasProfile] = useState(false);
   const [showRegisterPrompt, setShowRegisterPrompt] = useState(false);
@@ -50,29 +47,17 @@ export default function Submit() {
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      setUser(u);
-      if (u) {
-        const profile = await userService.getUserProfile(u.uid);
+    const checkProfile = async () => {
+      if (user) {
+        const profile = await userService.getUserProfile(user.uid);
         setHasProfile(!!profile);
       } else {
         setHasProfile(false);
       }
-      
-      if (isEditing && u) {
-        loadRecipe(id!);
-      }
-    });
-
-    const checkInitialProfile = async () => {
-      if (auth.currentUser) {
-        const profile = await userService.getUserProfile(auth.currentUser.uid);
-        setHasProfile(!!profile);
-      }
     };
-    checkInitialProfile();
+    checkProfile();
 
-    if (isEditing && auth.currentUser) {
+    if (isEditing && user) {
       loadRecipe(id!);
     } else if (!isEditing && location.state?.scrapedData) {
       setShouldNotifyEmail(false); // Desativa notificação por e-mail por padrão para receitas via scrap
@@ -93,9 +78,7 @@ export default function Submit() {
           : [{ name: '', quantity: '', group: '' }]
       }));
     }
-
-    return () => unsubscribe();
-  }, [id, isEditing, location.state]);
+  }, [user, id, isEditing, location.state]);
 
   const loadRecipe = async (recipeId: string) => {
     setFetching(true);
@@ -103,9 +86,7 @@ export default function Submit() {
       const recipe = await recipeService.getRecipe(recipeId);
       if (recipe) {
         // Double check permissions with current user
-        const currentUser = auth.currentUser;
-        
-        if (currentUser && recipe.ownerId !== currentUser.uid && !isAdmin) {
+        if (user && recipe.ownerId !== user.uid && !isAdmin) {
           alert('Você não tem permissão para editar esta receita.');
           navigate('/explore');
           return;
