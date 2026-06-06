@@ -303,7 +303,7 @@ export default function ManageRecipes() {
 
               <div className="flex items-center gap-2 md:pl-6 md:border-l border-surface-container-high">
                 <Link 
-                  to={`/recipe/${recipe.id}`}
+                  to={`/receita/${recipe.slug || recipe.id}`}
                   className="p-3 text-on-surface-variant hover:text-primary hover:bg-primary/10 rounded-xl transition-all"
                   title="Ver Receita"
                 >

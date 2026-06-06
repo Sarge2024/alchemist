@@ -15,7 +15,8 @@ import {
   where, 
   orderBy, 
   Timestamp,
-  serverTimestamp
+  serverTimestamp,
+  limit
 } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
 import { geminiService } from './geminiService';
@@ -84,6 +85,17 @@ export function deepSanitize<T>(obj: T): T {
   return result;
 }
 
+export function generateSlug(text: string): string {
+  if (!text) return '';
+  return text.toString().toLowerCase()
+    .normalize('NFD').replace(/[\\u0300-\\u036f]/g, "") // Remove acentos
+    .replace(/\\s+/g, '-')           // Replace spaces with -
+    .replace(/[^\\w\\-]+/g, '')       // Remove all non-word chars
+    .replace(/\\-\\-+/g, '-')         // Replace multiple - with single -
+    .replace(/^-+/, '')             // Trim - from start of text
+    .replace(/-+$/, '');            // Trim - from end of text
+}
+
 export interface Ingredient {
   name: string;
   quantity: string;
@@ -92,6 +104,7 @@ export interface Ingredient {
 
 export interface Recipe {
   id?: string;
+  slug?: string;
   title: string;
   description?: string;
   image?: string;
@@ -115,6 +128,7 @@ export interface Recipe {
   isClassic?: boolean;
   imageOptions?: string[];
   chefTips?: string;
+  faqs?: { question: string, answer: string }[];
 }
 
 const RECIPES_COLLECTION = 'recipes';
@@ -123,8 +137,15 @@ export const recipeService = {
   async createRecipe(recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>, options: { notifyEmail: boolean } = { notifyEmail: true }) {
     try {
       const sanitizedRecipe = deepSanitize(recipe);
+      
+      // Gera o slug baseado no título
+      let slug = generateSlug(sanitizedRecipe.title);
+      // Opcional: checar se já existe e adicionar hash, mas para simplificar:
+      slug = `${slug}-${Math.random().toString(36).substring(2, 8)}`;
+      
       const docRef = await addDoc(collection(db, RECIPES_COLLECTION), {
         ...sanitizedRecipe,
+        slug,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         rating: 0, // Initial rating
@@ -215,6 +236,11 @@ export const recipeService = {
       // Remove id from payload to avoid overwriting doc.id or storing it as a field
       const { id: _, ...dataToUpdate } = sanitizedRecipe as any;
       
+      if (dataToUpdate.title && !dataToUpdate.slug) {
+        // Only update slug if title changes and no specific slug was provided
+        dataToUpdate.slug = `${generateSlug(dataToUpdate.title)}-${Math.random().toString(36).substring(2, 8)}`;
+      }
+      
       const docRef = doc(db, RECIPES_COLLECTION, id);
       await updateDoc(docRef, {
         ...dataToUpdate,
@@ -244,6 +270,22 @@ export const recipeService = {
       return null;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `${RECIPES_COLLECTION}/${id}`);
+      return null;
+    }
+  },
+
+  async getRecipeBySlug(slug: string): Promise<Recipe | null> {
+    try {
+      const q = query(collection(db, RECIPES_COLLECTION), where('slug', '==', slug), limit(1));
+      const snapshot = await getDocs(q);
+      
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        return { ...doc.data(), id: doc.id } as Recipe;
+      }
+      return null;
+    } catch (error) {
+      console.error('Erro ao buscar receita por slug:', error);
       return null;
     }
   },

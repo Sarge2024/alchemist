@@ -419,7 +419,7 @@ export default function Explore() {
                           transition={{ delay: i * 0.03 }}
                         >
                           <Link 
-                            to={`/recipe/${recipe.id}`}
+                            to={`/receita/${recipe.slug || recipe.id}`}
                             className="bg-surface-container-low p-3 md:p-4 rounded-xl border border-surface-container-high flex items-center gap-4 hover:bg-surface-container transition-colors group"
                           >
                             <div className="w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden flex-shrink-0 bg-surface-container-high">

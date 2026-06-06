@@ -13,6 +13,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { Search, Bookmark, User, Share2, Mail, LogOut, LogIn, X, Menu, Users, ChevronDown, Shield, ArrowLeft, Beaker } from 'lucide-react';
 import { userService } from '../infra/services/userService';
 import { Avatar } from './Avatar';
+import { RAGAssistant } from './RAGAssistant';
 
 interface LayoutProps {
   children: ReactNode;
@@ -360,6 +361,7 @@ export default function Layout({ children }: LayoutProps) {
           </div>
         </div>
       </footer>
+      <RAGAssistant />
     </div>
   );
 }

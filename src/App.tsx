@@ -54,6 +54,7 @@ export default function App() {
             <Route path="/members" element={<ProtectedRoute requireAdmin><UserManagement /></ProtectedRoute>} />
             
             <Route path="/recipe/:id" element={<RecipeDetail />} />
+            <Route path="/receita/:slug" element={<RecipeDetail />} />
             <Route path="/manifesto" element={<Manifesto />} />
             <Route path="/historia-das-especiarias" element={<SpicesHistory />} />
             <Route path="/acervo" element={<Acervo />} />

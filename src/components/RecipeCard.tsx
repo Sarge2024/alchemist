@@ -88,7 +88,7 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
             {reviewsCount && reviewsCount > 0 ? `${reviewsCount} avaliações` : 'Sem avaliações'}
           </div>
           <Link
-            to={`/recipe/${id}`}
+            to={`/receita/${recipe.slug || id}`}
             className="inline-flex items-center gap-2 bg-surface-container-high hover:bg-primary hover:text-white text-primary font-bold px-4 py-2 rounded-xl transition-all active:scale-95 text-sm group/btn"
           >
             Ver Receita

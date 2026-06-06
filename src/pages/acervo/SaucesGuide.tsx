@@ -514,7 +514,7 @@ function SauceSpotlight({ sauce }: { sauce: any }) {
               if (ids.length > 1) {
                 setShowSelectionModal(true);
               } else if (ids.length === 1) {
-                navigate(`/recipe/${ids[0]}`);
+                navigate(`/receita/${ids[0]}`);
               } else {
                 setShowSoonModal(true);
               }
@@ -561,7 +561,7 @@ function SauceSpotlight({ sauce }: { sauce: any }) {
                 {sauce.recipeIds.map((id: string, idx: number) => (
                   <button
                     key={id}
-                    onClick={() => navigate(`/recipe/${id}`)}
+                    onClick={() => navigate(`/receita/${id}`)}
                     className="w-full p-6 rounded-2xl border-2 border-stone-100 hover:border-[#8B2323] hover:bg-[#8B2323]/5 transition-all flex items-center justify-between group"
                   >
                     <div className="text-left">

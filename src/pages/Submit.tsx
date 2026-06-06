@@ -234,6 +234,24 @@ export default function Submit() {
           ownerId: user.uid,
         }, { notifyEmail: shouldNotifyEmail });
         console.log('createRecipe concluído com sucesso, novo ID:', newId);
+        
+        // Gamification: points for publishing a recipe
+        try {
+          fetch('/api/gamification/event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+            },
+            body: JSON.stringify({
+              uid: user.uid,
+              eventType: 'RECIPE_PUBLISHED'
+            })
+          });
+        } catch (err) {
+          console.error("Gamification error:", err);
+        }
+
         alert('Receita publicada com sucesso!');
       }
       

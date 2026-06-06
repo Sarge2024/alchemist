@@ -4,16 +4,16 @@ import { Grau } from '@prisma/client';
 export class GamificationService {
   private static readonly XP_PER_LEVEL = 100;
   
-  // Valores atualizados de XP por evento (Nova Matriz de Gamificação)
   private static readonly EVENT_XP = {
     COLLABORATION_MESSAGE: 5,         // Colaboração entre participantes (antigo LOUNGE_MESSAGE)
     PROFILE_PARTIAL: 10,              // Preenchimento de Cadastro Parcial
     PROFILE_COMPLETE: 25,             // Cadastro Completo
     PROFILE_QUIZ: 5,                  // Quiz de perfil/preferências
     ARTICLE_PUBLISHED: 50,            // Publicação de Artigos em PDF
-    RECIPE_PUBLISHED_PHOTO: 25,       // Publicação de Receitas (com fotos)
+    RECIPE_PUBLISHED: 50,             // Publicação de Receitas (50 pts)
     RECIPE_UPVOTE_RECEIVED: 10,       // Avaliação positiva de receita
-    REVIEW_WITH_PHOTO: 30,            // Postagem de Avaliação com foto
+    REVIEW_WITH_PHOTO: 20,            // Postagem de Avaliação com foto (20 pts)
+    WEEKLY_CHALLENGE_COMPLETED: 100,  // Completar Desafio da Semana (100 pts)
     PRODUCT_PURCHASED: 25,            // Compras de Produtos
   };
 

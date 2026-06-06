@@ -13,7 +13,7 @@ import { auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import html2pdf from 'html2pdf.js';
 import { reviewService, Review as ReviewType } from '../infra/services/reviewService';
-import { ChefHat, Info as InfoIcon, Lightbulb } from 'lucide-react';
+import { ChefHat, Info as InfoIcon, Lightbulb, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 import { ASSETS, getAssetUrl } from '../lib/assets';
@@ -48,7 +48,17 @@ const MOCK_RECIPES_DETAIL: Record<string, Recipe> = {
       'Adicione o recheio escolhido, dobre ao meio e finalize com um fio de manteiga de garrafa.'
     ],
     ownerId: 'system',
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
+    faqs: [
+      {
+        question: 'Posso usar outro tipo de queijo além do coalho?',
+        answer: 'Sim, você pode usar queijos como parmesão ralado ou provolone, mas o coalho é o mais recomendado por sua firmeza ao aquecer, permitindo criar a crosta crocante (a "renda") sem derreter completamente.'
+      },
+      {
+        question: 'Por que a tapioca quebra na hora de virar?',
+        answer: 'Isso geralmente acontece quando a camada de goma é muito fina ou se a tapioca não hidratou/cozinhou o suficiente. Peneire a goma uniformemente e espere as bordas começarem a levantar antes de tentar virar.'
+      }
+    ]
   },
   'feijoada-completa': {
     id: 'feijoada-completa',
@@ -147,7 +157,8 @@ const MOCK_RECIPES_DETAIL: Record<string, Recipe> = {
 };
 
 export default function RecipeDetail() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
+  const routeParam = slug || id;
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
@@ -176,6 +187,7 @@ export default function RecipeDetail() {
     : 'Confira esta receita no Alquimia do Prato!';
 
   const [isSharing, setIsSharing] = useState(false);
+  const [openFaqIndex, setOpenFaqIndex] = useState<number | null>(null);
 
   const shareAsPDF = async () => {
     if (!recipe || !printRef.current) return;
@@ -235,6 +247,82 @@ export default function RecipeDetail() {
     }
   };
 
+  const sharePDFToWhatsApp = async () => {
+    if (!recipe || !printRef.current) return;
+    
+    setIsSharing(true);
+    setShowShareMenu(false);
+    
+    // Open a blank window immediately to bypass popup blockers
+    const shareWindow = window.open('', '_blank');
+    if (shareWindow) {
+      shareWindow.document.write('<p style="font-family: sans-serif; text-align: center; margin-top: 50px;">Gerando PDF e preparando link do WhatsApp...</p>');
+    }
+    
+    const element = printRef.current;
+    const filename = `Receita_${recipe.title.replace(/\s+/g, '_')}.pdf`;
+    
+    const opt = {
+      margin: [5, 5, 5, 5],
+      filename: filename,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        letterRendering: true,
+        logging: false,
+        scrollY: 0
+      },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    } as any;
+
+    try {
+      const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+      
+      // Upload PDF
+      const formData = new FormData();
+      formData.append('image', new File([pdfBlob], filename, { type: 'application/pdf' }));
+      
+      const uploadRes = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+        },
+        body: formData
+      });
+      
+      const uploadData = await uploadRes.json();
+      if (!uploadData.success) {
+        throw new Error(uploadData.error || 'Failed to upload PDF');
+      }
+
+      const pdfUrl = uploadData.imageUrl;
+      
+      // Create WhatsApp share URL
+      let text = `🥘 *${recipe.title}*\n\n`;
+      text += `Baixe a Ficha Técnica em PDF:\n${pdfUrl}\n\n`;
+      text += `🔗 *Veja a receita completa no portal:*\n${window.location.href}`;
+      
+      const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+      
+      if (shareWindow) {
+        shareWindow.location.href = whatsappUrl;
+      } else {
+        window.open(whatsappUrl, '_blank');
+      }
+      
+    } catch (error) {
+      console.error('Error in PDF WhatsApp sharing:', error);
+      if (shareWindow) {
+        shareWindow.close();
+      }
+      alert('Não foi possível gerar e enviar o PDF. Tente novamente mais tarde.');
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   const shareLinks = {
     facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
     twitter: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`,
@@ -282,11 +370,10 @@ export default function RecipeDetail() {
   };
 
   useEffect(() => {
-    if (id) {
-      loadRecipe(id);
-      loadReviews(id);
+    if (routeParam) {
+      loadRecipe(routeParam);
     }
-  }, [id]);
+  }, [routeParam]);
 
   const loadReviews = async (recipeId: string) => {
     const data = await reviewService.getRecipeReviews(recipeId);
@@ -295,7 +382,7 @@ export default function RecipeDetail() {
 
   const handleAddReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !id || !newComment.trim() || newRating === 0) {
+    if (!user || !recipe?.id || !newComment.trim() || newRating === 0) {
       if (newRating === 0) alert('Por favor, selecione uma nota!');
       return;
     }
@@ -303,7 +390,7 @@ export default function RecipeDetail() {
     setIsSubmittingReview(true);
     try {
       await reviewService.addReview({
-        recipeId: id,
+        recipeId: recipe.id,
         userId: user.uid,
         userName: user.displayName || 'Alquimista',
         userPhoto: user.photoURL || undefined,
@@ -311,15 +398,32 @@ export default function RecipeDetail() {
         comment: newComment,
         image: newReviewPhoto || undefined
       });
+
+      // Gamification: points for review with photo
+      if (newReviewPhoto) {
+        try {
+          fetch('/api/gamification/event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+            },
+            body: JSON.stringify({
+              uid: user.uid,
+              eventType: 'REVIEW_WITH_PHOTO'
+            })
+          });
+        } catch (err) {
+          console.error("Gamification error:", err);
+        }
+      }
       
       setNewComment('');
       setNewRating(0);
       setNewReviewPhoto(null);
       setShowReviewForm(false);
-      
       // Reload everything
-      await loadRecipe(id);
-      await loadReviews(id);
+      await loadRecipe(routeParam!);
     } catch (error) {
       alert('Erro ao enviar avaliação. Tente novamente.');
     } finally {
@@ -355,12 +459,11 @@ export default function RecipeDetail() {
   };
 
   const handleDeleteReview = async (reviewId: string) => {
-    if (!id || !window.confirm('Tem certeza que deseja apagar esta avaliação?')) return;
+    if (!recipe?.id || !window.confirm('Tem certeza que deseja apagar esta avaliação?')) return;
     
     try {
-      await reviewService.deleteReview(reviewId, id);
-      await loadRecipe(id);
-      await loadReviews(id);
+      await reviewService.deleteReview(reviewId, recipe.id);
+      await loadRecipe(routeParam!);
     } catch (error) {
       alert('Erro ao apagar avaliação.');
     }
@@ -374,17 +477,16 @@ export default function RecipeDetail() {
 
   const handleUpdateReview = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!id || !editingReviewId) return;
+    if (!recipe?.id || !editingReviewId) return;
 
     setIsUpdatingReview(true);
     try {
-      await reviewService.updateReview(editingReviewId, id, {
+      await reviewService.updateReview(editingReviewId, recipe.id, {
         rating: editRating,
         comment: editComment
       });
       setEditingReviewId(null);
-      await loadRecipe(id);
-      await loadReviews(id);
+      await loadRecipe(routeParam!);
     } catch (error) {
       alert('Erro ao atualizar avaliação.');
     } finally {
@@ -396,6 +498,8 @@ export default function RecipeDetail() {
     if (recipe) {
       document.title = `${recipe.title} | Alquimia do Prato`;
       
+      const truncatedDesc = recipe.description ? (recipe.description.length > 155 ? recipe.description.substring(0, 152) + '...' : recipe.description) : '';
+
       // Update meta tags for social previews (some modern scrapers use JS)
       const updateMeta = (name: string, property: string, content: string) => {
         let el = (name ? document.querySelector(`meta[name="${name}"]`) : null) || 
@@ -410,7 +514,7 @@ export default function RecipeDetail() {
         el.setAttribute('content', content);
       };
 
-      if (recipe.description) updateMeta('description', 'og:description', recipe.description);
+      if (truncatedDesc) updateMeta('description', 'og:description', truncatedDesc);
       updateMeta('', 'og:title', recipe.title);
       if (recipe.image) {
         updateMeta('', 'og:image', recipe.image);
@@ -420,26 +524,116 @@ export default function RecipeDetail() {
       updateMeta('', 'og:type', 'article');
       updateMeta('', 'twitter:card', 'summary_large_image');
       updateMeta('', 'twitter:title', recipe.title);
-      if (recipe.description) updateMeta('', 'twitter:description', recipe.description);
+      if (truncatedDesc) updateMeta('', 'twitter:description', truncatedDesc);
+
+      // Gerador JSON-LD (Schema.org)
+      const existingScript = document.getElementById('json-ld-recipe');
+      if (existingScript) existingScript.remove();
+
+      // Simple time parser to ISO 8601 duration
+      const parseTime = (timeStr: string) => {
+        if (!timeStr) return undefined;
+        const nums = timeStr.match(/\\d+/g);
+        return nums ? `PT${nums[0]}M` : undefined;
+      };
+
+      const jsonLd = {
+        "@context": "https://schema.org/",
+        "@type": "Recipe",
+        "name": recipe.title,
+        "image": recipe.image ? [getAssetUrl(recipe.image)] : [],
+        "description": recipe.description,
+        "author": {
+          "@type": "Person",
+          "name": recipe.ownerId === 'system' ? 'Alquimia do Prato' : 'Comunidade'
+        },
+        "prepTime": parseTime(recipe.prepTime),
+        "cookTime": parseTime(recipe.time),
+        "recipeYield": recipe.servings ? recipe.servings.toString() : undefined,
+        "recipeIngredient": recipe.ingredients.map(i => typeof i === 'string' ? i : `${i.quantity || ''} ${i.name || ''}`.trim()),
+        "recipeInstructions": recipe.instructions.map((inst, index) => ({
+          "@type": "HowToStep",
+          "position": index + 1,
+          "text": inst
+        }))
+      };
+
+      const script = document.createElement('script');
+      script.id = 'json-ld-recipe';
+      script.type = 'application/ld+json';
+      script.text = JSON.stringify(jsonLd);
+      document.head.appendChild(script);
+
+      // Gerador FAQPage JSON-LD se houver FAQs
+      if (recipe.faqs && recipe.faqs.length > 0) {
+        const existingFaqScript = document.getElementById('json-ld-faq');
+        if (existingFaqScript) existingFaqScript.remove();
+
+        const faqJsonLd = {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          "mainEntity": recipe.faqs.map(faq => ({
+            "@type": "Question",
+            "name": faq.question,
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": faq.answer
+            }
+          }))
+        };
+
+        const faqScript = document.createElement('script');
+        faqScript.id = 'json-ld-faq';
+        faqScript.type = 'application/ld+json';
+        faqScript.text = JSON.stringify(faqJsonLd);
+        document.head.appendChild(faqScript);
+      }
+
+      return () => {
+        const scriptToRemove = document.getElementById('json-ld-recipe');
+        if (scriptToRemove) scriptToRemove.remove();
+        
+        const faqScriptToRemove = document.getElementById('json-ld-faq');
+        if (faqScriptToRemove) faqScriptToRemove.remove();
+      };
     }
   }, [recipe]);
 
-  const loadRecipe = async (recipeId: string) => {
+  const loadRecipe = async (param: string) => {
     try {
-      const data = await recipeService.getRecipe(recipeId);
+      setLoading(true);
+      let data = null;
+      
+      // Tenta buscar por slug primeiro se estiver na rota /receita/:slug, ou busca por id
+      if (slug) {
+        data = await recipeService.getRecipeBySlug(param);
+      }
+      
+      if (!data) {
+        data = await recipeService.getRecipe(param);
+      }
+      
       if (data) {
         setRecipe(data);
-      } else if (MOCK_RECIPES_DETAIL[recipeId]) {
+        if (data.id) loadReviews(data.id);
+        
+        // Redireciona 301 client-side se entrou pelo /recipe/:id mas a receita já tem slug
+        if (id && data.slug) {
+          navigate(`/receita/${data.slug}`, { replace: true });
+        }
+      } else if (MOCK_RECIPES_DETAIL[param]) {
         // Fallback for popular/mock recipes
-        setRecipe(MOCK_RECIPES_DETAIL[recipeId]);
+        setRecipe(MOCK_RECIPES_DETAIL[param]);
+        loadReviews(param);
       } else {
         console.warn('Recipe not found in Firestore or Mocks');
       }
     } catch (error) {
       console.error('Error loading recipe:', error);
       // Even on error, try to check mocks as fallback
-      if (MOCK_RECIPES_DETAIL[recipeId]) {
-        setRecipe(MOCK_RECIPES_DETAIL[recipeId]);
+      if (MOCK_RECIPES_DETAIL[param]) {
+        setRecipe(MOCK_RECIPES_DETAIL[param]);
+        loadReviews(param);
       }
     } finally {
       setLoading(false);
@@ -740,6 +934,13 @@ export default function RecipeDetail() {
                     <MessageCircle className="w-5 h-5" /> WhatsApp (Receita Texto)
                   </button>
 
+                  <button 
+                    onClick={sharePDFToWhatsApp}
+                    className="flex items-center gap-3 p-3 rounded-xl hover:bg-green-50 text-green-700 transition-colors font-bold w-full text-left bg-green-50/50"
+                  >
+                    <MessageCircle className="w-5 h-5" /> WhatsApp (Ficha PDF)
+                  </button>
+
                   <a 
                     href={shareLinks.whatsapp} 
                     target="_blank" 
@@ -865,6 +1066,61 @@ export default function RecipeDetail() {
               <div className="text-lg text-stone-700 leading-relaxed min-h-[4.5rem] whitespace-pre-line font-medium italic">
                 "{recipe.chefTips}"
               </div>
+            </div>
+          </div>
+        </motion.section>
+      )}
+
+      {/* FAQ / Dúvidas Comuns (RAG / SEO) */}
+      {recipe.faqs && recipe.faqs.length > 0 && (
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="mt-16 w-full no-print"
+        >
+          <div className="bg-surface-container-low border border-surface-container-high p-8 md:p-12 rounded-[2.5rem]">
+            <h3 className="text-2xl font-bold text-on-surface mb-2 flex items-center gap-3">
+              <HelpCircle className="w-6 h-6 text-primary" /> Dúvidas Comuns (FAQ)
+            </h3>
+            <p className="text-on-surface-variant mb-8 text-sm">
+              Perguntas frequentes baseadas no conhecimento de nossos Alquimistas e IA Gastronômica.
+            </p>
+            
+            <div className="space-y-4">
+              {recipe.faqs.map((faq, idx) => (
+                <div 
+                  key={idx} 
+                  className="bg-background rounded-2xl border border-surface-container-high overflow-hidden"
+                >
+                  <button
+                    onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+                    className="w-full px-6 py-4 flex items-center justify-between text-left hover:bg-surface-container-lowest transition-colors"
+                  >
+                    <span className="font-bold text-on-surface pr-4">{faq.question}</span>
+                    {openFaqIndex === idx ? (
+                      <ChevronUp className="w-5 h-5 text-primary flex-shrink-0" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-on-surface-variant flex-shrink-0" />
+                    )}
+                  </button>
+                  <AnimatePresence>
+                    {openFaqIndex === idx && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="px-6 pb-5 pt-1 text-on-surface-variant leading-relaxed">
+                          <div className="w-full h-px bg-surface-container-high mb-4"></div>
+                          {faq.answer}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              ))}
             </div>
           </div>
         </motion.section>
@@ -1035,7 +1291,7 @@ export default function RecipeDetail() {
                   {/* Left: User Info */}
                   <div className="flex md:flex-col items-center md:items-start gap-4 md:w-48 shrink-0">
                     {review.userPhoto ? (
-                      <img src={review.userPhoto} alt={review.userName} className="w-14 h-14 rounded-full object-cover border-2 border-[#f3e5d8]" />
+                      <img src={review.userPhoto} alt={review.userName} loading="lazy" width="56" height="56" className="w-14 h-14 rounded-full object-cover border-2 border-[#f3e5d8]" />
                     ) : (
                       <div className="w-14 h-14 rounded-full bg-[#fdf8f4] flex items-center justify-center text-[#5c3d2e] font-bold uppercase border-2 border-[#f3e5d8]">
                         {review.userName.charAt(0)}
@@ -1067,6 +1323,7 @@ export default function RecipeDetail() {
                         <img 
                           src={getAssetUrl(review.image)} 
                           alt="Foto da receita" 
+                          loading="lazy"
                           className="w-full h-auto hover:scale-105 transition-transform duration-500" 
                           referrerPolicy="no-referrer"
                         />

@@ -212,7 +212,7 @@ export default function AdminDashboard() {
                     <td className="px-8 py-6 text-right">
                       <div className="flex items-center justify-end gap-2">
                          <Link 
-                          to={`/recipe/${recipe.id}`}
+                          to={`/receita/${recipe.slug || recipe.id}`}
                           className="p-3 bg-surface-container-high text-on-surface-variant hover:bg-primary/10 hover:text-primary rounded-xl transition-all"
                           title="Ver no Site"
                         >

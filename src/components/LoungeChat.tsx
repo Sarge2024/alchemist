@@ -200,7 +200,7 @@ export const LoungeChat: React.FC = () => {
                   `}
                   onClick={() => {
                     if (msg.metadata?.type === 'new_recipe' && msg.metadata?.recipeId) {
-                      navigate(`/recipe/${msg.metadata.recipeId}`);
+                      navigate(`/receita/${msg.metadata.recipeId}`);
                     }
                   }}
                   >

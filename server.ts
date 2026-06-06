@@ -110,10 +110,10 @@ const upload = multer({
   storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/")) {
+    if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      cb(new Error("Apenas imagens são permitidas"));
+      cb(new Error("Apenas imagens e PDFs são permitidos"));
     }
   }
 });
@@ -637,6 +637,42 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
   } catch (error: any) {
     console.error("Erro ao atualizar interação:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint to ask the RAG Assistant (AI Chat)
+app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question) {
+      return res.status(400).json({ error: "question is required" });
+    }
+    
+    // Calls the RAG Backend Service to retrieve context and ask Gemini
+    const answer = await RagBackendService.askGeminiWithContext(question);
+    
+    res.json({ success: true, answer });
+  } catch (error: any) {
+    console.error("[Chat RAG API] Erro:", error);
+    res.status(500).json({ success: false, error: "Erro ao consultar o assistente." });
+  }
+});
+
+// Endpoint to process a gamification event and assign XP
+app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
+  try {
+    const { uid, eventType } = req.body;
+    
+    if (!uid || !eventType) {
+      return res.status(400).json({ error: "uid and eventType are required" });
+    }
+
+    const result = await GamificationService.processEvent(uid, eventType);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error(`[Gamification Event API] Erro ao processar evento ${req.body?.eventType}:`, error.message);
+    // Retorna success: false mas 200 OK para não quebrar a UI
+    res.json({ success: false, error: error.message });
   }
 });
 

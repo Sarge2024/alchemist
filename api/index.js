@@ -407,7 +407,6 @@ var GamificationService = class {
     this.XP_PER_LEVEL = 100;
   }
   static {
-    // Valores atualizados de XP por evento (Nova Matriz de Gamificação)
     this.EVENT_XP = {
       COLLABORATION_MESSAGE: 5,
       // Colaboração entre participantes (antigo LOUNGE_MESSAGE)
@@ -419,12 +418,14 @@ var GamificationService = class {
       // Quiz de perfil/preferências
       ARTICLE_PUBLISHED: 50,
       // Publicação de Artigos em PDF
-      RECIPE_PUBLISHED_PHOTO: 25,
-      // Publicação de Receitas (com fotos)
+      RECIPE_PUBLISHED: 50,
+      // Publicação de Receitas (50 pts)
       RECIPE_UPVOTE_RECEIVED: 10,
       // Avaliação positiva de receita
-      REVIEW_WITH_PHOTO: 30,
-      // Postagem de Avaliação com foto
+      REVIEW_WITH_PHOTO: 20,
+      // Postagem de Avaliação com foto (20 pts)
+      WEEKLY_CHALLENGE_COMPLETED: 100,
+      // Completar Desafio da Semana (100 pts)
       PRODUCT_PURCHASED: 25
       // Compras de Produtos
     };
@@ -1365,6 +1366,32 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
   } catch (error) {
     console.error("Erro ao atualizar intera\xE7\xE3o:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
+  try {
+    const { question } = req.body;
+    if (!question) {
+      return res.status(400).json({ error: "question is required" });
+    }
+    const answer = await RagBackendService.askGeminiWithContext(question);
+    res.json({ success: true, answer });
+  } catch (error) {
+    console.error("[Chat RAG API] Erro:", error);
+    res.status(500).json({ success: false, error: "Erro ao consultar o assistente." });
+  }
+});
+app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
+  try {
+    const { uid, eventType } = req.body;
+    if (!uid || !eventType) {
+      return res.status(400).json({ error: "uid and eventType are required" });
+    }
+    const result = await GamificationService.processEvent(uid, eventType);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error(`[Gamification Event API] Erro ao processar evento ${req.body?.eventType}:`, error.message);
+    res.json({ success: false, error: error.message });
   }
 });
 app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
