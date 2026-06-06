@@ -59,11 +59,12 @@ export default function UserManagement() {
   };
 
   const filteredMembers = members.filter(m => {
-    const matchesSearch = 
-      m.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      m.email?.toLowerCase().includes(searchTerm.toLowerCase());
+    const search = searchTerm.toLowerCase();
+    const matchesSearch = !search || 
+      (m.displayName?.toLowerCase().includes(search)) ||
+      (m.email?.toLowerCase().includes(search));
     const matchesRole = roleFilter === 'all' || m.role === roleFilter;
-    return matchesSearch && matchesRole;
+    return Boolean(matchesSearch && matchesRole);
   });
 
   if (!isAdmin) {

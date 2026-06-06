@@ -18,7 +18,7 @@ import {
 import { db } from '../../lib/firebase';
 import { deepSanitize } from './recipeService';
 
-export type LibraryItemType = 'pdf' | 'ebook' | 'presentation';
+export type LibraryItemType = 'pdf' | 'ebook' | 'presentation' | 'infographic';
 
 export interface LibraryItem {
   id?: string;

@@ -21,6 +21,7 @@ export const LoungeChat: React.FC = () => {
   const [editingMessage, setEditingMessage] = useState<LoungeMessage | null>(null);
   const [editInput, setEditInput] = useState('');
   const [directedTo, setDirectedTo] = useState<UserProfile | null>(null);
+  const [userNamesCache, setUserNamesCache] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Carrega o perfil do usuário para saber a Role
@@ -38,6 +39,27 @@ export const LoungeChat: React.FC = () => {
       setTimeout(() => {
         scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
       }, 100);
+
+      // Busca perfis para mensagens antigas que não possuem senderName
+      newMessages.forEach(msg => {
+        if (!msg.senderName && msg.senderId) {
+          setUserNamesCache(prev => {
+            if (prev[msg.senderId]) return prev; // já temos no cache local
+            
+            // Busca o perfil de forma assíncrona
+            userService.getUserProfile(msg.senderId).then(profile => {
+              if (profile?.displayName) {
+                setUserNamesCache(current => ({
+                  ...current,
+                  [msg.senderId]: profile.displayName
+                }));
+              }
+            });
+            // Marca como pendente (string vazia por enquanto para não refazer o fetch)
+            return { ...prev, [msg.senderId]: '' };
+          });
+        }
+      });
     });
     return () => unsubscribe();
   }, []);
@@ -176,7 +198,7 @@ export const LoungeChat: React.FC = () => {
                 >
                   <div className="flex items-center gap-2 mb-1.5 px-1">
                     <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
-                      {msg.senderName || (msg.senderId === user?.uid ? 'Você' : `Usuário-${String(msg.senderId || '0000').substring(0,4)}`)}
+                      {msg.senderId === user?.uid ? 'Você' : (msg.senderName || userNamesCache[msg.senderId] || 'Membro')}
                     </span>
                     {msg.senderRole === 'chef' && (
                       <span className="bg-amber-100 text-amber-700 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5 border border-amber-200">

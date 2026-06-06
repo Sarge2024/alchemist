@@ -81,20 +81,20 @@ const Lounge: React.FC = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="grid grid-cols-1 lg:grid-cols-12 gap-8"
+              className="grid grid-cols-1 lg:grid-cols-12 gap-6"
             >
               {/* Esquerda: Chefs da Casa */}
-              <div className="lg:col-span-3">
+              <div className="lg:col-span-2">
                 <ChefList />
               </div>
 
               {/* Centro: Chat */}
-              <div className="lg:col-span-6">
+              <div className="lg:col-span-8">
                 <LoungeChat />
               </div>
 
               {/* Direita: Comunidade e Regras */}
-              <div className="lg:col-span-3 space-y-6">
+              <div className="lg:col-span-2 space-y-6">
                 {/* Lista de Colaboradores Ativos */}
                 <ActiveCollaborators />
 

@@ -27,18 +27,25 @@ export const MemberService = {
    */
   async getAllMembers(): Promise<UserProfile[]> {
     try {
-      const q = query(collection(db, 'users'), orderBy('createdAt', 'desc'));
+      // Usamos query simples sem orderBy para evitar que usuários SEM a propriedade 'createdAt'
+      // sejam silenciosamente omitidos pelo Firestore (comportamento padrão de índices)
+      const q = query(collection(db, 'users'));
       const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ 
+      
+      const members = querySnapshot.docs.map(doc => ({ 
+        uid: doc.id,
         ...doc.data() 
       } as UserProfile));
+
+      // Ordenação local (descendente)
+      return members.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
+        return timeB - timeA;
+      });
     } catch (error) {
       console.error('[MemberService] Erro ao listar membros:', error);
-      // Fallback para query sem orderBy caso o índice não exista ainda
-      const querySnapshot = await getDocs(collection(db, 'users'));
-      return querySnapshot.docs.map(doc => ({ 
-        ...doc.data() 
-      } as UserProfile));
+      throw error;
     }
   },
 

@@ -25,7 +25,8 @@ import {
   X,
   Tag,
   Pencil,
-  Eye
+  Eye,
+  PieChart
 } from 'lucide-react';
 import { libraryService, LibraryItem, LibraryItemType } from '../infra/services/libraryService';
 import { useAuth } from '../context/AuthContext';
@@ -33,7 +34,8 @@ import { useAuth } from '../context/AuthContext';
 const TYPE_CONFIG = {
   pdf: { icon: FileText, color: 'text-red-500', bg: 'bg-red-50', label: 'Artigo PDF' },
   ebook: { icon: BookOpen, color: 'text-blue-500', bg: 'bg-blue-50', label: 'Ebook' },
-  presentation: { icon: Presentation, color: 'text-amber-500', bg: 'bg-amber-50', label: 'Apresentação' }
+  presentation: { icon: Presentation, color: 'text-amber-500', bg: 'bg-amber-50', label: 'Apresentação' },
+  infographic: { icon: PieChart, color: 'text-emerald-500', bg: 'bg-emerald-50', label: 'Infográfico' }
 };
 
 const CATEGORIES = ['Todos', 'História', 'Técnicas Culinárias', 'Cultura', 'Nutrição', 'Antropologia'];
@@ -306,7 +308,7 @@ export default function Acervo() {
         >
           Todos os Formatos
         </button>
-        {(['pdf', 'ebook', 'presentation'] as LibraryItemType[]).map(type => {
+        {(['pdf', 'ebook', 'presentation', 'infographic'] as LibraryItemType[]).map(type => {
           const Config = TYPE_CONFIG[type];
           return (
             <button
@@ -385,13 +387,15 @@ export default function Acervo() {
                   <div className="flex items-center justify-between pt-6 border-t border-surface-container-high">
                     {item.url ? (
                       item.url.startsWith('/') ? (
-                        <Link 
-                          to={item.url}
+                        <a 
+                          href={item.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           className={`flex items-center gap-2 font-bold text-sm ${Config.color} hover:underline`}
                         >
                           <ExternalLink className="w-4 h-4" />
                           Explorar Conteúdo
-                        </Link>
+                        </a>
                       ) : (
                         <button 
                           onClick={() => setPreviewUrl(item.url)}
@@ -529,6 +533,7 @@ export default function Acervo() {
                       <option value="pdf">Artigo PDF</option>
                       <option value="ebook">Ebook</option>
                       <option value="presentation">Apresentação</option>
+                      <option value="infographic">Infográfico</option>
                     </select>
                   </div>
                   <div className="space-y-2">

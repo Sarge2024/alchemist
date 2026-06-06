@@ -10,3 +10,6 @@ scratch/
 
 # AI Agent configs
 .agents/
+
+# Documentos e Acervo (Arquivos pesados como PDFs, Apresentações)
+docs/

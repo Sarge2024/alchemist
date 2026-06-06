@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alquimia do Prato - Guia de Cortes Bovinos ABIEC</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Playfair Display & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['"Playfair Display"', 'serif'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(185, 28, 28, 0.4);
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: rgba(185, 28, 28, 0.7);
+        }
+        .slide-transition {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans flex flex-col justify-between selection:bg-red-700 selection:text-white">
+
+    <!-- Header Principal -->
+    <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-4 py-3 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-br from-red-600 to-amber-600 p-2.5 rounded-lg shadow-lg shadow-red-900/30">
+                <!-- SVG Logo Panela com Chamas (Alquimia do Prato) -->
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v4m0 0a4 4 0 00-4 4v2h8v-2a4 4 0 00-4-4zm-8 10h16M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M8 10V6a4 4 0 018 0v4"></path>
+                </svg>
+            </div>
+            <div>
+                <span class="text-xs font-bold uppercase tracking-widest text-amber-500">Acervo Técnico</span>
+                <h1 class="text-lg font-bold tracking-tight text-white font-serif">Alquimia do Prato</h1>
+            </div>
+        </div>
+        
+        <!-- Toggle de Modos: Apresentação vs Guia Livre -->
+        <div class="flex bg-slate-950 p-1 rounded-full border border-slate-800 text-xs font-semibold">
+            <button onclick="switchView('presentation')" id="btn-view-presentation" class="px-4 py-2 rounded-full transition-all bg-red-700 text-white shadow">
+                Modo Aula (Slides)
+            </button>
+            <button onclick="switchView('explore')" id="btn-view-explore" class="px-4 py-2 rounded-full transition-all text-slate-400 hover:text-white">
+                Explorar Biblioteca
+            </button>
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="flex-grow p-4 sm:p-8 flex items-center justify-center">
+        
+        <!-- ================= MODO SLIDES / APRESENTAÇÃO ================= -->
+        <div id="section-presentation" class="w-full max-w-5xl bg-slate-900 rounded-2xl border border-slate-800 shadow-2xl shadow-black/60 overflow-hidden flex flex-col min-h-[600px] slide-transition">
+            <!-- Barra de Progresso dos Slides -->
+            <div class="h-1 w-full bg-slate-850 relative">
+                <div id="slide-progress" class="h-full bg-gradient-to-r from-red-600 to-amber-500 transition-all duration-300" style="width: 10%;"></div>
+            </div>
+
+            <!-- Header Interno do Slide -->
+            <div class="px-6 py-4 border-b border-slate-800/60 bg-slate-900/50 flex justify-between items-center">
+                <span class="text-xs font-bold text-red-500 tracking-widest uppercase font-mono">ABIEC • PADRONIZAÇÃO NACIONAL (SIPA 5/88)</span>
+                <span id="slide-counter" class="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-1 rounded">Slide 1 / 10</span>
+            </div>
+
+            <!-- Corpo dos Slides (Injeção via JS) -->
+            <div id="slide-container" class="flex-grow p-6 sm:p-10 flex flex-col justify-center min-h-[400px]">
+                <!-- O conteúdo do slide atual será injetado aqui pelo JavaScript -->
+            </div>
+
+            <!-- Rodapé e Controles dos Slides -->
+            <div class="px-6 py-4 bg-slate-950/80 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-slate-500 font-mono">Dica de Aula: Use as setas do teclado (← / →) para navegar.</span>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button id="btn-prev" onclick="changeSlide(-1)" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 active:bg-slate-900 text-slate-200 hover:text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 disabled:opacity-45 disabled:cursor-not-allowed">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                        Anterior
+                    </button>
+                    <button id="btn-next" onclick="changeSlide(1)" class="px-5 py-2 bg-red-700 hover:bg-red-600 active:bg-red-800 text-white rounded-lg text-sm font-semibold transition flex items-center gap-2 shadow-lg shadow-red-950/40">
+                        Próximo
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= MODO EXPLORAÇÃO LIVRE / BIBLIOTECA ================= -->
+        <div id="section-explore" class="hidden w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 slide-transition">
+            
+            <!-- Coluna Esquerda: Filtros e Diagrama -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+                <!-- Painel de Controle de Filtro -->
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+                    <h3 class="text-lg font-bold font-serif mb-4 flex items-center gap-2 text-white">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-600 block"></span>
+                        Selecione a Categoria
+                    </h3>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button onclick="filterCuts('all')" id="filter-all" class="explore-filter-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-left bg-red-700 text-white">
+                            Todos os Cortes (Técnicos)
+                        </button>
+                        <button onclick="filterCuts('traseiro')" id="filter-traseiro" class="explore-filter-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-left bg-slate-800 text-slate-400 hover:text-white">
+                            Quarto Traseiro
+                        </button>
+                        <button onclick="filterCuts('dianteiro')" id="filter-dianteiro" class="explore-filter-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-left bg-slate-800 text-slate-400 hover:text-white">
+                            Quarto Dianteiro
+                        </button>
+                        <button onclick="filterCuts('miudezas')" id="filter-miudezas" class="explore-filter-btn px-4 py-2 text-xs font-bold rounded-lg transition-all text-left bg-slate-800 text-slate-400 hover:text-white">
+                            Miudezas e Manufaturas
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mapa Anatômico Interativo -->
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl">
+                    <h3 class="text-sm font-bold uppercase tracking-wider text-slate-400 mb-3 font-mono">Mapa Anatômico Simplificado</h3>
+                    
+                    <div class="relative w-full aspect-[16/10] bg-slate-950 rounded-xl border border-slate-800/80 p-4 flex items-center justify-center">
+                        <!-- Representação estilizada SVG de um Boi Dividido -->
+                        <svg viewBox="0 0 300 180" class="w-full h-auto text-slate-700">
+                            <!-- Corpo Dianteiro -->
+                            <path d="M 50,70 C 60,60 100,50 140,60 L 140,140 L 70,140 C 65,120 50,110 50,70 Z" fill="currentColor" id="svg-dianteiro" class="hover:text-red-900/60 transition cursor-pointer" onclick="filterCuts('dianteiro')"/>
+                            <!-- Corpo Traseiro -->
+                            <path d="M 140,60 C 180,50 230,50 250,70 C 260,100 245,135 240,140 L 175,140 L 140,140 Z" fill="currentColor" id="svg-traseiro" class="hover:text-amber-900/60 transition cursor-pointer" onclick="filterCuts('traseiro')"/>
+                            <!-- Ponta de Agulha (Vazio / Costela baixa) -->
+                            <path d="M 115,100 L 195,100 L 195,130 L 115,130 Z" fill="currentColor" id="svg-vazio" class="hover:text-yellow-900/60 transition cursor-pointer" onclick="filterCuts('traseiro')"/>
+                            <!-- Cabeça / Pescoço -->
+                            <path d="M 50,70 C 50,55 40,45 30,40 C 20,40 15,55 15,70 C 15,85 30,100 50,95 Z" fill="#475569" />
+                            <!-- Pernas Dianteiras -->
+                            <rect x="65" y="140" width="15" height="30" rx="3" fill="#334155"/>
+                            <!-- Pernas Traseiras -->
+                            <rect x="220" y="140" width="15" height="30" rx="3" fill="#334155"/>
+                            
+                            <!-- Textos Indicativos -->
+                            <text x="85" y="95" fill="#f8fafc" font-size="10" font-weight="bold" class="pointer-events-none">DIANTEIRO</text>
+                            <text x="170" y="85" fill="#f8fafc" font-size="10" font-weight="bold" class="pointer-events-none">TRASEIRO</text>
+                            <text x="135" y="118" fill="#f1f5f9" font-size="7" font-weight="bold" class="pointer-events-none">VAZIO / COSTELAS</text>
+                        </svg>
+
+                        <!-- Tooltip explicativo de cliques -->
+                        <div class="absolute bottom-2 left-2 right-2 text-[10px] text-center text-slate-500 font-mono">
+                            Clique nas regiões do boi acima para carregar os respectivos cortes técnicos!
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Coluna Direita: Lista de Cortes e Seletor Multilíngue -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                <!-- Buscador de Cortes -->
+                <div class="bg-slate-900 rounded-2xl border border-slate-800 p-6 shadow-xl flex flex-col gap-4">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <h2 class="text-xl font-serif font-bold text-white">Explorador de Cortes ABIEC</h2>
+                            <p class="text-xs text-slate-400">Classificação conforme o Decreto SIPA Nº 5/88 do MAPA.</p>
+                        </div>
+                        <!-- Input de Pesquisa -->
+                        <div class="relative">
+                            <input type="text" id="search-input" onkeyup="searchCuts()" placeholder="Pesquisar corte ou código..." class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-red-600 transition w-full md:w-64">
+                            <svg class="w-4 h-4 text-slate-500 absolute right-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                    </div>
+
+                    <!-- Lista de Cortes (Resultados) -->
+                    <div id="cuts-list-container" class="space-y-3 max-h-[480px] overflow-y-auto custom-scrollbar pr-2">
+                        <!-- Cortes populados dinamicamente via JS -->
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Rodapé Geral -->
+    <footer class="border-t border-slate-850 bg-slate-950 px-4 py-4 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+        <div class="flex items-center gap-2">
+            <span class="font-bold text-slate-400">Portal Alquimia do Prato</span>
+            <span>© 2026 • Versão Integrada de Gastronomia & Tecnologia</span>
+        </div>
+        <div class="flex items-center gap-4">
+            <span>Referência Técnica: Livro Brasileiro de Cortes Bovinos (ABIEC/ApexBrasil)</span>
+        </div>
+    </footer>
+
+    <!-- Detalhes de Corte Modal (Visualizador Técnico Pop-up) -->
+    <div id="cut-modal" class="hidden fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl overflow-hidden shadow-2xl relative">
+            <!-- Modal Header -->
+            <div class="px-6 py-4 bg-slate-950 border-b border-slate-800/80 flex justify-between items-center">
+                <div class="flex items-center gap-2">
+                    <span id="modal-cut-code" class="text-xs font-mono font-bold bg-red-900/40 text-red-400 px-2 py-0.5 rounded border border-red-800/40">B1111</span>
+                    <h3 id="modal-cut-title" class="text-lg font-bold font-serif text-white">Título do Corte</h3>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <!-- Modal Body -->
+            <div class="p-6 space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
+                <!-- Tradutor -->
+                <div>
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2 font-mono">Dicionário Técnico Internacional</h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-xs">
+                            <span class="text-slate-500 block font-mono">Inglês</span>
+                            <strong id="modal-trans-en" class="text-slate-200">-</strong>
+                        </div>
+                        <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-xs">
+                            <span class="text-slate-500 block font-mono">Espanhol</span>
+                            <strong id="modal-trans-es" class="text-slate-200">-</strong>
+                        </div>
+                        <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-xs">
+                            <span class="text-slate-500 block font-mono">Francês</span>
+                            <strong id="modal-trans-fr" class="text-slate-200">-</strong>
+                        </div>
+                        <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-xs">
+                            <span class="text-slate-500 block font-mono">Farsi</span>
+                            <strong id="modal-trans-fa" class="text-slate-200">-</strong>
+                        </div>
+                        <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-xs">
+                            <span class="text-slate-500 block font-mono">Japonês</span>
+                            <strong id="modal-trans-ja" class="text-slate-200">-</strong>
+                        </div>
+                        <div class="bg-slate-950 p-2 rounded-lg border border-slate-850 text-xs">
+                            <span class="text-slate-500 block font-mono">Alemão</span>
+                            <strong id="modal-trans-de" class="text-slate-200">-</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Anatomia e Obtenção -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                        <h5 class="font-bold text-amber-500 mb-1.5 font-serif text-sm">Bases Musculares</h5>
+                        <p id="modal-muscles" class="text-slate-300 leading-relaxed">-</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850">
+                        <h5 class="font-bold text-amber-500 mb-1.5 font-serif text-sm">Estrutura Óssea Correlata</h5>
+                        <p id="modal-bones" class="text-slate-300 leading-relaxed">-</p>
+                    </div>
+                </div>
+
+                <!-- Alquimia do Prato: Uso Gastronômico Recomendado -->
+                <div class="bg-gradient-to-br from-red-950/40 to-slate-950 p-4 rounded-xl border border-red-900/30">
+                    <h5 class="text-xs font-bold uppercase tracking-wider text-red-400 mb-2 font-mono flex items-center gap-1.5">
+                        <svg class="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Recomendação Gastronômica Alquimia do Prato
+                    </h5>
+                    <p id="modal-gastronomy" class="text-xs text-slate-300 leading-relaxed">-</p>
+                </div>
+            </div>
+            <!-- Modal Footer -->
+            <div class="px-6 py-4 bg-slate-950 border-t border-slate-800 flex justify-end">
+                <button onclick="closeModal()" class="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white rounded-lg text-sm font-semibold transition">
+                    Fechar Painel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Principal -->
+    <script>
+        // Banco de Dados Consolidado do PDF da ABIEC + Gastronomia do Portal Alquimia do Prato
+        const cutsDatabase = [
+            {
+                code: "B1111",
+                name: "Filé Mignon com Cordão",
+                quarter: "traseiro",
+                en: "Tenderloin Chain On",
+                es: "Solomillo/Lomo con Cordón",
+                fr: "Filet avec Chaînette",
+                fa: "فیله پاک نشده",
+                ja: "テンダーロインチェイン付き",
+                de: "Filet mit Kette",
+                muscles: "m. psoas maior, m. psoas menor, m. ilíaco, m. quadrado lombar.",
+                bones: "Três últimas vértebras torácicas, porção espinhal das costelas correspondentes, vértebras lombares, ilíaco e fêmur.",
+                gastronomy: "Extremamente tenro e macio. Excelente para grelhados rápidos, medalhões na manteiga com ervas, fondue e bifes de alta gastronomia. O cordão é geralmente retirado e limpo para estrogonofes ou picadinhos ricos."
+            },
+            {
+                code: "B1111.1",
+                name: "Filé Mignon sem Cordão",
+                quarter: "traseiro",
+                en: "Tenderloin Chain Off",
+                es: "Solomillo/Lomo sin Cordón",
+                fr: "Filet sans Chaînette",
+                fa: "فیله پاک شده",
+                ja: "テンダーロインチェインなし",
+                de: "Filet ohne Kette",
+                muscles: "m. psoas maior, m. ilíaco, m. quadrado lombar (com a remoção do músculo psoas menor).",
+                bones: "Livre de ossos; obtido da face ventral das vértebras lombares.",
+                gastronomy: "O corte mais nobre e macio do boi. Ideal para Chateaubriand, carpaccio fino e medalhões grelhados. Requer cozimento de alta intensidade e curto tempo para preservar a suculência interna devido ao baixíssimo teor de gordura intramuscular."
+            },
+            {
+                code: "B1112",
+                name: "Contrafilé com Cordão e Aba",
+                quarter: "traseiro",
+                en: "Striploin Chain On",
+                es: "Bife Angosto Bajo con Cordón",
+                fr: "Faux-filet avec Chaînette",
+                fa: "راسته با چوبی",
+                ja: "ストリップロインチェイン付き",
+                de: "Roastbeef mit Kette e Lappen",
+                muscles: "Longo dorsal, iliocostais, espinhais dorsais, multífidos, intercostais, serrato dorsal caudal.",
+                bones: "Oito últimas vértebras torácicas, porção dorsal das costelas correspondentes e vértebras lombares.",
+                gastronomy: "Possui uma das melhores texturas e ótimo marmoreio. O cordão e a aba trazem gordura rica que melhora o sabor se assado inteiro (Roast Beef tradicional) ou cortado em bifes espessos de grelha."
+            },
+            {
+                code: "B1112.3",
+                name: "Contrafilé sem Cordão e sem Gordura",
+                quarter: "traseiro",
+                en: "Striploin Scan Trim",
+                es: "Bife Angosto Bajo sin Cordón y sin Grasa",
+                fr: "Faux-filet Maigre",
+                fa: "راسته خلفي پاك كوده",
+                ja: "ストリップロインスキャントリム",
+                de: "Roastbeef sem Kette e sem Gordura",
+                muscles: "Músculo longissimus dorsi limpo de fáscias e depósitos periféricos de gordura.",
+                bones: "Totalmente desossado.",
+                gastronomy: "Versão ultra-limpa do contrafilé, muito apreciada para dietas restritivas e bifes rápidos de frigideira. Sem a capa de gordura, deve ser cozido ao ponto para malpassado rapidamente, evitando o ressecamento."
+            },
+            {
+                code: "B1113.2",
+                name: "Filé de Costela sem Aba e sem Gordura (Noix/Bife Ancho)",
+                quarter: "traseiro",
+                en: "Cube Roll",
+                es: "Bife Ancho sin Tapa / Asado sin Grasa",
+                fr: "Noix d'Entrecôte",
+                fa: "راسته قدامي",
+                ja: "キューブロール",
+                de: "Hochrippe ohne Lappen und ohne Fett",
+                muscles: "Longo dorsal, espinhal torácico, multífido torácico (músculo iliocostal e gordura removidos).",
+                bones: "Da sexta à décima vértebra torácica.",
+                gastronomy: "Conhecido nos países platinos como Ojo de Bife e na França como Entrecôte. Apresenta o clássico carrossel de gordura intramuscular que derrete ao grelhar. Indispensável para churrasco de alta temperatura na grelha."
+            },
+            {
+                code: "B1122",
+                name: "Picanha com Capa de Gordura",
+                quarter: "traseiro",
+                en: "Rump Cap",
+                es: "Tapa de Cuadril (Punta de Ganso)",
+                fr: "Aiguillette de rumsteck",
+                fa: "قسمت قدامي كفل",
+                ja: "ランプ カブリ",
+                de: "Hüftdeckel",
+                muscles: "Porção dorsal do músculo bíceps femoral.",
+                bones: "Ísquio, sacro e duas primeiras vértebras coccígeas.",
+                gastronomy: "O corte mais popular e sagrado do churrasco brasileiro. A espessa capa de gordura protege a carne ao assar em brasa forte. Deve ser selada com a gordura para cima antes de fatiar ou assar em espeto em formato de meia-lua."
+            },
+            {
+                code: "B1123",
+                name: "Maminha da Alcatra com Gordura",
+                quarter: "traseiro",
+                en: "Rump Tail Fat On",
+                es: "Tapilla/Colita de Cuadril",
+                fr: "Aiguillette baronne",
+                fa: "انتهاي مغرران با چوبی",
+                ja: "ランプテール",
+                de: "Hüftspitze mit Fett",
+                muscles: "Músculo tensor da fascia lata.",
+                bones: "Ílio.",
+                gastronomy: "Muito suculenta e saborosa por seu teor de gordura. Perfeita para assados de forno lentos (em assadeiras com manteiga ou alho) e grelhados rápidos na brasa. Sempre corte contra as fibras para máxima maciez."
+            },
+            {
+                code: "B1124",
+                name: "Coxão Mole (Chã de Dentro)",
+                quarter: "traseiro",
+                en: "Topside or Inside",
+                es: "Nalga de Adentro con Tapa (Posta Negra)",
+                fr: "Tende de Tranche / Fesa",
+                fa: "بغل رan (Rã)",
+                ja: "トップサイド",
+                de: "Oberschale",
+                muscles: "Sartório, gracilis, pectíneo, adutor femoral, semimembranoso, gêmeos, obturadores.",
+                bones: "Ísquio, púbis, fêmur e tíbia.",
+                gastronomy: "Fibra curta e macia. Ideal para bifes de panela com molho ferrugem, bifes à milanesa perfeitos, escalopes rápidos e carne moída de altíssima qualidade. Retém muito bem a umidade em ensopados curtos."
+            },
+            {
+                code: "B1125.1",
+                name: "Coxão Duro com Lagarto (Chã de Fora)",
+                quarter: "traseiro",
+                en: "Silverside",
+                es: "Cuadrada con Peceto",
+                fr: "Gîte noix",
+                fa: "سیلور ساید",
+                ja: "シルバーサイド",
+                de: "Unterschale",
+                muscles: "Bíceps femoral e semitendinoso.",
+                bones: "Fêmur, ilíaco, tíbia e fíbula.",
+                gastronomy: "Fibras mais longas e firmes. É o rei dos cozidos longos, como o clássico cozido de panela de pressão com batatas, carne louca desfiada e caldos ricos em colágeno. Excelente para embutidos e pastrami caseiro."
+            },
+            {
+                code: "B1126.2",
+                name: "Lagarto sem Gordura e sem Pele",
+                quarter: "traseiro",
+                en: "Eye Round Fat/Skin Off",
+                es: "Peceto sin Grasa y sin Piel",
+                fr: "Rond de Gîte",
+                fa: "ایراند",
+                ja: "アイラウンド",
+                de: "Seemerrolle ohne Fett/Haut",
+                muscles: "Músculo semitendinoso isolado e totalmente limpo.",
+                bones: "Livre de ossos.",
+                gastronomy: "Formato cilíndrico perfeito e uniforme. Muito utilizado na culinária fria (como Carpaccio e Roast Beef fatiado fino) e assado clássico recheado com bacon e calabresa. Exige cozimento lento úmido para não ressecar."
+            },
+            {
+                code: "B1127",
+                name: "Patinho",
+                quarter: "traseiro",
+                en: "Knuckle or Thick Flank",
+                es: "Bola de Lomo/Babilla (Posta Rosada)",
+                fr: "Tranche Grasse / Noce",
+                fa: "مقرران (Moghraran)",
+                ja: "ナックル",
+                de: "Kugel",
+                muscles: "Reto femoral, vastos lateral, medial e intermediário.",
+                bones: "Fêmur e patela.",
+                gastronomy: "Corte magro e fibroso de formato arredondado. Perfeito para carne moída de qualidade extrema (tatar e quibe cru), hambúrgueres magros e bifes rápidos fatiados bem finos."
+            },
+            {
+                code: "B1211",
+                name: "Fraldinha",
+                quarter: "traseiro",
+                en: "Thin Skirt",
+                es: "Entraña Fina",
+                fr: "Hampe",
+                fa: "دیافراگم (Diafragma)",
+                ja: "シンスカート",
+                de: "Saumfleisch",
+                muscles: "Músculo diafragmático porção costal.",
+                bones: "Seis últimas costelas e apêndice xifóide.",
+                gastronomy: "Fibras extremamente longas e soltas com gordura entremeada de sabor marcante. Ideal para grelhar rapidamente na brasa inteira em alta temperatura. Excelente em tacos mexicanos, stir-fries e grelhados rápidos."
+            },
+            {
+                code: "B2111",
+                name: "Raquete da Paleta (Flat Iron)",
+                quarter: "dianteiro",
+                en: "Oyster Blade",
+                es: "Marucha (Punta Paleta)",
+                fr: "Paleron / Copertina",
+                fa: "عضله سودست (Sodast)",
+                ja: "オイスターブレード",
+                de: "Schaufelstück",
+                muscles: "Músculo infraespinhoso da escápula.",
+                bones: "Escápula.",
+                gastronomy: "Uma joia escondida no dianteiro. Quando limpo de seu tendão central, origina o sensacional Flat Iron, considerado o segundo corte mais macio do boi, com sabor bovino profundo e textura de filé."
+            },
+            {
+                code: "B2211",
+                name: "Acém (Miolo do Dianteiro)",
+                quarter: "dianteiro",
+                en: "Chuck",
+                es: "Aguja (Huachalomo)",
+                fr: "Basse-côtes / Sottospalla",
+                fa: "شقه (Shaghe)",
+                ja: "チャック",
+                de: "Zungenstück",
+                muscles: "Trapézio, rombóide, serrato ventral, escaleno supracostal.",
+                bones: "Cinco primeiras vértebras torácicas e costelas correspondentes.",
+                gastronomy: "Rico em colágeno, gordura entremeada e sabor. É o campeão absoluto para cozidos de panela lentos (como Boeuf Bourguignon e goulash), carne desfiada suculenta e base gordurosa perfeita para hambúrgueres artesanais (blend)."
+            },
+            {
+                code: "B2212",
+                name: "Peito Bovino (Brisket)",
+                quarter: "dianteiro",
+                en: "Brisket Point End",
+                es: "Pecho (Tapapecho)",
+                fr: "Poitrine / Petto",
+                fa: "سینه (Sine)",
+                ja: "ブリスケット",
+                de: "Brust",
+                muscles: "Peitorais, subclávio, transverso torácico.",
+                bones: "Seis primeiras esternébras e cartilagens costais correspondentes.",
+                gastronomy: "Corte lendário do churrasco texano de defumação lenta (BBQ). Requer cozimento em temperatura baixa por muitas horas (low & slow) para quebrar o colágeno duro em gelatina derretida na boca. Também usado para Pastrami e caldos ricos."
+            },
+            {
+                code: "B2215",
+                name: "Cupim",
+                quarter: "dianteiro",
+                en: "Hump",
+                es: "Joroba / Gobba",
+                fr: "Bosse",
+                fa: "کوهان (Kohan)",
+                ja: "ハンプ",
+                de: "Höcker (Zebu)",
+                muscles: "Músculos trapézio e rombóide com alta infiltração de gordura em raças zebuínas (como Nelore).",
+                bones: "Extremidades superiores das cinco primeiras apófises espinhais.",
+                gastronomy: "Corte único da pecuária tropical brasileira. Apresenta gordura entremeada abundante e textura de fibras densas. Exige assamento lento no bafo envolto em papel alumínio por 4 a 6 horas ou cozimento prévio longo na pressão."
+            }
+        ];
+
+        // Definição dos slides para o Modo Apresentação
+        const slidesData = [
+            {
+                title: "O Universo dos Cortes Bovinos Brasileiros",
+                subtitle: "Portal Alquimia do Prato • Acervo Educacional",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-4">
+                            <span class="text-xs font-bold text-amber-500 uppercase tracking-wider font-mono">Aula de Introdução Gastronômica</span>
+                            <h2 class="text-3xl font-serif font-bold text-white leading-tight">Ciência, Padronização e Técnicas na Cozinha Profissional</h2>
+                            <p class="text-sm text-slate-300 leading-relaxed">
+                                O Brasil é o maior exportador de carne bovina do mundo, abastecendo mais de 130 países. Mas por trás dessa força comercial há uma rigorosa **padronização científica de cortes**, fundamentada na anatomia, musculatura e precisão industrial.
+                            </p>
+                            <p class="text-sm text-slate-400">
+                                Nesta apresentação, estudaremos as bases do sistema **ABIEC / MAPA (Portaria SIPA 5/88)** e como a Alquimia do Prato transforma essa ciência em técnicas culinárias de excelência.
+                            </p>
+                        </div>
+                        <div class="bg-gradient-to-br from-red-950/40 to-slate-900 border border-red-900/20 p-6 rounded-2xl flex flex-col gap-3">
+                            <div class="text-4xl text-amber-500 font-serif">"</div>
+                            <p class="italic text-xs text-slate-200 leading-relaxed font-serif">
+                                De uma única carcaça bovina, podemos obter dezenas de variações com texturas, fibras e composições químicas totalmente distintas. Dominar essa anatomia é o primeiro passo para o chef de cozinha idealizar o cozimento perfeito.
+                            </p>
+                            <span class="text-[10px] uppercase font-mono tracking-wider text-slate-400">— Chef Alquimista</span>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "A Regra de Ouro dos Códigos Técnicos",
+                subtitle: "Como ler e decifrar a codificação nacional",
+                content: `
+                    <div class="space-y-6">
+                        <p class="text-sm text-slate-300">O sistema brasileiro usa códigos alfanuméricos com uma estrutura inteligente para que compradores em qualquer lugar do globo entendam a peça exata:</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                                <span class="text-2xl font-bold text-red-500 font-mono block">1º Dígito</span>
+                                <span class="text-xs text-slate-400 block mt-1">Presença de Osso</span>
+                                <strong class="text-xs text-white block mt-2 font-mono">A = Com Osso<br>B = Sem Osso</strong>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                                <span class="text-2xl font-bold text-amber-500 font-mono block">2º Dígito</span>
+                                <span class="text-xs text-slate-400 block mt-1">Divisão da Carcaça</span>
+                                <strong class="text-xs text-white block mt-2 font-mono">1 = Quarto Traseiro<br>2 = Quarto Dianteiro</strong>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                                <span class="text-2xl font-bold text-yellow-500 font-mono block">3º Dígito</span>
+                                <span class="text-xs text-slate-400 block mt-1">Região Primária</span>
+                                <strong class="text-xs text-white block mt-2 font-mono">Identifica os grandes cortes da desossa</strong>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                                <span class="text-2xl font-bold text-emerald-500 font-mono block">Decimais</span>
+                                <span class="text-xs text-slate-400 block mt-1">Nível de Toalete</span>
+                                <strong class="text-xs text-white block mt-2 font-mono">.1, .2, .3 indicam limpezas especiais (ex: sem pele)</strong>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-950 p-3 rounded-lg border border-red-900/30 text-xs text-slate-300 flex items-center gap-3">
+                            <div class="bg-red-900/30 text-red-400 px-2 py-1 rounded font-mono font-bold">Exemplo: B1111.1</div>
+                            <span>Corresponde a: **B** (Sem osso) • **1** (Quarto Traseiro) • **11** (Subdivisão de filés) • **.1** (Versão limpa, sem o cordão lateral).</span>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Estrutura e Divisões Gerais da Meia Carcaça",
+                subtitle: "Traseiro, Dianteiro e Ponta de Agulha",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-4">
+                            <h3 class="text-lg font-serif font-bold text-white">A Primeira Grande Divisão (Decreto SIPA 5/88)</h3>
+                            <p class="text-sm text-slate-300 leading-relaxed">
+                                A carcaça bovina após o abate é dividida longitudinalmente em duas metades. Cada meia carcaça é subdividida entre a **5ª e a 6ª costelas** em três blocos comerciais fundamentais:
+                            </p>
+                            <ul class="space-y-2 text-xs text-slate-300 list-disc list-inside">
+                                <li><strong>Quarto Dianteiro (A2000):</strong> Região anterior. Fibras ricas em colágeno e gordura entremeada, muito saborosas.</li>
+                                <li><strong>Traseiro Serrote / Pistola (A1100):</strong> Livre das costelas inferiores e do vazio. Contém os músculos mais nobres e macios de baixa atividade motora.</li>
+                                <li><strong>Ponta de Agulha / Vazio:</strong> Parede abdominal e costelas inferiores, de onde saem a Fraldinha e a Costela Janela.</li>
+                            </ul>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 flex justify-center">
+                            <div class="text-center space-y-2">
+                                <span class="text-xs font-mono text-slate-500 uppercase tracking-widest block">Proporção Média Comercial</span>
+                                <div class="flex gap-1 h-8 w-64 bg-slate-800 rounded overflow-hidden">
+                                    <div class="bg-red-800 flex items-center justify-center text-[10px] text-white font-bold" style="width: 48%">Dianteiro (48%)</div>
+                                    <div class="bg-amber-700 flex items-center justify-center text-[10px] text-white font-bold" style="width: 39%">Traseiro (39%)</div>
+                                    <div class="bg-yellow-700 flex items-center justify-center text-[10px] text-white font-bold" style="width: 13%">Ponta (13%)</div>
+                                </div>
+                                <span class="text-[10px] text-slate-400 block">Os valores podem variar conforme a raça e engorda do animal.</span>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "O Quarto Traseiro: Maciez e Nobreza",
+                subtitle: "Os cortes da região lombo-pélvica",
+                content: `
+                    <div class="space-y-6">
+                        <p class="text-sm text-slate-300">
+                            Por realizarem menor esforço físico durante a vida do animal, os músculos do quarto traseiro têm fibras mais finas e menos tecido conjuntivo colagenoso. São ideais para cozimentos rápidos e secos (grelha/frigideira).
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                                <h4 class="text-sm font-bold text-red-400 font-serif mb-1">Filé Mignon & Contrafilé</h4>
+                                <p class="text-xs text-slate-400">Baixíssimo tecido conectivo. Suas proteínas coagulam de forma ideal em alta temperatura (reação de Maillard rápida).</p>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                                <h4 class="text-sm font-bold text-amber-400 font-serif mb-1">Picanha & Maminha</h4>
+                                <p class="text-xs text-slate-400">Protegidas por espessas capas de gordura subcutânea, que derretem para dentro da carne durante o preparo.</p>
+                            </div>
+                            <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                                <h4 class="text-sm font-bold text-yellow-400 font-serif mb-1">Alcatra & Patinho</h4>
+                                <p class="text-xs text-slate-400">Cortes magros de sabor bovino intenso. Muito versáteis para o dia a dia e preparações cruas de alta gastronomia.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "O Quarto Dianteiro: Colágeno e Sabor Extremo",
+                subtitle: "A alquimia do cozimento lento",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-4">
+                            <p class="text-sm text-slate-300 leading-relaxed">
+                                Os cortes do dianteiro são formados por músculos de sustentação e movimentação constante. Por isso, são ricos em **colágeno (tecido conjuntivo duro)**. 
+                            </p>
+                            <p class="text-xs text-slate-400 leading-relaxed">
+                                Sob calor seco e rápido, eles endurecem. No entanto, quando submetidos ao calor úmido e lento (cozimento de panela) acima de **65°C**, o colágeno rígido se hidrolisa, transformando-se em **gelatina natural líquida**, dando uma textura extremamente macia, úmida e aveludada ao molho.
+                            </p>
+                            <div class="flex gap-2">
+                                <span class="bg-slate-950 px-2 py-1 rounded text-[10px] text-slate-300 font-mono">Acém</span>
+                                <span class="bg-slate-950 px-2 py-1 rounded text-[10px] text-slate-300 font-mono">Peito</span>
+                                <span class="bg-slate-950 px-2 py-1 rounded text-[10px] text-slate-300 font-mono">Cupim</span>
+                                <span class="bg-slate-950 px-2 py-1 rounded text-[10px] text-slate-300 font-mono">Raquete</span>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-red-900/20 text-xs space-y-2">
+                            <span class="text-amber-500 font-serif font-bold text-sm block">A Alquimia da Raquete (Flat Iron)</span>
+                            <p class="text-slate-300">
+                                Tradicionalmente considerado "carne de segunda" no Brasil, quando a **Raquete da Paleta** é limpa de forma cirúrgica na indústria (extraindo-se o tendão central), transforma-se no **Flat Iron**. Cientificamente comprovado como o segundo corte mais macio do boi, rivalizando diretamente com o filé mignon, mas com o triplo de sabor.
+                            </p>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "A Alquimia da Harmonização na Cozinha",
+                subtitle: "Combinando o corte ao método de cocção correto",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm text-slate-300">Dominar a culinária é saber escolher a técnica física de calor exata para a biologia do corte:</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div class="bg-gradient-to-b from-red-950/30 to-slate-950 p-4 rounded-xl border border-slate-850">
+                                <span class="text-amber-500 font-bold block text-xs tracking-wider uppercase font-mono mb-2">🔥 Grelha / Brasa</span>
+                                <p class="text-[11px] text-slate-400">Calor seco de altíssima radiação. Para carnes com gordura e fibras macias.</p>
+                                <strong class="text-[11px] text-slate-200 block mt-2">Picanha, Contrafilé, Fraldinha.</strong>
+                            </div>
+                            <div class="bg-gradient-to-b from-amber-950/30 to-slate-950 p-4 rounded-xl border border-slate-850">
+                                <span class="text-amber-500 font-bold block text-xs tracking-wider uppercase font-mono mb-2">🍲 Cozido Lento</span>
+                                <p class="text-[11px] text-slate-400">Calor úmido prolongado para hidrolisar colágeno em gelatina.</p>
+                                <strong class="text-[11px] text-slate-200 block mt-2">Acém, Músculo, Costela, Peito.</strong>
+                            </div>
+                            <div class="bg-gradient-to-b from-yellow-950/30 to-slate-950 p-4 rounded-xl border border-slate-850">
+                                <span class="text-amber-500 font-bold block text-xs tracking-wider uppercase font-mono mb-2">🍳 Frigideira / Chapa</span>
+                                <p class="text-[11px] text-slate-400">Calor por condução com reação de Maillard rápida e crosta de sabor.</p>
+                                <strong class="text-[11px] text-slate-200 block mt-2">Filé Mignon, Alcatra, Flat Iron.</strong>
+                            </div>
+                            <div class="bg-gradient-to-b from-emerald-950/30 to-slate-950 p-4 rounded-xl border border-slate-850">
+                                <span class="text-amber-500 font-bold block text-xs tracking-wider uppercase font-mono mb-2">💨 Defumação (BBQ)</span>
+                                <p class="text-[11px] text-slate-400">Calor indireto por convecção em fluxo de fumaça aromática.</p>
+                                <strong class="text-[11px] text-slate-200 block mt-2">Peito (Brisket), Costela Janela.</strong>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Embalagens e Tecnologias de Conservação",
+                subtitle: "A ciência por trás do shelf life internacional",
+                content: `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                        <div class="space-y-4">
+                            <p class="text-sm text-slate-300">
+                                A carne bovina de exportação do Brasil chega fresca e suculenta a destinos distantes como Europa e Ásia graças a avanços de bioengenharia em embalagens:
+                            </p>
+                            <div class="space-y-2 text-xs">
+                                <div class="bg-slate-950 p-2.5 rounded border border-slate-850 flex items-center gap-3">
+                                    <span class="bg-red-900/40 text-red-400 px-2 py-1 rounded font-mono font-bold">VAC</span>
+                                    <span><strong>Embalado a Vácuo:</strong> Remove o oxigênio para inibir microrganismos aeróbicos. Estende o shelf life sob controle para até 12 semanas.</span>
+                                </div>
+                                <div class="bg-slate-950 p-2.5 rounded border border-slate-850 flex items-center gap-3">
+                                    <span class="bg-amber-900/40 text-amber-400 px-2 py-1 rounded font-mono font-bold">MAP</span>
+                                    <span><strong>Atmosfera Modificada:</strong> Substitui o ar interno por uma mistura precisa de gases inertes (como nitrogênio e CO₂), preservando a cor vermelha brilhante do produto.</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 space-y-3">
+                            <span class="text-xs font-bold uppercase tracking-widest text-slate-500 block font-mono">Outros Códigos de Embalagem ABIEC</span>
+                            <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                                    <strong>IWP:</strong> Individually Wrapped (Embalado individualmente para congelamento limpo).
+                                </div>
+                                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                                    <strong>LP:</strong> Layer Packed (Embalado em camadas separadas por filme).
+                                </div>
+                                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                                    <strong>TP:</strong> Tray Pack (Embalagem em bandeja pronta para o varejo de curto prazo).
+                                </div>
+                                <div class="p-2 bg-slate-900 rounded border border-slate-800">
+                                    <strong>MWP:</strong> Multi-Wrapped (Vários cortes agrupados em um filme protetor).
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Miudezas: Joias Ocultas na Culinária do Mundo",
+                subtitle: "Tradição gastronômica e valor nutricional",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm text-slate-300 leading-relaxed">
+                            A culinária clássica valoriza as miudezas bovinas por suas texturas únicas e altíssima concentração de ferro, vitaminas e minerais. O livro da ABIEC classifica e codifica estes itens de forma unificada:
+                        </p>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs text-center">
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-850">
+                                <span class="text-red-500 font-bold block mb-1">Rabo (550)</span>
+                                <p class="text-[11px] text-slate-400">Rico em colágeno gelatinoso. Base da rabada brasileira e da Oxtail Soup francesa.</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-850">
+                                <span class="text-red-500 font-bold block mb-1">Língua (510)</span>
+                                <p class="text-[11px] text-slate-400">Extremamente macia e aveludada quando cozida longamente e descascada.</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-850">
+                                <span class="text-red-500 font-bold block mb-1">Timo (640)</span>
+                                <p class="text-[11px] text-slate-400">Conhecido na alta gastronomia como *Sweetbread* ou *Mollejas*. Textura sedosa e rica.</p>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-lg border border-slate-850">
+                                <span class="text-red-500 font-bold block mb-1">Medula (600)</span>
+                                <p class="text-[11px] text-slate-400">Gordura de tutano pura. Consumida assada no osso ou como base do risoto alla milanese.</p>
+                            </div>
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Alquimia do Prato: Seletor Gastronômico Rápido",
+                subtitle: "Escolha o método e veja os cortes ideais",
+                content: `
+                    <div class="space-y-4">
+                        <p class="text-sm text-slate-300">Use este seletor interativo para treinar sua equipe ou planejar seu cardápio com base na ciência dos cortes:</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <button onclick="highlightCutsByMethod('grelha')" class="p-4 bg-slate-950 hover:bg-slate-800 text-left rounded-xl border border-slate-800 transition block group text-xs">
+                                <span class="text-lg block group-hover:scale-110 transition">🔥</span>
+                                <strong class="text-white block mt-2 text-sm font-serif">Braseiro e Grelha</strong>
+                                <span class="text-slate-400 mt-1 block">Para cortes com gordura rica e maciez estrutural nativa.</span>
+                                <span class="text-red-500 font-bold mt-2 block font-mono text-[10px]">VER RECOMENDADOS</span>
+                            </button>
+                            <button onclick="highlightCutsByMethod('cozido')" class="p-4 bg-slate-950 hover:bg-slate-800 text-left rounded-xl border border-slate-800 transition block group text-xs">
+                                <span class="text-lg block group-hover:scale-110 transition">🍲</span>
+                                <strong class="text-white block mt-2 text-sm font-serif">Cozidos e Caldos</strong>
+                                <span class="text-slate-400 mt-1 block">Músculos ricos em colágeno para hidrólise gelatinosa.</span>
+                                <span class="text-red-500 font-bold mt-2 block font-mono text-[10px]">VER RECOMENDADOS</span>
+                            </button>
+                            <button onclick="highlightCutsByMethod('frigideira')" class="p-4 bg-slate-950 hover:bg-slate-800 text-left rounded-xl border border-slate-800 transition block group text-xs">
+                                <span class="text-lg block group-hover:scale-110 transition">🍳</span>
+                                <strong class="text-white block mt-2 text-sm font-serif">Frigideira e Chapa</strong>
+                                <span class="text-slate-400 mt-1 block">Selagem ultrarápida com manteiga, ervas e crosta de reação Maillard.</span>
+                                <span class="text-red-500 font-bold mt-2 block font-mono text-[10px]">VER RECOMENDADOS</span>
+                            </button>
+                            <button onclick="highlightCutsByMethod('forno')" class="p-4 bg-slate-950 hover:bg-slate-800 text-left rounded-xl border border-slate-800 transition block group text-xs">
+                                <span class="text-lg block group-hover:scale-110 transition">🥩</span>
+                                <strong class="text-white block mt-2 text-sm font-serif">Assados de Forno</strong>
+                                <span class="text-slate-400 mt-1 block">Cozimentos longos e uniformes, com marinadas protetoras.</span>
+                                <span class="text-red-500 font-bold mt-2 block font-mono text-[10px]">VER RECOMENDADOS</span>
+                            </button>
+                        </div>
+                        <div id="method-results-area" class="bg-slate-950/80 p-3 rounded-lg border border-slate-850 text-xs hidden">
+                            <!-- Injeção via JS -->
+                        </div>
+                    </div>
+                `
+            },
+            {
+                title: "Desafio de Fixação Gastronômica",
+                subtitle: "Portal Alquimia do Prato • Teste de Conhecimento",
+                content: `
+                    <div class="space-y-6">
+                        <p class="text-sm text-slate-300">Responda à questão para testar sua compreensão sobre a padronização dos cortes:</p>
+                        
+                        <div class="bg-slate-950 p-5 rounded-2xl border border-slate-850 space-y-4">
+                            <span class="text-xs font-mono font-bold text-amber-500 block uppercase tracking-widest">PERGUNTA CLÁSSICA DE CHEFIA</span>
+                            <h4 class="text-base font-serif font-bold text-white">Por que o Acém (B2211) e o Peito (B2212) endurecem sob grelhados rápidos, mas tornam-se incrivelmente macios após horas em cozimento lento úmido?</h4>
+                            
+                            <div class="grid grid-cols-1 gap-2 text-xs">
+                                <button onclick="answerQuiz(1)" class="quiz-option text-left p-3 rounded-xl border border-slate-800 hover:border-red-600 hover:bg-slate-900 transition flex items-center justify-between text-slate-300">
+                                    <span>A) Porque o sal grosso perde o efeito na grelha e a carne do dianteiro precisa de pressão para salgar.</span>
+                                    <span class="quiz-status hidden text-red-500">❌ Incorreta</span>
+                                </button>
+                                <button onclick="answerQuiz(2)" class="quiz-option text-left p-3 rounded-xl border border-slate-800 hover:border-red-600 hover:bg-slate-900 transition flex items-center justify-between text-slate-300">
+                                    <span>B) Devido ao alto teor de colágeno duro (tecido conjuntivo) das fibras do dianteiro, que exige calor úmido prolongado acima de 65°C para se transformar em gelatina macia.</span>
+                                    <span class="quiz-status hidden text-emerald-500 font-bold">✓ Correta!</span>
+                                </button>
+                                <button onclick="answerQuiz(3)" class="quiz-option text-left p-3 rounded-xl border border-slate-800 hover:border-red-600 hover:bg-slate-900 transition flex items-center justify-between text-slate-300">
+                                    <span>C) Porque a gordura intramuscular desses cortes impede a condução física de calor rápido por radiação.</span>
+                                    <span class="quiz-status hidden text-red-500">❌ Incorreta</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `
+            }
+        ];
+
+        let currentSlide = 0;
+
+        // Inicializar a Apresentação e o Banco de Dados
+        window.onload = function() {
+            renderSlide();
+            renderCutsList(cutsDatabase);
+        };
+
+        // Troca entre Modo Slides e Modo Explorador Livre
+        function switchView(mode) {
+            const btnPres = document.getElementById('btn-view-presentation');
+            const btnExp = document.getElementById('btn-view-explore');
+            const secPres = document.getElementById('section-presentation');
+            const secExp = document.getElementById('section-explore');
+
+            if (mode === 'presentation') {
+                btnPres.classList.add('bg-red-700', 'text-white', 'shadow');
+                btnPres.classList.remove('text-slate-400');
+                btnExp.classList.remove('bg-red-700', 'text-white', 'shadow');
+                btnExp.classList.add('text-slate-400');
+                
+                secPres.classList.remove('hidden');
+                secExp.classList.add('hidden');
+            } else {
+                btnExp.classList.add('bg-red-700', 'text-white', 'shadow');
+                btnExp.classList.remove('text-slate-400');
+                btnPres.classList.remove('bg-red-700', 'text-white', 'shadow');
+                btnPres.classList.add('text-slate-400');
+
+                secExp.classList.remove('hidden');
+                secPres.classList.add('hidden');
+            }
+        }
+
+        // Renderiza o Slide Atual
+        function renderSlide() {
+            const slide = slidesData[currentSlide];
+            const progress = ((currentSlide + 1) / slidesData.length) * 100;
+            
+            document.getElementById('slide-progress').style.width = `${progress}%`;
+            document.getElementById('slide-counter').innerText = `Slide ${currentSlide + 1} / ${slidesData.length}`;
+            
+            let html = `
+                <div class="space-y-4">
+                    <span class="text-xs font-bold text-amber-500 uppercase tracking-widest font-mono block">${slide.subtitle}</span>
+                    <h2 class="text-2xl sm:text-3xl font-serif font-bold text-white mb-6">${slide.title}</h2>
+                    <div class="slide-transition duration-500">
+                        ${slide.content}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('slide-container').innerHTML = html;
+
+            // Gerenciar estado de botões anteriores/próximos
+            document.getElementById('btn-prev').disabled = currentSlide === 0;
+            if (currentSlide === slidesData.length - 1) {
+                document.getElementById('btn-next').innerHTML = `Finalizar <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>`;
+            } else {
+                document.getElementById('btn-next').innerHTML = `Próximo <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>`;
+            }
+        }
+
+        // Mudar o slide de forma indexada
+        function changeSlide(direction) {
+            currentSlide += direction;
+            if (currentSlide < 0) currentSlide = 0;
+            if (currentSlide >= slidesData.length) {
+                // Chegou ao fim, redirecionar para o explorador interativo
+                currentSlide = slidesData.length - 1;
+                switchView('explore');
+                return;
+            }
+            renderSlide();
+        }
+
+        // Navegação por teclado
+        document.addEventListener('keydown', function(event) {
+            const secPres = document.getElementById('section-presentation');
+            if (!secPres.classList.contains('hidden')) {
+                if (event.key === 'ArrowRight') {
+                    changeSlide(1);
+                } else if (event.key === 'ArrowLeft') {
+                    changeSlide(-1);
+                }
+            }
+        });
+
+        // Interação de Resposta do Quiz nos slides
+        function answerQuiz(option) {
+            const options = document.querySelectorAll('.quiz-option');
+            options.forEach(opt => {
+                const status = opt.querySelector('.quiz-status');
+                status.classList.remove('hidden');
+                opt.classList.add('opacity-60');
+                opt.style.borderColor = 'rgb(30, 41, 59)';
+            });
+            // O botão correto é o B (opção indexada em 2)
+            options[option - 1].classList.remove('opacity-60');
+            options[option - 1].style.borderColor = option === 2 ? 'rgb(16, 185, 129)' : 'rgb(239, 68, 68)';
+        }
+
+        // Recomendador Gastronômico Rápido (No Slide 9)
+        function highlightCutsByMethod(method) {
+            const resultArea = document.getElementById('method-results-area');
+            resultArea.classList.remove('hidden');
+
+            let title = '';
+            let text = '';
+            let cuts = [];
+
+            if (method === 'grelha') {
+                title = '🔥 Grelha e Braseiro (Método Seco por Radiação)';
+                text = 'Carnes com fibras finas e boa infiltração de gordura. Exigem calor de alto impacto e cozimentos rápidos para manter os líquidos internos.';
+                cuts = ['Picanha (B1122)', 'Contrafilé (B1112)', 'Fraldinha (B1211)'];
+            } else if (method === 'cozido') {
+                title = '🍲 Cozidos de Panela e Guisados (Método Úmido)';
+                text = 'Músculos densos de alta movimentação. O calor longo e úmido rompe o colágeno fibroso em gelatina, criando molhos ricos e carne desfiada com garfo.';
+                cuts = ['Acém (B2211)', 'Peito (B2212)', 'Cupim (B2215)', 'Coxão Duro (B1125.1)'];
+            } else if (method === 'frigideira') {
+                title = '🍳 Frigideira Selada e Salteados (Método de Condução)';
+                text = 'Peças muito limpas e tenras. Selagem rápida em fogo forte com manteiga derretida e ervas frescas para uma crosta Maillard perfeita.';
+                cuts = ['Filé Mignon (B1111.1)', 'Alcatra (B1121.1)', 'Raquete / Flat Iron (B2111)'];
+            } else if (method === 'forno') {
+                title = '🥩 Assados Lentos de Forno (Calor Convectivo Indireto)';
+                text = 'Ideais para peças simétricas. Exigem marinadas com ácidos (vinho ou limão) e cozimento coberto para reter hidratação nas fibras.';
+                cuts = ['Maminha (B1123)', 'Lagarto (B1126.2)', 'Patinho (B1127)'];
+            }
+
+            resultArea.innerHTML = `
+                <div class="space-y-2">
+                    <h5 class="font-bold text-amber-500 font-serif text-sm">${title}</h5>
+                    <p class="text-slate-300 leading-relaxed">${text}</p>
+                    <div class="flex flex-wrap gap-1.5 mt-2">
+                        <span class="text-slate-400 font-mono font-bold uppercase mr-1">Cortes Recomendados ABIEC:</span>
+                        ${cuts.map(cut => `<span class="bg-red-950/60 text-red-400 px-2.5 py-1 rounded font-bold">${cut}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // Renderiza a Lista de Cortes no Modo Explorador Livre
+        function renderCutsList(data) {
+            const container = document.getElementById('cuts-list-container');
+            if (data.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-10 text-slate-500">
+                        Nenhum corte encontrado para os filtros selecionados.
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            data.forEach(cut => {
+                html += `
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-850 hover:border-red-900/60 transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 group">
+                        <div class="space-y-1.5">
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-mono font-bold bg-slate-900 text-slate-400 px-2 py-0.5 rounded border border-slate-800">${cut.code}</span>
+                                <h4 class="text-sm font-bold text-white font-serif group-hover:text-red-400 transition">${cut.name}</h4>
+                            </div>
+                            <div class="flex items-center gap-4 text-xs text-slate-400">
+                                <span>Inglês: <strong class="text-slate-300 font-medium">${cut.en}</strong></span>
+                                <span>Região: <span class="capitalize text-amber-500 font-semibold">${cut.quarter}</span></span>
+                            </div>
+                        </div>
+                        <button onclick="openModal('${cut.code}')" class="w-full sm:w-auto px-4 py-1.5 bg-slate-900 hover:bg-red-700 text-slate-300 hover:text-white rounded-lg text-xs font-semibold transition font-mono border border-slate-800 hover:border-red-600">
+                            Ficha Técnica
+                        </button>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        // Filtra os cortes nas abas do explorador
+        function filterCuts(category) {
+            // Resetar estilos de filtro ativo
+            document.querySelectorAll('.explore-filter-btn').forEach(btn => {
+                btn.classList.remove('bg-red-700', 'text-white');
+                btn.classList.add('bg-slate-800', 'text-slate-400');
+            });
+            
+            // Ativar botão selecionado
+            document.getElementById(`filter-${category}`).classList.remove('bg-slate-800', 'text-slate-400');
+            document.getElementById(`filter-${category}`).classList.add('bg-red-700', 'text-white');
+
+            // Resetar cores do Boi SVG
+            document.getElementById('svg-traseiro').style.color = '';
+            document.getElementById('svg-dianteiro').style.color = '';
+            document.getElementById('svg-vazio').style.color = '';
+
+            // Acender regiões do boi
+            if (category === 'traseiro') {
+                document.getElementById('svg-traseiro').style.color = '#7f1d1d';
+                document.getElementById('svg-vazio').style.color = '#7f1d1d';
+            } else if (category === 'dianteiro') {
+                document.getElementById('svg-dianteiro').style.color = '#7f1d1d';
+            }
+
+            // Aplicar filtro real de dados
+            if (category === 'all') {
+                renderCutsList(cutsDatabase);
+            } else {
+                const filtered = cutsDatabase.filter(cut => cut.quarter === category);
+                renderCutsList(filtered);
+            }
+        }
+
+        // Campo de Pesquisa Interativo
+        function searchCuts() {
+            const query = document.getElementById('search-input').value.toLowerCase();
+            const results = cutsDatabase.filter(cut => 
+                cut.name.toLowerCase().includes(query) || 
+                cut.code.toLowerCase().includes(query) ||
+                cut.en.toLowerCase().includes(query)
+            );
+            renderCutsList(results);
+        }
+
+        // Abrir Modal de Ficha Técnica
+        function openModal(code) {
+            const cut = cutsDatabase.find(c => c.code === code);
+            if (!cut) return;
+
+            document.getElementById('modal-cut-code').innerText = cut.code;
+            document.getElementById('modal-cut-title').innerText = cut.name;
+            document.getElementById('modal-trans-en').innerText = cut.en;
+            document.getElementById('modal-trans-es').innerText = cut.es;
+            document.getElementById('modal-trans-fr').innerText = cut.fr;
+            document.getElementById('modal-trans-fa').innerText = cut.fa;
+            document.getElementById('modal-trans-ja').innerText = cut.ja;
+            document.getElementById('modal-trans-de').innerText = cut.de;
+            document.getElementById('modal-muscles').innerText = cut.muscles;
+            document.getElementById('modal-bones').innerText = cut.bones;
+            document.getElementById('modal-gastronomy').innerText = cut.gastronomy;
+
+            document.getElementById('cut-modal').classList.remove('hidden');
+        }
+
+        // Fechar Modal
+        function closeModal() {
+            document.getElementById('cut-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
