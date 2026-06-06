@@ -401,7 +401,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 pb-24 pt-8 md:pt-12">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 pt-6 sm:pt-12">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -414,7 +414,7 @@ export default function Profile() {
           <ArrowLeft className="w-4 h-4" /> Voltar
         </button>
 
-        <div className="bg-surface-container-lowest rounded-[3rem] shadow-2xl border border-surface-container-high overflow-hidden">
+        <div className="bg-surface-container-lowest rounded-3xl sm:rounded-[3rem] shadow-2xl border border-surface-container-high overflow-hidden">
           {/* Header Banner - Premium Design */}
           <div className="relative h-48 sm:h-64 w-full overflow-hidden bg-on-surface">
             {/* Cover Gradient & Texture */}
@@ -423,7 +423,7 @@ export default function Profile() {
             <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-surface-container-lowest to-transparent" />
           </div>
 
-          <div className="px-6 sm:px-12 pb-12 relative -mt-20 sm:-mt-24">
+          <div className="px-4 sm:px-12 pb-8 sm:pb-12 relative -mt-16 sm:-mt-24">
             <div className="flex flex-col sm:flex-row gap-6 sm:gap-8 items-start sm:items-end">
               {/* Avatar Container */}
               <div className="relative group shrink-0">
@@ -517,25 +517,25 @@ export default function Profile() {
             </div>
           </div>
 
-          <div className="px-6 sm:px-12 pb-12">
-            <div className="flex justify-between items-start mb-12">
+          <div className="px-4 sm:px-12 pb-12">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-6 mb-8 sm:mb-12">
               <div>
-                <h2 className="text-2xl font-bold text-on-surface mb-2">Informações do Perfil</h2>
-                <p className="text-on-surface-variant">Detalhes da sua identidade na Alquimia do Prato.</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-on-surface mb-1 sm:mb-2">Informações do Perfil</h2>
+                <p className="text-sm text-on-surface-variant">Detalhes da sua identidade na Alquimia do Prato.</p>
               </div>
-              <div className="flex gap-3">
+              <div className="flex w-full md:w-auto gap-2.5">
                 <button 
                   onClick={() => setShowInteractionsPopup(true)}
-                  className="px-6 py-3 bg-primary-container text-on-primary-container rounded-2xl font-bold hover:bg-primary/20 transition-all shadow-sm active:scale-95 flex items-center gap-2"
+                  className="flex-1 md:flex-initial px-4 py-2.5 sm:px-6 sm:py-3 bg-primary-container text-on-primary-container rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold hover:bg-primary/20 transition-all shadow-sm active:scale-95 flex items-center justify-center gap-2"
                   title="Matriz de Gamificação"
                 >
-                  <Target className="w-5 h-5" />
+                  <Target className="w-4 h-4 sm:w-5 sm:h-5" />
                   Progresso
                 </button>
                 {canEdit && !isEditing && (
                   <button 
                     onClick={() => setIsEditing(true)}
-                    className="px-8 py-3 bg-on-surface text-background rounded-2xl font-bold hover:bg-on-surface-variant transition-all shadow-lg active:scale-95"
+                    className="flex-1 md:flex-initial px-4 py-2.5 sm:px-8 sm:py-3 bg-on-surface text-background rounded-xl sm:rounded-2xl text-sm sm:text-base font-bold hover:bg-on-surface-variant transition-all shadow-lg active:scale-95 whitespace-nowrap text-center"
                   >
                     Editar Perfil
                   </button>
@@ -719,15 +719,14 @@ export default function Profile() {
               </AnimatePresence>
             </form>
 
-            {/* Seção de Gamificação & Conquistas (Certificado) */}
             <div className="mt-12 pt-12 border-t border-surface-container-high">
               <div className="mb-8 text-center">
-                <h2 className="text-3xl font-black text-on-surface mb-3 flex items-center justify-center gap-3">
-                  <Award className="w-8 h-8 text-primary" />
-                  Certificado de Conquistas
-                  <Award className="w-8 h-8 text-primary" />
+                <h2 className="text-xl sm:text-3xl font-black text-on-surface mb-2 flex items-center justify-center gap-2 sm:gap-3">
+                  <Award className="w-5 h-5 sm:w-8 sm:h-8 text-primary shrink-0" />
+                  <span className="text-center">Certificado de Conquistas</span>
+                  <Award className="w-5 h-5 sm:w-8 sm:h-8 text-primary shrink-0" />
                 </h2>
-                <p className="text-on-surface-variant text-base font-medium">Sua jornada culinária e maestria, faixa a faixa.</p>
+                <p className="text-on-surface-variant text-sm sm:text-base font-medium">Sua jornada culinária e maestria, faixa a faixa.</p>
               </div>
 
               <div className="flex flex-col gap-6 max-w-4xl mx-auto">
@@ -844,21 +843,21 @@ export default function Profile() {
                                 const colorClass = colors[level.id - 1] || colors[0];
 
                                 return (
-                                 <div key={b.id} className="flex items-center gap-4 p-2.5 rounded-2xl bg-background border shadow-sm hover:shadow transition-all border-surface-container hover:border-primary/30">
-                                   <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 shadow-inner border-2 border-background overflow-hidden relative ${colorClass}`}>
+                                 <div key={b.id} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-2.5 rounded-2xl bg-background border shadow-sm hover:shadow transition-all border-surface-container hover:border-primary/30">
+                                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 shadow-inner border-2 border-background overflow-hidden relative ${colorClass}`}>
                                       {b.url_vercel_blob ? (
                                         <img src={b.url_vercel_blob} alt={b.nome} className="w-full h-full object-cover" />
                                       ) : (
-                                        <Award className="w-5 h-5" />
+                                        <Award className="w-4 h-4 sm:w-5 sm:h-5" />
                                       )}
                                    </div>
-                                   <div className="flex-1">
-                                      <div className="font-black text-base text-on-surface leading-tight">{b.nome}</div>
+                                   <div className="flex-1 min-w-0">
+                                      <div className="font-black text-sm sm:text-base text-on-surface leading-tight truncate">{b.nome}</div>
                                       {b.descricao && (
-                                        <div className="text-[10px] text-on-surface-variant leading-tight mt-0.5">{b.descricao}</div>
+                                        <div className="text-[10px] text-on-surface-variant leading-tight mt-0.5 truncate sm:whitespace-normal">{b.descricao}</div>
                                       )}
                                    </div>
-                                   <div className="text-xl font-black italic text-primary/80 pr-4 drop-shadow-sm">
+                                   <div className="text-sm sm:text-xl font-black italic text-primary/80 pr-2 sm:pr-4 drop-shadow-sm shrink-0">
                                       {/* Mocked XP for now, or could come from DB if added later */}
                                       {level.id * 500}XP
                                    </div>
@@ -904,15 +903,15 @@ export default function Profile() {
               exit={{ scale: 0.95, y: 20 }}
               className="bg-surface rounded-3xl p-6 sm:p-8 max-w-2xl w-full shadow-2xl border border-surface-container-high my-auto"
             >
-              <div className="flex justify-between items-center mb-6">
+              <div className="flex justify-between items-start gap-4 mb-6">
                 <div>
-                  <h3 className="text-2xl font-black text-on-surface flex items-center gap-2">
-                    <Target className="w-6 h-6 text-primary" />
+                  <h3 className="text-lg sm:text-2xl font-black text-on-surface flex items-center gap-2">
+                    <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
                     Progresso de Gamificação
                   </h3>
-                  <p className="text-sm text-on-surface-variant mt-1">Acompanhe e lance seus valores atingidos na matriz de interações.</p>
+                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1">Acompanhe e lance seus valores atingidos na matriz de interações.</p>
                 </div>
-                <button onClick={() => setShowInteractionsPopup(false)} className="p-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors">
+                <button onClick={() => setShowInteractionsPopup(false)} className="p-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors shrink-0">
                   <X className="w-5 h-5 text-on-surface-variant" />
                 </button>
               </div>
