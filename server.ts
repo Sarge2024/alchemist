@@ -810,10 +810,41 @@ app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (r
 // Deletar Avatar
 app.delete("/api/admin/avatars/:id", authenticateAPI, async (req, res) => {
   try {
-    await prisma.avatarOption.delete({ where: { id: req.params.id } });
+    const { id } = req.params;
+    
+    // Buscar o avatar antes de deletar para obter o urlVercelBlob
+    const avatar = await prisma.avatarOption.findUnique({
+      where: { id }
+    });
+
+    if (!avatar) {
+      return res.status(404).json({ error: "Avatar não encontrado." });
+    }
+
+    // Deletar do Postgres
+    await prisma.avatarOption.delete({ where: { id } });
+
+    // Atualizar no Firestore
+    const db = getFirestore();
+    const snapshot = await db.collection("users").where("photoURL", "==", avatar.urlVercelBlob).get();
+
+    if (!snapshot.empty) {
+      const batch = db.batch();
+      snapshot.docs.forEach(doc => {
+        const userData = doc.data();
+        const fallbackPhoto = userData.initialPhotoURL || "";
+        batch.update(doc.ref, {
+          photoURL: fallbackPhoto,
+          updatedAt: FieldValue.serverTimestamp()
+        });
+      });
+      await batch.commit();
+      console.log(`[Admin] Reset photoURL for ${snapshot.size} users using deleted avatar ${avatar.codigoAvatar}`);
+    }
+
     res.json({ success: true });
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao deletar avatar:", error);
     res.status(500).json({ error: "Erro ao deletar avatar" });
   }
 });

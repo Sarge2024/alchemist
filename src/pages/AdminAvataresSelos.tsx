@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Loader2, Plus, Trash2, Image as ImageIcon, Shield, Award, Upload, ArrowUpDown, Search } from 'lucide-react';
+import { Loader2, Plus, Trash2, Image as ImageIcon, Shield, Award, Upload, ArrowUpDown, Search, Hourglass } from 'lucide-react';
 
 export default function AdminAvataresSelos() {
   const [avatars, setAvatars] = useState<any[]>([]);
@@ -7,6 +7,8 @@ export default function AdminAvataresSelos() {
   const [loading, setLoading] = useState(true);
   const [searchCode, setSearchCode] = useState('');
   const [activeInnerTab, setActiveInnerTab] = useState<'avatars' | 'badges'>('avatars');
+  const [selectedAvatarIds, setSelectedAvatarIds] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
 
   // Ordenação da tabela de avatares
   const [sortField, setSortField] = useState<string>('codigoAvatar');
@@ -58,6 +60,10 @@ export default function AdminAvataresSelos() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    setSelectedAvatarIds([]);
+  }, [searchCode, activeInnerTab]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
@@ -85,6 +91,7 @@ export default function AdminAvataresSelos() {
       return;
     }
 
+    setIsUploading(true);
     try {
       let successCount = 0;
       for (let i = 0; i < avatarImages.length; i++) {
@@ -118,6 +125,8 @@ export default function AdminAvataresSelos() {
     } catch (err) {
       console.error(err);
       alert("Erro ao criar avatares.");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -125,6 +134,7 @@ export default function AdminAvataresSelos() {
     e.preventDefault();
     if (!badgeImage) return alert("Selecione uma imagem!");
 
+    setIsUploading(true);
     try {
       const formData = new FormData();
       formData.append('codigo_evento', newBadge.codigo_evento);
@@ -140,12 +150,17 @@ export default function AdminAvataresSelos() {
 
       if (res.ok) {
         alert("Selo criado!");
+        setBadgeImage(null);
+        setNewBadge({ codigo_evento: '', nome: '', descricao: '' });
         fetchData();
       } else {
         alert("Erro ao criar selo");
       }
     } catch (err) {
       console.error(err);
+      alert("Erro ao criar selo");
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -156,9 +171,49 @@ export default function AdminAvataresSelos() {
         method: 'DELETE',
         headers: { 'x-api-key': import.meta.env.VITE_APP_API_KEY || '' }
       });
+      setSelectedAvatarIds(prev => prev.filter(x => x !== id));
       fetchData();
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleToggleSelectAvatar = (id: string) => {
+    setSelectedAvatarIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleToggleSelectAll = () => {
+    if (selectedAvatarIds.length === sortedAvatars.length) {
+      setSelectedAvatarIds([]);
+    } else {
+      setSelectedAvatarIds(sortedAvatars.map(a => a.id));
+    }
+  };
+
+  const handleBulkDeleteAvatars = async () => {
+    if (selectedAvatarIds.length === 0) return;
+    if (!confirm(`Deletar os ${selectedAvatarIds.length} avatares selecionados?`)) return;
+
+    setLoading(true);
+    try {
+      const headers = { 'x-api-key': import.meta.env.VITE_APP_API_KEY || '' };
+      await Promise.all(
+        selectedAvatarIds.map(id =>
+          fetch(`/api/admin/avatars/${id}`, {
+            method: 'DELETE',
+            headers
+          })
+        )
+      );
+      setSelectedAvatarIds([]);
+      alert("Avatares excluídos com sucesso!");
+      await fetchData();
+    } catch (err) {
+      console.error("Error bulk deleting avatars:", err);
+      alert("Ocorreu um erro ao excluir alguns avatares.");
+      fetchData();
     }
   };
 
@@ -290,7 +345,17 @@ export default function AdminAvataresSelos() {
       {activeInnerTab === 'avatars' && (
       <section className="bg-surface-container rounded-3xl p-6 shadow-sm border border-surface-container-high">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold flex items-center gap-2"><ImageIcon className="text-primary" /> UI de Cadastro de Avatares</h2>
+          <div className="flex items-center gap-4">
+            <h2 className="text-2xl font-bold flex items-center gap-2"><ImageIcon className="text-primary" /> UI de Cadastro de Avatares</h2>
+            {selectedAvatarIds.length > 0 && (
+              <button 
+                onClick={handleBulkDeleteAvatars}
+                className="bg-red-50 text-red-500 border border-red-200 hover:bg-red-500 hover:text-white transition-all flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm cursor-pointer"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Deletar Selecionados ({selectedAvatarIds.length})
+              </button>
+            )}
+          </div>
           <div className="relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
             <input
@@ -322,8 +387,13 @@ export default function AdminAvataresSelos() {
           <div className="text-xs text-on-surface-variant w-full -mt-2 ml-1">
             {avatarImages.length > 0 ? `${avatarImages.length} arquivo(s) selecionado(s)` : 'Nenhuma imagem selecionada'}
           </div>
-          <button type="submit" className="bg-primary text-white font-bold rounded-lg px-4 py-2 hover:bg-primary-container flex items-center gap-2 text-sm shrink-0">
-            <Plus className="w-4 h-4" /> Adicionar
+          <button 
+            type="submit" 
+            disabled={isUploading}
+            className="bg-primary text-white font-bold rounded-lg px-4 py-2 hover:bg-primary-container flex items-center gap-2 text-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUploading ? <Hourglass className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
+            {isUploading ? 'Processando...' : 'Adicionar'}
           </button>
         </form>
 
@@ -331,6 +401,15 @@ export default function AdminAvataresSelos() {
           <table className="w-full text-left text-sm">
             <thead className="bg-surface-container-low border-b border-outline text-xs uppercase font-black tracking-widest text-on-surface-variant">
               <tr>
+                <th className="p-3 w-12 text-center">
+                  <input
+                    type="checkbox"
+                    checked={sortedAvatars.length > 0 && selectedAvatarIds.length === sortedAvatars.length}
+                    onChange={handleToggleSelectAll}
+                    className="rounded border-outline text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                    title="Selecionar Todos"
+                  />
+                </th>
                 <th className="p-3 w-16 text-center">Imagem</th>
                 <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('codigoAvatar')}>Código Único<SortIcon field="codigoAvatar" /></th>
                 <th className="p-3 cursor-pointer select-none hover:text-primary" onClick={() => toggleSort('tierMinimo')}>Nível (Tier) Liberado<SortIcon field="tierMinimo" /></th>
@@ -344,9 +423,18 @@ export default function AdminAvataresSelos() {
                   return map[tier.toLowerCase()] || tier;
                 };
                 const numericTier = getNumericTier(avatar.tierMinimo);
+                const isSelected = selectedAvatarIds.includes(avatar.id);
 
                 return (
-                  <tr key={avatar.id} className="hover:bg-surface-container-lowest transition-colors">
+                  <tr key={avatar.id} className={`transition-colors ${isSelected ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-surface-container-lowest'}`}>
+                    <td className="p-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectAvatar(avatar.id)}
+                        className="rounded border-outline text-primary focus:ring-primary h-4 w-4 cursor-pointer"
+                      />
+                    </td>
                     <td className="p-3 text-center">
                       <div className="relative group w-10 h-10 mx-auto">
                         <img src={avatar.urlVercelBlob} alt={avatar.codigoAvatar} className="w-10 h-10 object-cover rounded-md border border-outline mx-auto" />
@@ -398,8 +486,13 @@ export default function AdminAvataresSelos() {
           />
           
           <input type="file" accept="image/*" onChange={e => setBadgeImage(e.target.files?.[0] || null)} className="w-56 p-1.5 text-sm bg-surface rounded-lg border border-outline" required />
-          <button type="submit" className="bg-amber-500 text-white font-bold rounded-lg px-4 py-2 hover:bg-amber-600 flex items-center gap-2 text-sm shrink-0">
-            <Plus className="w-4 h-4" /> Adicionar
+          <button 
+            type="submit" 
+            disabled={isUploading}
+            className="bg-amber-500 text-white font-bold rounded-lg px-4 py-2 hover:bg-amber-600 flex items-center gap-2 text-sm shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isUploading ? <Hourglass className="w-4 h-4 animate-spin text-white" /> : <Plus className="w-4 h-4" />}
+            {isUploading ? 'Processando...' : 'Adicionar'}
           </button>
         </form>
 
@@ -477,11 +570,24 @@ export default function AdminAvataresSelos() {
               <button 
                 onClick={handleConfirmUpload}
                 disabled={popupState.isUploading}
-                className="px-6 py-2 rounded-xl bg-primary text-white font-bold hover:bg-primary-container transition-colors flex items-center justify-center min-w-[140px] gap-2"
+                className="px-6 py-2 rounded-xl bg-primary text-white font-bold hover:bg-primary-container transition-colors flex items-center justify-center min-w-[140px] gap-2 disabled:opacity-50"
               >
-                {popupState.isUploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
+                {popupState.isUploading ? <Hourglass className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {popupState.isUploading ? 'Salvando...' : 'Confirmar'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {isUploading && (
+        <div className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-surface-container-low p-8 rounded-3xl border border-surface-container-high shadow-2xl flex flex-col items-center gap-4 max-w-xs text-center">
+            <div className="p-4 bg-primary/10 rounded-full text-primary animate-bounce">
+              <Hourglass className="w-10 h-10 animate-spin duration-1000" />
+            </div>
+            <div>
+              <h4 className="text-lg font-bold text-on-surface">Processando Imagens</h4>
+              <p className="text-xs text-on-surface-variant mt-1">Fazendo o upload e configurando as imagens em background...</p>
             </div>
           </div>
         </div>

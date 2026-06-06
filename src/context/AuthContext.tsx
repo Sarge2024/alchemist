@@ -108,22 +108,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatePresence = async (appUser: AppUser | null, isOnline: boolean) => {
       if (appUser?.uid) {
         try {
-          // Gravação direta via SDK Cliente (imediato, sem depender do backend da Vercel)
           const { doc, setDoc, serverTimestamp } = await import('firebase/firestore');
           const { db } = await import('../lib/firebase');
           await setDoc(doc(db, "users", appUser.uid), {
             isOnline,
-            lastSeen: serverTimestamp(),
-            ...(appUser.displayName && { displayName: appUser.displayName }),
-            ...(appUser.email && { email: appUser.email }),
-            ...(appUser.photoURL && { photoURL: appUser.photoURL })
+            lastSeen: serverTimestamp()
           }, { merge: true });
-
-          // Buscar role APÓS garantir que o documento existe
-          await fetchUserRole(appUser.uid, appUser.email);
         } catch (err) {
           console.error("Error updating presence directly:", err);
         }
+      }
+    };
+
+    const syncProfileAndPresence = async (appUser: AppUser, isOnline: boolean) => {
+      try {
+        const { doc, getDoc, setDoc, serverTimestamp } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+
+        const userDocRef = doc(db, "users", appUser.uid);
+        const docSnap = await getDoc(userDocRef);
+        const currentData = docSnap.exists() ? docSnap.data() : null;
+
+        // Resolve photo URLs
+        const initialPhotoURL = currentData?.initialPhotoURL || appUser.photoURL || '';
+        const finalPhotoURL = currentData?.photoURL || appUser.photoURL || '';
+
+        // If the Firestore photoURL is different from the mapped one, we want to update the React state
+        if (finalPhotoURL !== appUser.photoURL) {
+          setUser(prev => prev ? { ...prev, photoURL: finalPhotoURL } : null);
+        }
+
+        await setDoc(userDocRef, {
+          isOnline,
+          lastSeen: serverTimestamp(),
+          ...(appUser.displayName && { displayName: appUser.displayName }),
+          ...(appUser.email && { email: appUser.email }),
+          photoURL: finalPhotoURL,
+          initialPhotoURL
+        }, { merge: true });
+
+        // Busca o papel/role do usuário
+        await fetchUserRole(appUser.uid, appUser.email);
+      } catch (err) {
+        console.error("Error syncing profile and presence:", err);
       }
     };
 
@@ -147,7 +174,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         const appUser = mapSupabaseUserToAppUser(session.user);
         setUser(appUser);
-        await updatePresence(appUser, true);
+        await syncProfileAndPresence(appUser, true);
       } else {
         setUser(null);
       }
@@ -159,7 +186,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (session?.user) {
         const appUser = mapSupabaseUserToAppUser(session.user);
         setUser(appUser);
-        await updatePresence(appUser, true);
+        await syncProfileAndPresence(appUser, true);
       } else {
         if (userRef.current) {
           updatePresence(userRef.current, false);
