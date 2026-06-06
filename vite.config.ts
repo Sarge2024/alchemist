@@ -14,7 +14,7 @@ export default defineConfig(({mode}) => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.png', 'apple-touch-icon.png'],
         workbox: {
-          maximumFileSizeToCacheInBytes: 4000000,
+          maximumFileSizeToCacheInBytes: 10000000,
           globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
           cleanupOutdatedCaches: true,
           skipWaiting: true,
