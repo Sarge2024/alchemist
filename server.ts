@@ -720,9 +720,13 @@ app.get("/api/admin/avatars", authenticateAPI, async (req, res) => {
   try {
     const avatars = await prisma.avatarOption.findMany({ orderBy: { criadoEm: 'desc' }});
     res.json(avatars);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao buscar avatares" });
+    res.status(500).json({ 
+      error: "Erro ao buscar avatares", 
+      details: error?.message || String(error),
+      stack: error?.stack 
+    });
   }
 });
 
@@ -817,9 +821,13 @@ app.get("/api/admin/badges", authenticateAPI, async (req, res) => {
   try {
     const badges = await prisma.badge.findMany();
     res.json(badges);
-  } catch (error) {
+  } catch (error: any) {
     console.error(error);
-    res.status(500).json({ error: "Erro ao buscar selos" });
+    res.status(500).json({ 
+      error: "Erro ao buscar selos",
+      details: error?.message || String(error),
+      stack: error?.stack 
+    });
   }
 });
 
