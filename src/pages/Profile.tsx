@@ -144,6 +144,8 @@ export default function Profile() {
   const [unlockedLevel, setUnlockedLevel] = useState<number>(0);
   const [showInteractionsPopup, setShowInteractionsPopup] = useState(false);
   const [userInteractions, setUserInteractions] = useState<Record<string, number>>({});
+  const [selectedLevelForTips, setSelectedLevelForTips] = useState<number | null>(null);
+  const [showTipsPopup, setShowTipsPopup] = useState(false);
 
   const INTERACTION_MATRIX = [
     { id: 'COLLABORATION_MESSAGE', label: 'Mensagens no Lounge', required: 50 },
@@ -151,11 +153,93 @@ export default function Profile() {
     { id: 'PROFILE_COMPLETE', label: 'Cadastro Completo', required: 1 },
     { id: 'PROFILE_QUIZ', label: 'Quiz de Preferências', required: 1 },
     { id: 'ARTICLE_PUBLISHED', label: 'Artigos Publicados', required: 5 },
-    { id: 'RECIPE_PUBLISHED_PHOTO', label: 'Receitas Publicadas (c/ Foto)', required: 10 },
+    { id: 'RECIPE_PUBLISHED', label: 'Receitas Publicadas (c/ Foto)', required: 10 },
     { id: 'RECIPE_UPVOTE_RECEIVED', label: 'Avaliações Positivas Recebidas', required: 20 },
     { id: 'REVIEW_WITH_PHOTO', label: 'Avaliações Feitas (c/ Foto)', required: 15 },
     { id: 'PRODUCT_PURCHASED', label: 'Produtos Comprados', required: 3 }
   ];
+
+  const getRelativeCountForLevel = (eventType: string, absoluteCount: number, levelId: number) => {
+    const matrixItem = INTERACTION_MATRIX.find(item => item.id === eventType);
+    if (!matrixItem) return 0;
+    const baseReq = matrixItem.required;
+
+    let remaining = absoluteCount;
+    for (let lvl = 1; lvl < levelId; lvl++) {
+      const targetForLvl = baseReq * lvl;
+      if (remaining >= targetForLvl) {
+        remaining -= targetForLvl;
+      } else {
+        return 0;
+      }
+    }
+    return remaining;
+  };
+
+  const getTipsForInteraction = (id: string) => {
+    switch (id) {
+      case 'COLLABORATION_MESSAGE':
+        return {
+          title: 'Mensagens no Lounge',
+          tip: 'Envie mensagens e tire dúvidas de culinária no Lounge. O Chef IA (@Alchemist) e outros membros estão sempre online!',
+          action: 'Ir para o Lounge'
+        };
+      case 'PROFILE_PARTIAL':
+        return {
+          title: 'Cadastro Parcial',
+          tip: 'Preencha suas informações básicas (Nome, Estado, WhatsApp) nas configurações de Perfil.',
+          action: 'Editar Perfil'
+        };
+      case 'PROFILE_COMPLETE':
+        return {
+          title: 'Cadastro Completo',
+          tip: 'Complete 100% do seu perfil, preenchendo todos os campos adicionais de endereço e preferências culinárias.',
+          action: 'Editar Perfil'
+        };
+      case 'PROFILE_QUIZ':
+        return {
+          title: 'Quiz de Preferências',
+          tip: 'Responda ao Quiz de preferências de culinária na aba de preferências para alinhar as recomendações do Chef IA.',
+          action: 'Responder Quiz'
+        };
+      case 'ARTICLE_PUBLISHED':
+        return {
+          title: 'Artigos Publicados',
+          tip: 'Publique artigos técnicos, guias gastronômicos ou PDFs de receitas e história da culinária no acervo compartilhado.',
+          action: 'Acessar Acervo'
+        };
+      case 'RECIPE_PUBLISHED':
+        return {
+          title: 'Receitas Publicadas (c/ Foto)',
+          tip: 'Publique suas próprias receitas deliciosas contendo fotos atrativas no acervo de receitas.',
+          action: 'Publicar Receita'
+        };
+      case 'RECIPE_UPVOTE_RECEIVED':
+        return {
+          title: 'Avaliações Positivas Recebidas',
+          tip: 'Compartilhe suas melhores receitas no acervo e incentive outros alquimistas a deixarem avaliações positivas!',
+          action: 'Ver Minhas Receitas'
+        };
+      case 'REVIEW_WITH_PHOTO':
+        return {
+          title: 'Avaliações Feitas (c/ Foto)',
+          tip: 'Avalie receitas enviadas por outros membros do Alquimia do Prato, adicionando uma foto do prato que você preparou.',
+          action: 'Explorar Receitas'
+        };
+      case 'PRODUCT_PURCHASED':
+        return {
+          title: 'Produtos Comprados',
+          tip: 'Visite nossa loja parceira ou selecione ingredientes especiais para compra na plataforma e amplie seu estoque culinário.',
+          action: 'Visitar Loja'
+        };
+      default:
+        return {
+          title: 'Interação Culinária',
+          tip: 'Execute ações na plataforma para acumular pontos de alquimista e desbloquear novos selos de maestria.',
+          action: 'Explorar'
+        };
+    }
+  };
   
   const [formData, setFormData] = useState({
     displayName: '',
@@ -371,6 +455,27 @@ export default function Profile() {
             full_name: formData.displayName
           }
         });
+      }
+      
+      // Trigger gamificação do perfil
+      const isComplete = !!(formData.displayName && formData.whatsapp && formData.city && formData.state && formData.photoURL);
+      const profileEvent = isComplete ? 'PROFILE_COMPLETE' : 'PROFILE_PARTIAL';
+
+      try {
+        await fetch('/api/gamification/event', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+          },
+          body: JSON.stringify({
+            uid: targetUid,
+            eventType: profileEvent
+          })
+        });
+        await fetchInteractions();
+      } catch (gamiErr) {
+        console.error("Erro ao registrar evento de gamificação de perfil:", gamiErr);
       }
       
       setProfile(prev => prev ? { ...prev, ...formData } : null);
@@ -729,6 +834,8 @@ export default function Profile() {
                 <p className="text-on-surface-variant text-sm sm:text-base font-medium">Sua jornada culinária e maestria, faixa a faixa.</p>
               </div>
 
+
+
               <div className="flex flex-col gap-6 max-w-4xl mx-auto">
                 {MOCK_LEVELS.map(level => {
                    const isUnlocked = (gamification?.level || 1) >= level.id;
@@ -748,8 +855,6 @@ export default function Profile() {
                                  a.codigo.toUpperCase().includes(`TIER${level.id}`) || 
                                  a.tierMinimo === level.id.toString()
                                );
-                               // Se está bloqueado, mostra o placeholder liso
-                               // Se está desbloqueado, pega o avatar preferido do usuário ou o primeiro que bater
                                const avatarUrl = isUnlocked 
                                  ? (certAvatars[level.id] || (matchingAvatar ? matchingAvatar.url : level.avatar))
                                  : level.avatar;
@@ -799,72 +904,103 @@ export default function Profile() {
                           </h3>
                           
                           <div className="flex flex-col gap-3">
-                            {(() => {
-                              // Filter real badges from DB that belong to this level
-                              const userBadges = gamification?.user?.badges || [];
-                              const levelBadges = userBadges.filter((ub: any) => {
-                                // Hardcoded mapping for the existing DB badges to their levels
-                                const map: Record<string, number> = {
-                                  'mestre_fundador': 5,
-                                  'guardiao_lounge': 5,
-                                  'criador_supremo': 5,
-                                  'degustador_elite': 5
-                                };
-                                const badgeLevel = map[ub.badge.codigo_evento] || 1; // Default to 1 if unknown
-                                return badgeLevel === level.id;
-                              });
+                            {isUnlocked && (
+                              <div className="mt-2 p-4 rounded-2xl bg-surface-container-low border border-surface-container-high/60 flex flex-col gap-3 shadow-sm">
+                                {(() => {
+                                  const activeLines = INTERACTION_MATRIX.map(interaction => {
+                                    const absoluteCount = userInteractions[interaction.id] || 0;
+                                    const relativeCount = getRelativeCountForLevel(interaction.id, absoluteCount, level.id);
+                                    const targetForLevel = interaction.required * level.id;
+                                    
+                                    let seal: 'locked' | 'bronze' | 'prata' | 'ouro' = 'locked';
+                                    if (relativeCount >= targetForLevel * 4) {
+                                      seal = 'ouro';
+                                    } else if (relativeCount >= targetForLevel * 2) {
+                                      seal = 'prata';
+                                    } else if (relativeCount >= targetForLevel) {
+                                      seal = 'bronze';
+                                    }
 
-                              if (!isUnlocked) return null;
+                                    return {
+                                      ...interaction,
+                                      relativeCount,
+                                      targetForLevel,
+                                      seal
+                                    };
+                                  }).filter(line => line.relativeCount > 0);
 
-                              if (levelBadges.length === 0) {
-                                // If no real badges for this level yet, show a placeholder
-                                return (
-                                  <div className="flex items-center gap-4 p-2.5 rounded-2xl bg-background border border-surface-container-high opacity-50">
-                                    <div className="w-12 h-12 rounded-full flex items-center justify-center shrink-0 border-2 border-background bg-surface-container-high text-on-surface-variant">
-                                      <Award className="w-5 h-5" />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-bold text-sm text-on-surface-variant">Nenhuma conquista registrada nesta faixa.</div>
-                                    </div>
-                                  </div>
-                                );
-                              }
+                                  if (activeLines.length === 0) {
+                                    return (
+                                      <div className="text-center py-4 px-2">
+                                        <p className="text-xs text-on-surface-variant font-medium italic">Nenhuma pontuação acumulada neste nível.</p>
+                                      </div>
+                                    );
+                                  }
 
-                              return levelBadges.map((ub: any) => {
-                                const b = ub.badge;
-                                // Determine colors based on level
-                                const colors = [
-                                  'bg-stone-200 text-stone-600', // Level 1
-                                  'bg-emerald-100 text-emerald-600', // Level 2
-                                  'bg-amber-100 text-amber-600', // Level 3
-                                  'bg-blue-100 text-blue-600', // Level 4
-                                  'bg-purple-100 text-purple-600' // Level 5
-                                ];
-                                const colorClass = colors[level.id - 1] || colors[0];
+                                  return activeLines.map(line => {
+                                    return (
+                                      <div key={line.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-surface-container-lowest hover:bg-surface-container-low transition-colors duration-200 border border-surface-container-high/40 text-left">
+                                        {/* 1. Selo */}
+                                        <div className="flex items-center gap-2">
+                                          {line.seal === 'locked' && (
+                                            <span className="flex items-center gap-1 text-[10px] font-black uppercase bg-stone-100 text-stone-500 px-2.5 py-1 rounded-full border border-stone-200 shadow-sm">
+                                              <Lock className="w-3 h-3 shrink-0 text-stone-400" /> Em Progresso
+                                            </span>
+                                          )}
+                                          {line.seal === 'bronze' && (
+                                            <span className="flex items-center gap-1 text-[10px] font-black uppercase bg-amber-700/10 text-amber-700 px-2.5 py-1 rounded-full border border-amber-700/20 shadow-sm">
+                                              <Award className="w-3 h-3 shrink-0 text-amber-700 animate-pulse" /> Bronze
+                                            </span>
+                                          )}
+                                          {line.seal === 'prata' && (
+                                            <span className="flex items-center gap-1 text-[10px] font-black uppercase bg-slate-300/30 text-slate-700 px-2.5 py-1 rounded-full border border-slate-300 shadow-sm">
+                                              <Award className="w-3 h-3 shrink-0 text-slate-600 animate-pulse" /> Prata
+                                            </span>
+                                          )}
+                                          {line.seal === 'ouro' && (
+                                            <span className="flex items-center gap-1 text-[10px] font-black uppercase bg-yellow-400/10 text-yellow-600 px-2.5 py-1 rounded-full border border-yellow-400/30 shadow-sm">
+                                              <Trophy className="w-3 h-3 shrink-0 text-yellow-500 animate-pulse" /> Ouro
+                                            </span>
+                                          )}
+                                        </div>
 
-                                return (
-                                 <div key={b.id} className="flex items-center gap-3 sm:gap-4 p-2 sm:p-2.5 rounded-2xl bg-background border shadow-sm hover:shadow transition-all border-surface-container hover:border-primary/30">
-                                   <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center shrink-0 shadow-inner border-2 border-background overflow-hidden relative ${colorClass}`}>
-                                      {b.url_vercel_blob ? (
-                                        <img src={b.url_vercel_blob} alt={b.nome} className="w-full h-full object-cover" />
-                                      ) : (
-                                        <Award className="w-4 h-4 sm:w-5 sm:h-5" />
-                                      )}
-                                   </div>
-                                   <div className="flex-1 min-w-0">
-                                      <div className="font-black text-sm sm:text-base text-on-surface leading-tight truncate">{b.nome}</div>
-                                      {b.descricao && (
-                                        <div className="text-[10px] text-on-surface-variant leading-tight mt-0.5 truncate sm:whitespace-normal">{b.descricao}</div>
-                                      )}
-                                   </div>
-                                   <div className="text-sm sm:text-xl font-black italic text-primary/80 pr-2 sm:pr-4 drop-shadow-sm shrink-0">
-                                      {/* Mocked XP for now, or could come from DB if added later */}
-                                      {level.id * 500}XP
-                                   </div>
-                                 </div>
-                                );
-                              });
-                            })()}
+                                        {/* 2. Item de Interação */}
+                                        <span className="text-xs font-bold text-on-surface leading-tight flex-1">
+                                          {line.label}
+                                        </span>
+
+                                        {/* 3. Pontuação Acumulada */}
+                                        <div className="flex items-center gap-3 w-full sm:w-auto mt-1 sm:mt-0 shrink-0 justify-end">
+                                          <div className="flex-1 sm:w-24 bg-surface-container-high rounded-full h-2 overflow-hidden border border-surface-container-high/40">
+                                            <div 
+                                              className={`h-full rounded-full transition-all duration-500 ${line.seal === 'ouro' ? 'bg-yellow-500' : line.seal === 'prata' ? 'bg-slate-400' : line.seal === 'bronze' ? 'bg-amber-600' : 'bg-primary'}`} 
+                                              style={{ width: `${Math.min(100, (line.relativeCount / line.targetForLevel) * 100)}%` }}
+                                            />
+                                          </div>
+                                          <span className="text-xs font-black text-on-surface-variant font-mono tabular-nums leading-none min-w-[50px] text-right">
+                                            {line.relativeCount} / {line.targetForLevel}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    );
+                                  });
+                                })()}
+                                
+                                <div className="flex justify-end mt-1">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedLevelForTips(level.id);
+                                      setShowTipsPopup(true);
+                                    }}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all duration-300 cursor-pointer shadow-sm active:scale-95"
+                                  >
+                                    <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                                    Dicas
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
                        </div>
 
@@ -909,7 +1045,7 @@ export default function Profile() {
                     <Target className="w-5 h-5 sm:w-6 sm:h-6 text-primary shrink-0" />
                     Progresso de Gamificação
                   </h3>
-                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1">Acompanhe e lance seus valores atingidos na matriz de interações.</p>
+                  <p className="text-xs sm:text-sm text-on-surface-variant mt-1">Acompanhe seu progresso na matriz de interações para conquista de selos.</p>
                 </div>
                 <button onClick={() => setShowInteractionsPopup(false)} className="p-2 bg-surface-container rounded-full hover:bg-surface-container-high transition-colors shrink-0">
                   <X className="w-5 h-5 text-on-surface-variant" />
@@ -942,7 +1078,7 @@ export default function Profile() {
                         </div>
                       </div>
 
-                      {canEdit && (
+                      {isAdmin && (
                         <div className="flex items-center gap-2 shrink-0">
                           <button 
                             onClick={() => handleUpdateInteraction(interaction.id, -1)}
@@ -966,6 +1102,121 @@ export default function Profile() {
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Tips Popup */}
+      <AnimatePresence>
+        {showTipsPopup && selectedLevelForTips !== null && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTipsPopup(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            {/* Modal Content */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: "spring", duration: 0.5 }}
+              className="bg-surface rounded-3xl p-6 md:p-8 max-w-lg w-full border border-surface-container-high shadow-2xl relative z-10 overflow-hidden text-left"
+            >
+              {/* Background gradient hint */}
+              <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-primary/5 rounded-full blur-[40px] -mr-10 -mt-10 pointer-events-none"></div>
+
+              <div className="flex items-center justify-between mb-6 border-b border-surface-container-high pb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    <Sparkles className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-black text-on-surface leading-tight">Dicas de Alquimista</h3>
+                    <p className="text-xs text-on-surface-variant font-medium mt-0.5">Nível {selectedLevelForTips} — Como pontuar</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setShowTipsPopup(false)}
+                  className="p-2 hover:bg-surface-container-high rounded-full transition-colors text-on-surface-variant hover:text-on-surface"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="max-h-[350px] overflow-y-auto pr-1 flex flex-col gap-4">
+                {(() => {
+                  const unrankedInteractions = INTERACTION_MATRIX.filter(interaction => {
+                    const abs = userInteractions[interaction.id] || 0;
+                    const rel = getRelativeCountForLevel(interaction.id, abs, selectedLevelForTips);
+                    return rel === 0;
+                  });
+
+                  if (unrankedInteractions.length === 0) {
+                    return (
+                      <div className="text-center py-6">
+                        <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-3 animate-bounce" />
+                        <h4 className="font-bold text-on-surface">Excelente trabalho!</h4>
+                        <p className="text-xs text-on-surface-variant mt-1.5 px-4">Você já iniciou a pontuação em todos os itens de interação deste nível!</p>
+                      </div>
+                    );
+                  }
+
+                  return unrankedInteractions.map(interaction => {
+                    const tipInfo = getTipsForInteraction(interaction.id);
+                    return (
+                      <div key={interaction.id} className="p-4 rounded-2xl bg-surface-container-low border border-surface-container-high/60 hover:border-primary/20 transition-all duration-300 flex flex-col gap-3">
+                        <div className="flex items-start gap-3">
+                          <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0" />
+                          <div className="flex-1">
+                            <h4 className="font-bold text-sm text-on-surface leading-tight">{tipInfo.title}</h4>
+                            <p className="text-xs text-on-surface-variant mt-1 leading-relaxed font-medium">{tipInfo.tip}</p>
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowTipsPopup(false);
+                              if (interaction.id === 'PROFILE_PARTIAL' || interaction.id === 'PROFILE_COMPLETE') {
+                                setIsEditing(true);
+                                window.scrollTo({ top: 0, behavior: 'smooth' });
+                              } else if (interaction.id === 'COLLABORATION_MESSAGE') {
+                                navigate('/lounge');
+                              } else if (interaction.id === 'RECIPE_PUBLISHED') {
+                                navigate('/submit');
+                              } else if (interaction.id === 'ARTICLE_PUBLISHED') {
+                                navigate('/acervo');
+                              } else if (interaction.id === 'REVIEW_WITH_PHOTO') {
+                                navigate('/explore');
+                              } else {
+                                alert(`Para pontuar, realize ações de "${tipInfo.title}" no lounge, acervo ou receitas!`);
+                              }
+                            }}
+                            className="text-[11px] font-bold px-3 py-1.5 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all cursor-pointer"
+                          >
+                            {tipInfo.action}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+
+              <div className="mt-6 border-t border-surface-container-high pt-4 flex justify-end">
+                <button
+                  onClick={() => setShowTipsPopup(false)}
+                  className="px-6 py-2.5 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/10 hover:bg-primary-hover transition-all cursor-pointer"
+                >
+                  Entendi
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

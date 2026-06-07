@@ -98,6 +98,17 @@ function getDb() {
  * @returns Retorna 'approved' se pertinente, 'rejected' caso contrário.
  */
 async function validateCulinaryRelevance(text: string): Promise<"approved" | "rejected"> {
+  const lowerText = text.toLowerCase();
+  // Mensagens chamando o bot são sempre aprovadas
+  if (
+    lowerText.includes('@alchemist') || 
+    lowerText.includes('@copilot') || 
+    lowerText.includes('@chef') || 
+    lowerText.includes('@alquimista')
+  ) {
+    return 'approved';
+  }
+
   const apiKeys = getAvailableApiKeys();
 
   // Sem chave configurada, aprova por padrão (fail-open)
@@ -203,8 +214,36 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 1. Executa a moderação via IA antes de persistir
     console.log(`[Lounge Serverless] Iniciando moderação para: "${text.substring(0, 30)}..."`);
-    const status = await validateCulinaryRelevance(text);
+    let status = await validateCulinaryRelevance(text);
     console.log(`[Lounge Serverless] Resultado da moderação: ${status}`);
+
+    const finalMetadata = { ...(metadata || {}) };
+
+    if (status === 'rejected') {
+      // É uma mensagem restrita. Vamos checar o histórico do usuário nos últimos 10 minutos.
+      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
+      const recentMessagesSnapshot = await db.collection('lounge_messages')
+        .where('timestamp', '>=', tenMinutesAgo)
+        .get();
+
+      let restrictedCount = 0;
+      recentMessagesSnapshot.forEach(doc => {
+        const data = doc.data();
+        if (data.senderId === senderId && (data.status === 'rejected' || (data.metadata && data.metadata.restricted === true))) {
+          restrictedCount++;
+        }
+      });
+
+      if (restrictedCount === 0) {
+        // Primeira ocorrência: publica com a marcação de inadequado
+        status = 'approved';
+        finalMetadata.restricted = true;
+        console.log(`[Lounge Serverless] Primeira ocorrência de inadequação nos últimos 10 minutos. Publicando com restrição.`);
+      } else {
+        // Segunda ocorrência ou mais: bloqueia
+        console.log(`[Lounge Serverless] Segunda ocorrência ou mais de inadequação nos últimos 10 minutos (${restrictedCount} anteriores). Bloqueando mensagem.`);
+      }
+    }
 
     // 2. Salva a mensagem no Firestore com server timestamp
     const docRef = await db.collection("lounge_messages").add({
@@ -214,16 +253,63 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       timestamp: FieldValue.serverTimestamp(),
       status,
       reactions: {},
-      metadata: metadata || {},
+      metadata: finalMetadata,
     });
 
     console.log(`[Lounge Serverless] Mensagem salva com sucesso! ID: ${docRef.id}`);
+
+    // Integração da Gamificação: Dar XP pela mensagem no Lounge (apenas se for aprovada e não restrita)
+    let gamificationResult = null;
+    if (status === 'approved' && !finalMetadata.restricted) {
+      try {
+        const { GamificationService } = await import("../../src/infra/services/GamificationService");
+        gamificationResult = await GamificationService.processEvent(senderId, 'COLLABORATION_MESSAGE');
+        console.log(`[Lounge Serverless] XP atribuído: +${gamificationResult.xpGained} XP. Nível Atual: ${gamificationResult.currentLevel}`);
+      } catch (gamiErr: any) {
+        console.warn("[Lounge Serverless] Erro não fatal na gamificação (Usuário não cadastrado no Prisma?):", gamiErr.message);
+      }
+    }
+
+    // Trigger Alchemist bot if mentioned (@alchemist, @copilot, @chef, @alquimista)
+    const lowerText = text.toLowerCase();
+    if (status === 'approved' && (lowerText.includes('@alchemist') || lowerText.includes('@copilot') || lowerText.includes('@chef') || lowerText.includes('@alquimista'))) {
+      console.log(`[Lounge Serverless] Bot acionado! Iniciando processamento do Alchemist RAG...`);
+      try {
+        const { RagBackendService } = await import("../../src/infra/services/ragBackendService");
+        // Await the bot generation to prevent Vercel from terminating/freezing the execution early
+        const answer = await RagBackendService.askGeminiWithContext(text);
+        const copilotMessage = {
+          text: answer,
+          senderId: 'copilot-agent',
+          senderName: 'Alchemist',
+          senderRole: 'agent',
+          timestamp: FieldValue.serverTimestamp(),
+          status: 'approved',
+          reactions: {},
+          metadata: { isBot: true, replyTo: docRef.id }
+        };
+        await db.collection('lounge_messages').add(copilotMessage);
+        console.log(`[Lounge Serverless] Resposta do Alchemist salva com sucesso!`);
+      } catch (err: any) {
+        console.error("[Lounge Serverless] Erro ao gerar resposta do Alchemist:", err);
+      }
+    }
+
+    // Inicia verificação de engajamento proativo se a mensagem foi aprovada e não acionou o bot diretamente
+    if (status === 'approved' && !(lowerText.includes('@alchemist') || lowerText.includes('@copilot') || lowerText.includes('@chef') || lowerText.includes('@alquimista'))) {
+      import("../../src/infra/services/ragBackendService").then(({ RagBackendService }) => {
+        RagBackendService.checkAndTriggerProactiveEngagement(db).catch(err => 
+          console.error("[Lounge Serverless] Erro no fluxo de engajamento proativo:", err)
+        );
+      }).catch(err => console.error("[Lounge Serverless] Erro ao carregar RagBackendService para engajamento proativo:", err));
+    }
 
     return res.status(200).json({
       success: true,
       id: docRef.id,
       status,
-      message: status === "approved" ? "Mensagem publicada!" : "Sua mensagem passará por revisão.",
+      message: status === "approved" ? (finalMetadata.restricted ? "Mensagem publicada com restrição de contexto." : "Mensagem publicada!") : "Sua mensagem passará por revisão.",
+      gamification: gamificationResult
     });
   } catch (error: any) {
     console.error("[Lounge Serverless] ERRO CRÍTICO ao postar mensagem:", error);

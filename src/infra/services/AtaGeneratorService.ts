@@ -33,22 +33,26 @@ export const AtaGeneratorService = {
     try {
       // 1. Recupera mensagens aprovadas nas últimas 24h
       const messagesSnapshot = await db.collection('lounge_messages')
-        .where('status', '==', 'approved')
         .where('timestamp', '>=', last24h)
-        .orderBy('timestamp', 'asc')
         .get();
 
-      if (messagesSnapshot.empty) {
+      const approvedDocs = messagesSnapshot.docs
+        .map(doc => ({ id: doc.id, data: doc.data() }))
+        .filter(item => item.data.status === 'approved')
+        .sort((a, b) => {
+          const tA = a.data.timestamp?.toDate ? a.data.timestamp.toDate().getTime() : new Date(a.data.timestamp).getTime();
+          const tB = b.data.timestamp?.toDate ? b.data.timestamp.toDate().getTime() : new Date(b.data.timestamp).getTime();
+          return tA - tB;
+        });
+
+      if (approvedDocs.length === 0) {
         console.log("[AtaGenerator] Nenhuma mensagem aprovada para processar nas últimas 24h.");
         return null;
       }
 
       // 2. Prepara o contexto para a IA
-      const messagesContent = messagesSnapshot.docs
-        .map(doc => {
-          const data = doc.data();
-          return `[${data.senderRole}] ${data.text}`;
-        })
+      const messagesContent = approvedDocs
+        .map(item => `[${item.data.senderRole}] ${item.data.text}`)
         .join('\n---\n');
 
       // Busca contexto histórico relacionado às mensagens do dia
@@ -60,12 +64,62 @@ export const AtaGeneratorService = {
         console.warn("[AtaGenerator] Não foi possível buscar contexto semântico:", e);
       }
 
+      const ACERVO_SUMMARY_LIST = [
+        {
+          title: "Padrão de Qualidade da Carne Angus",
+          description: "Critérios de certificação de qualidade Angus, padrões de marmoreio e seleção de carnes premium.",
+          url: "/docs/acervo/Angus-2017.10.30-19.22.35.pdf"
+        },
+        {
+          title: "Manual e Cultura do Churrasco Brasileiro",
+          description: "História e rituais do churrasco, salga correta, fogo e brasa, e reação de Maillard.",
+          url: "/docs/acervo/churrasco.pdf"
+        },
+        {
+          title: "Os 8 Melhores Tipos de Carne para Churrasco",
+          description: "Análise de cortes bovinos para churrasco (Picanha, Fraldinha, Contrafilé/Ancho e Costela).",
+          url: "/docs/acervo/os-8-melhores-tipos-de-carne-para-churrasco.pdf"
+        },
+        {
+          title: "Qualidade Nutricional da Carne Vermelha",
+          description: "Benefícios nutricionais da carne vermelha: ferro heme, vitamina B12 e proteínas essenciais.",
+          url: "/docs/acervo/qualidade-nutricional-da-carne-vermelha.pdf"
+        },
+        {
+          title: "Fichas Técnicas de Cortes Bovinos",
+          description: "Rendimento, teor de gordura e métodos recomendados de preparo (dianteiro vs traseiro).",
+          url: "/docs/acervo/FICHAS-TÉCNICAS-TECMEAT-BOVINO.compressed.pdf"
+        },
+        {
+          title: "Brazilian Beef: Global Standards",
+          description: "Manual sobre rastreabilidade, pastagens tropicais, sustentabilidade e exportação da carne brasileira.",
+          url: "/docs/acervo/Brazilian_Beef_Global_Standards.pdf"
+        },
+        {
+          title: "Apresentação Interativa de Cortes Bovinos",
+          description: "Anatomia bovina, localização dos cortes, diferença de maciez do traseiro/dianteiro e cupim.",
+          url: "/docs/acervo/apresenta_o_interativa_de_cortes_bovinos.html"
+        },
+        {
+          title: "Arte dos Molhos: Guia de Alta Gastronomia",
+          description: "Acompanhamentos culinários, emulsões clássicas francesas, reduções e espessantes.",
+          url: "/acervo/guia-dos-molhos"
+        }
+      ];
+
+      const acervoSummaryText = ACERVO_SUMMARY_LIST.map(item => 
+        `- Título: "${item.title}" | Descrição: ${item.description}`
+      ).join('\n');
+
       const prompt = `
         Você é o Cronista Oficial da Alquimia do Prato. Sua missão é ler as mensagens do Lounge Gastronômico 
         e sintetizar uma "Ata de Interação Comunitária" que inspire a nossa comunidade.
         Você pode usar o "Contexto Histórico do Acervo" para conectar as discussões atuais com receitas ou temas do passado.
         
-        CONTEXTO HISTÓRICO DO ACERVO (Para referência e conexões na seção de Insights):
+        SUMÁRIO DE DOCUMENTOS DISPONÍVEIS NO ACERVO:
+        ${acervoSummaryText}
+
+        CONTEXTO HISTÓRICO DO ACERVO RETORNADO VIA RAG (Contém trechos e links específicos):
         ${semanticContext || "Nenhum contexto relacionado encontrado."}
 
         MENSAGENS APROVADAS (ÚLTIMAS 24H):
@@ -84,14 +138,20 @@ export const AtaGeneratorService = {
            - Termo em Destaque: [Termo técnico/histórico] - [Explicação cultural]
            - Dica do Chef: [Conselho prático orgânico]
            
-        3. Acervo Citado & Referências (Links do site):
-           - Artigo: [Título sugerido]
-           - E-book: [Título sugerido]
+        3. Acervo Citado & Referências:
+           - Artigo: [Selecione obrigatoriamente um Título do Acervo acima que seja mais relevante para a conversa]
+           - E-book: [Selecione obrigatoriamente outro Título do Acervo acima que complemente o assunto]
            
         4. Termômetro da Comunidade:
            - Clima: [Produtivo/Técnico/Inspiracional]
            - Participação: [Nº aproximado de colaboradores distintos]
            - Destaque do Dia: [Nome/ID do autor da contribuição mais relevante]
+
+        REGRAS IMPORTANTES PARA A SEÇÃO "referencias" DO JSON:
+        1. Você DEVE OBRIGATORIAMENTE mapear a discussão do Lounge a documentos existentes listados no "SUMÁRIO DE DOCUMENTOS DISPONÍVEIS NO ACERVO".
+        2. As propriedades "artigo" e "ebook" no objeto "referencias" do JSON devem conter o TÍTULO EXATO de um dos documentos listados acima (sem o link/URL, apenas o título como por exemplo: "Os 8 Melhores Tipos de Carne para Churrasco" ou "Manual e Cultura do Churrasco Brasileiro" ou "Padrão de Qualidade da Carne Angus" ou "Qualidade Nutricional da Carne Vermelha").
+        3. Não deixe esses campos vazios ou com valores genéricos como "Consultar Biblioteca" ou "Fundamentos da Gastronomia" se houver qualquer relação mínima (exemplo: se a conversa for sobre carnes/churrasco, use os documentos de carne/churrasco; se for sobre molhos, use "Arte dos Molhos: Guia de Alta Gastronomia").
+        4. O título exato inserido no JSON será usado diretamente pelo sistema para abrir a busca do respectivo documento no acervo.
 
         REGRAS DE RETORNO (JSON ESTRITO):
         {
@@ -105,15 +165,15 @@ export const AtaGeneratorService = {
             "dicaDoChef": "..."
           },
           "referencias": {
-            "artigo": "...",
-            "ebook": "..."
+            "artigo": "TÍTULO EXATO DO ARTIGO SELECIONADO DO ACERVO",
+            "ebook": "TÍTULO EXATO DO EBOOK SELECIONADO DO ACERVO"
           },
           "termometro": {
             "clima": "...",
             "participacao": 0,
             "destaqueDoDia": "..."
           },
-          "stats": { "totalMessages": ${messagesSnapshot.size} }
+          "stats": { "totalMessages": ${approvedDocs.length} }
         }
       `;
 

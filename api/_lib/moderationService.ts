@@ -15,6 +15,17 @@ import { GoogleGenAI } from "@google/genai";
  * @returns Retorna 'approved' se pertinente, 'rejected' caso contrário.
  */
 export async function validateCulinaryRelevance(text: string): Promise<"approved" | "rejected"> {
+  const lowerText = text.toLowerCase();
+  // Mensagens chamando o bot são sempre aprovadas
+  if (
+    lowerText.includes('@alchemist') || 
+    lowerText.includes('@copilot') || 
+    lowerText.includes('@chef') || 
+    lowerText.includes('@alquimista')
+  ) {
+    return 'approved';
+  }
+
   const apiKey = process.env.GEMINI_API_KEY;
 
   // Caso a chave não esteja configurada, aprova por padrão (fail-open para dev)

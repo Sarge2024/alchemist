@@ -7,6 +7,7 @@ interface SearchResult {
   id: string;
   title: string;
   content: string;
+  url?: string | null;
   similarity: number;
 }
 
@@ -34,7 +35,13 @@ export class RagBackendService {
 
     // 4. Gerar a resposta final alimentando o Gemini com o contexto injetado
     const finalPrompt = `
-      Você é o assistente culinário Alchemist. Use as referências de contexto fornecidas abaixo para responder à pergunta do usuário de forma precisa. Se não souber a resposta ou se o contexto não for suficiente, use seus conhecimentos de forma honesta, indicando que as informações históricas locais do portal não mencionam o assunto.
+      Você é o assistente culinário Alchemist do portal "Alquimia do Prato".
+      
+      REGRA CRÍTICA DE CONTEXTO:
+      Primeiramente, interprete se a pergunta do usuário possui afinidade com o contexto culinário, gastronômico, receitas, ingredientes, técnicas de cozinha ou herança cultural alimentar.
+      Se a pergunta NÃO tiver nenhuma relação com esses temas culinários, você DEVE pedir desculpas e solicitar que o usuário seja mais claro em relação à questão ou avisar que a resposta está fora do contexto deste chat. Não tente responder a perguntas de outros temas.
+      
+      Se a pergunta tiver afinidade culinária, use as referências de contexto fornecidas abaixo para responder à pergunta de forma precisa. Se não souber a resposta ou se o contexto não for suficiente, use seus conhecimentos de forma honesta, indicando que as informações históricas locais do portal não mencionam o assunto.
 
       CONTEXTO RECUPERADO:
       ${context || "Nenhum contexto histórico relevante foi encontrado no banco de dados."}
@@ -58,9 +65,12 @@ export class RagBackendService {
     const ai = await this.getGeminiClient();
 
     const embeddingResponse = await ai.models.embedContent({
-      model: "text-embedding-004",
+      model: "gemini-embedding-2",
       contents: queryText,
-    });
+      config: {
+        outputDimensionality: 768
+      }
+    } as any);
 
     const queryVector = embeddingResponse.embeddings?.[0]?.values;
     
@@ -71,7 +81,7 @@ export class RagBackendService {
     const vectorLiteral = `[${queryVector.join(',')}]`;
 
     const matchedDocs = await prisma.$queryRaw<SearchResult[]>`
-      SELECT id, title, content,
+      SELECT id, title, content, url,
              1 - (embedding <=> ${vectorLiteral}::vector) AS similarity
       FROM "SemanticDocument"
       ORDER BY embedding <=> ${vectorLiteral}::vector ASC
@@ -80,7 +90,10 @@ export class RagBackendService {
 
     return matchedDocs
       .filter(doc => doc.similarity > 0.6)
-      .map(doc => `[Documento: ${doc.title}]\n${doc.content}`)
+      .map(doc => {
+        const urlStr = doc.url ? ` | Link/URL: ${doc.url}` : "";
+        return `[Documento: ${doc.title}${urlStr}]\n${doc.content}`;
+      })
       .join("\n\n");
   }
 
@@ -94,16 +107,17 @@ export class RagBackendService {
 
     // 1. Ler mensagens recentes em lote único do Firestore
     const snapshot = await db.collection("lounge_messages")
-      .where("status", "==", "approved")
       .where("timestamp", ">=", last24h)
       .get();
 
-    if (snapshot.empty) {
+    const approvedDocs = snapshot.docs.filter(doc => doc.data().status === "approved");
+
+    if (approvedDocs.length === 0) {
       console.log("[RAG Sync] Nenhuma mensagem nova nas últimas 24h.");
       return;
     }
 
-    const messages = snapshot.docs.map(doc => ({
+    const messages = approvedDocs.map(doc => ({
       id: doc.id,
       text: doc.data().text,
       sender: doc.data().senderRole || "user"
@@ -114,9 +128,12 @@ export class RagBackendService {
     
     console.log(`[RAG Sync] Gerando embeddings para ${messages.length} mensagens...`);
     const embeddingResponse = await ai.models.embedContent({
-      model: "text-embedding-004",
+      model: "gemini-embedding-2",
       contents: messages.map(m => `[${m.sender}]: ${m.text}`),
-    });
+      config: {
+        outputDimensionality: 768
+      }
+    } as any);
 
     const embeddings = embeddingResponse.embeddings; // Array de { values: number[] }
 
@@ -144,5 +161,125 @@ export class RagBackendService {
     }
 
     console.log("[RAG Sync] Sincronização concluída com sucesso.");
+  }
+
+  /**
+   * Generates a proactive response based on a list of recent lounge messages to stimulate conversation.
+   */
+  static async generateProactiveResponse(recentMessages: { text: string; senderName: string }[]): Promise<string> {
+    const ai = await this.getGeminiClient();
+
+    const conversationHistory = recentMessages
+      .map(m => `${m.senderName}: "${m.text}"`)
+      .join('\n');
+
+    // We can also fetch semantic context based on the whole conversation summary
+    let semanticContext = "";
+    try {
+      const query = recentMessages.map(m => m.text).join(" ").substring(0, 500);
+      semanticContext = await this.getSemanticContext(query, 2);
+    } catch (e) {
+      console.warn("[Proactive] Failed to get semantic context:", e);
+    }
+
+    const proactivePrompt = `
+      Você é o assistente culinário Alchemist do portal "Alquimia do Prato".
+      Você está acompanhando a conversa no Lounge Gastronômico. A comunidade está ativa discutindo vários temas.
+      Sua tarefa é intervir de forma natural, proativa e sutil para estimular a discussão, acrescentando uma curiosidade, uma dica prática, um termo do acervo ou uma pergunta provocativa sobre culinária/gastronomia.
+
+      REGRAS:
+      1. Seja extremamente natural e amigável. Não pareça um robô.
+      2. Mantenha seu tom de "Alquimista do Prato" - alguém apaixonado por química culinária, história dos alimentos e técnicas.
+      3. Baseie-se no histórico recente da conversa fornecido abaixo.
+      4. Se relevante, incorpore elementos do contexto histórico recuperado.
+      5. Escreva em português (pt-BR) e seja conciso (máximo de 4-5 linhas).
+
+      HISTÓRICO RECENTE DA CONVERSA:
+      ${conversationHistory}
+
+      CONTEXTO HISTÓRICO RECUPERADO:
+      ${semanticContext || "Nenhum contexto específico do acervo encontrado."}
+    `;
+
+    const generation = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: proactivePrompt,
+    });
+
+    return generation.text || "Continue cozinhando, alquimistas!";
+  }
+
+  /**
+   * Checks the interaction density in the Lounge and triggers a proactive bot response if appropriate.
+   */
+  static async checkAndTriggerProactiveEngagement(db: any): Promise<void> {
+    console.log("[Proactive] Checking interaction density...");
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+
+    try {
+      // Fetch all messages in the last 1 hour
+      const snapshot = await db.collection('lounge_messages')
+        .where('timestamp', '>=', oneHourAgo)
+        .get();
+
+      const docs = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const t = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
+        return { id: doc.id, ...data, timestampDate: t };
+      });
+
+      // 1. Check if the bot has spoken in the last 1 hour
+      const botSpokeRecently = docs.some(d => d.senderId === 'copilot-agent');
+      if (botSpokeRecently) {
+        console.log("[Proactive] Bot spoke recently. Cooldown is active.");
+        return;
+      }
+
+      // 2. Count approved user messages in the last 15 minutes
+      const recentUserMessages = docs.filter(d => 
+        d.timestampDate.getTime() >= fifteenMinutesAgo.getTime() && 
+        d.status === 'approved' &&
+        d.senderId !== 'copilot-agent'
+      );
+
+      console.log(`[Proactive] Found ${recentUserMessages.length} user messages in the last 15 minutes.`);
+
+      if (recentUserMessages.length >= 5) {
+        console.log("[Proactive] High interaction density detected! Triggering proactive response.");
+        
+        // Sort chronologically for context
+        recentUserMessages.sort((a, b) => a.timestampDate.getTime() - b.timestampDate.getTime());
+
+        const messagesForContext = recentUserMessages.map(m => ({
+          text: m.text || "",
+          senderName: m.senderName || "Alquimista"
+        }));
+
+        const answer = await this.generateProactiveResponse(messagesForContext);
+
+        const copilotMessage = {
+          text: answer,
+          senderId: 'copilot-agent',
+          senderName: 'Alchemist',
+          senderRole: 'agent',
+          timestamp: new Date(),
+          status: 'approved',
+          reactions: {},
+          metadata: { isBot: true, proactive: true }
+        };
+
+        const FieldValue = (await import('firebase-admin/firestore')).FieldValue;
+
+        await db.collection('lounge_messages').add({
+          ...copilotMessage,
+          timestamp: FieldValue.serverTimestamp()
+        });
+        
+        console.log("[Proactive] Proactive Alchemist message posted successfully.");
+      }
+    } catch (error) {
+      console.error("[Proactive Error] Failed to check or trigger proactive response:", error);
+    }
   }
 }

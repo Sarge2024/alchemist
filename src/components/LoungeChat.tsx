@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Send, Heart, ChefHat, Shield, MessageCircle, Reply, X as CloseIcon, ExternalLink, Pencil, Trash2 } from 'lucide-react';
+import { Send, Heart, ChefHat, Shield, MessageCircle, Reply, X as CloseIcon, ExternalLink, Pencil, Trash2, Sparkles, AlertTriangle } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { loungeService, LoungeMessage } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
@@ -14,6 +14,7 @@ export const LoungeChat: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [messages, setMessages] = useState<LoungeMessage[]>([]);
+  const [optimisticMessages, setOptimisticMessages] = useState<LoungeMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -23,6 +24,7 @@ export const LoungeChat: React.FC = () => {
   const [directedTo, setDirectedTo] = useState<UserProfile | null>(null);
   const [userNamesCache, setUserNamesCache] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Carrega o perfil do usuário para saber a Role
   useEffect(() => {
@@ -82,31 +84,49 @@ export const LoungeChat: React.FC = () => {
     e.preventDefault();
     if (!inputText.trim() || !user || isSending) return;
 
+    const textToSend = inputText.trim();
+    const tempId = `temp-${Date.now()}`;
+    const newMsg: LoungeMessage = {
+      id: tempId,
+      text: textToSend,
+      senderId: user.uid,
+      senderRole: userProfile?.role || 'member',
+      senderName: userProfile?.displayName || user.displayName || 'Membro',
+      status: 'pending',
+      timestamp: { toDate: () => new Date(), seconds: Date.now() / 1000 },
+      reactions: {},
+      metadata: {
+        replyTo: replyingTo ? {
+          id: replyingTo.id,
+          text: replyingTo.text,
+          senderName: replyingTo.senderName
+        } : undefined,
+        directedTo: directedTo ? {
+          uid: directedTo.uid,
+          name: directedTo.displayName
+        } : undefined
+      }
+    };
+
+    // Optimistic UI Update
+    setOptimisticMessages(prev => [...prev, newMsg]);
+    setInputText('');
+    setReplyingTo(null);
+    setDirectedTo(null);
     setIsSending(true);
+
     try {
       await loungeService.sendMessage(
-        inputText,
-        user.uid,
-        userProfile?.role || 'member',
-        userProfile?.displayName || user.displayName || 'Membro',
-        {
-          replyTo: replyingTo ? {
-            id: replyingTo.id,
-            text: replyingTo.text,
-            senderName: replyingTo.senderName
-          } : undefined,
-          directedTo: directedTo ? {
-            uid: directedTo.uid,
-            name: directedTo.displayName
-          } : undefined
-        }
+        textToSend,
+        newMsg.senderId,
+        newMsg.senderRole,
+        newMsg.senderName,
+        newMsg.metadata
       );
-      setInputText('');
-      setReplyingTo(null);
-      setDirectedTo(null);
     } catch (error) {
       console.error('Error sending message:', error);
     } finally {
+      setOptimisticMessages(prev => prev.filter(m => m.id !== tempId));
       setIsSending(false);
     }
   };
@@ -160,6 +180,24 @@ export const LoungeChat: React.FC = () => {
             <p className="text-[10px] text-on-surface-variant font-bold uppercase tracking-widest">Ambiente linear e moderado</p>
           </div>
         </div>
+        
+        <button 
+          onClick={() => {
+            setInputText(prev => prev.includes('@Alchemist') ? prev : prev + (prev.endsWith(' ') || prev === '' ? '' : ' ') + '@Alchemist ');
+            setTimeout(() => inputRef.current?.focus(), 10);
+          }}
+          className="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 border border-emerald-200 dark:border-emerald-800 rounded-xl transition-all hover:scale-105 active:scale-95 group cursor-pointer shadow-sm"
+          title="Chamar o Chef IA"
+        >
+          <img 
+            src="https://placehold.co/400x400/57534e/292524?text=Alchemist" 
+            alt="Alchemist Avatar" 
+            className="w-6 h-6 md:w-7 md:h-7 rounded-full object-cover shadow-sm ring-2 ring-emerald-500/50 group-hover:ring-emerald-500 transition-all"
+          />
+          <span className="hidden md:inline text-xs font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-300">
+            Chef IA
+          </span>
+        </button>
       </div>
 
       {/* Messages Area */}
@@ -168,9 +206,9 @@ export const LoungeChat: React.FC = () => {
         className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-stone-200"
       >
         <AnimatePresence initial={false}>
-          {messages.map((msg, index) => {
+          {[...messages, ...optimisticMessages].map((msg, index, arr) => {
             const msgDate = msg.timestamp?.toDate ? msg.timestamp.toDate() : new Date();
-            const prevMsg = index > 0 ? messages[index - 1] : null;
+            const prevMsg = index > 0 ? arr[index - 1] : null;
             const prevDate = prevMsg?.timestamp?.toDate ? prevMsg.timestamp.toDate() : null;
             
             const isNewDay = !prevDate || 
@@ -197,6 +235,13 @@ export const LoungeChat: React.FC = () => {
                   className={`flex flex-col ${msg.senderId === user?.uid ? 'items-end' : 'items-start'}`}
                 >
                   <div className="flex items-center gap-2 mb-1.5 px-1">
+                    {msg.senderRole === 'agent' && (
+                       <img 
+                          src="https://placehold.co/400x400/57534e/292524?text=Alchemist" 
+                          alt="Alchemist Avatar" 
+                          className="w-5 h-5 rounded-full object-cover shadow-sm ring-1 ring-emerald-500"
+                       />
+                    )}
                     <span className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
                       {msg.senderId === user?.uid ? 'Você' : (msg.senderName || userNamesCache[msg.senderId] || 'Membro')}
                     </span>
@@ -210,15 +255,25 @@ export const LoungeChat: React.FC = () => {
                         <Shield className="w-2.5 h-2.5" /> ADMIN
                       </span>
                     )}
+                    {msg.senderRole === 'agent' && (
+                      <span className="bg-emerald-100 text-emerald-700 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5 border border-emerald-200">
+                        <Sparkles className="w-2.5 h-2.5" /> ALCHEMIST
+                      </span>
+                    )}
                   </div>
 
                   <div className={`
-                    max-w-[90%] md:max-w-[85%] p-3 rounded-xl relative group shadow-sm
-                    ${msg.senderId === user?.uid
-                      ? 'bg-on-surface text-background rounded-tr-none'
-                      : msg.metadata?.type === 'new_recipe'
-                        ? 'bg-primary/10 border-2 border-primary/30 text-on-surface shadow-primary/10 cursor-pointer hover:bg-primary/20 transition-all'
-                        : 'bg-surface-container-lowest text-on-surface border border-surface-container-high rounded-tl-none shadow-stone-200/50'}
+                    max-w-[90%] md:max-w-[85%] p-3 rounded-xl relative group shadow-sm transition-all
+                    ${msg.status === 'pending' ? 'opacity-50 grayscale-[0.5]' : ''}
+                    ${msg.metadata?.restricted
+                      ? 'bg-stone-50 dark:bg-stone-900/50 border border-stone-200 dark:border-stone-800 rounded-tl-none opacity-80'
+                      : msg.senderId === user?.uid
+                        ? 'bg-on-surface text-background rounded-tr-none'
+                        : msg.senderRole === 'agent'
+                          ? 'bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-tl-none shadow-emerald-200/50'
+                          : msg.metadata?.type === 'new_recipe'
+                            ? 'bg-primary/10 border-2 border-primary/30 text-on-surface shadow-primary/10 cursor-pointer hover:bg-primary/20 transition-all'
+                            : 'bg-surface-container-lowest text-on-surface border border-surface-container-high rounded-tl-none shadow-stone-200/50'}
                   `}
                   onClick={() => {
                     if (msg.metadata?.type === 'new_recipe' && msg.metadata?.recipeId) {
@@ -226,6 +281,14 @@ export const LoungeChat: React.FC = () => {
                     }
                   }}
                   >
+                    {/* Tarja de Contexto Inadequado */}
+                    {msg.metadata?.restricted && (
+                      <div className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-stone-500 bg-stone-100 dark:bg-stone-800 dark:text-stone-400 p-1.5 rounded-lg border border-stone-200 dark:border-stone-700 w-fit">
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        contexto inadequado
+                      </div>
+                    )}
+
                     {/* Directed Message Badge */}
                     {msg.metadata?.directedTo && (
                       <div className="mb-2 flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-500 bg-amber-50 dark:bg-amber-900/20 p-1.5 rounded-lg border border-amber-100 dark:border-amber-800">
@@ -281,7 +344,16 @@ export const LoungeChat: React.FC = () => {
                       </div>
                     ) : (
                       <div className="relative group/text">
-                        <p className="text-sm md:text-base leading-relaxed font-medium">{msg.text}</p>
+                        <p className={`
+                          text-sm md:text-base leading-relaxed
+                          ${msg.metadata?.restricted 
+                            ? 'text-stone-300 dark:text-stone-700 font-light italic line-through decoration-stone-300/30' 
+                            : msg.senderId === user?.uid 
+                              ? 'font-medium text-background' 
+                              : 'font-medium text-on-surface'}
+                        `}>
+                          {msg.text}
+                        </p>
                         {msg.metadata?.isEdited && (
                           <span className="text-[8px] italic opacity-40">(editada)</span>
                         )}
@@ -319,22 +391,29 @@ export const LoungeChat: React.FC = () => {
                       </button>
 
                       {/* Like Button */}
-                      <button
-                        onClick={() => toggleLike(msg)}
-                        className={`
-                          w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all
-                          ${msg.reactions?.[user?.uid || '']
-                            ? 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-500 scale-110'
-                            : 'bg-surface-container-lowest border-surface-container-high text-on-surface-variant/40 hover:text-red-400'}
-                        `}
-                      >
-                        <motion.div
-                          whileTap={{ scale: 1.5 }}
-                          animate={msg.reactions?.[user?.uid || ''] ? { scale: [1, 1.3, 1] } : {}}
+                      <div className="relative flex items-center">
+                        {Object.keys(msg.reactions || {}).length > 0 && (
+                          <span className="absolute -left-3 -top-1 bg-red-500 text-white text-[8px] font-black rounded-full min-w-[16px] h-[16px] flex items-center justify-center border-2 border-surface-container-lowest z-10 shadow-sm">
+                            {Object.keys(msg.reactions || {}).length}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => toggleLike(msg)}
+                          className={`
+                            w-8 h-8 rounded-full flex items-center justify-center border shadow-lg transition-all
+                            ${msg.reactions?.[user?.uid || '']
+                              ? 'bg-red-50 dark:bg-red-500/10 border-red-100 dark:border-red-500/20 text-red-500 scale-110 relative z-0'
+                              : 'bg-surface-container-lowest border-surface-container-high text-on-surface-variant/40 hover:text-red-400 relative z-0'}
+                          `}
                         >
-                          <Heart className={`w-4 h-4 ${msg.reactions?.[user?.uid || ''] ? 'fill-current' : ''}`} />
-                        </motion.div>
-                      </button>
+                          <motion.div
+                            whileTap={{ scale: 1.5 }}
+                            animate={msg.reactions?.[user?.uid || ''] ? { scale: [1, 1.3, 1] } : {}}
+                          >
+                            <Heart className="w-4 h-4" fill={msg.reactions?.[user?.uid || ''] ? 'currentColor' : 'none'} />
+                          </motion.div>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -409,6 +488,7 @@ export const LoungeChat: React.FC = () => {
 
         <form onSubmit={handleSendMessage} className="relative flex items-center">
           <input
+            ref={inputRef}
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}

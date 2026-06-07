@@ -71,12 +71,13 @@ model Ingredient {
 
 // Modelos de Gamificação (adicionados conforme pedido original)
 model UserGamificationProfile {
-  id        String   @id @default(uuid())
-  nivel     Int      @default(1)
-  grau      Grau     @default(APRENDIZ)
-  xp_total  Int      @default(0)
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String   @id @default(uuid())
+  nivel      Int      @default(1)
+  grau       Grau     @default(APRENDIZ)
+  xp_total   Int      @default(0)
+  meta_nivel Int      @default(100) // Campo próprio para determinar a pontuação necessária para subir de nível
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserInteraction {
@@ -130,6 +131,7 @@ model SemanticDocument {
   id        String                      @id @default(uuid())
   title     String
   content   String                      // Text content of the chunk/chat/article
+  url       String?                     // Optional URL link to the original resource
   type      String                      // 'article' | 'presentation' | 'chat_summary'
   embedding Unsupported("vector(768)")? // Vector output from text-embedding-004
   createdAt DateTime                    @default(now())

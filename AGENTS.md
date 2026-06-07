@@ -59,6 +59,37 @@ API key check is bypassed in dev when `APP_API_KEY` is not a placeholder.
 - `lucide-react` for icons.
 - `getAssetUrl()` helper normalizes image paths (supports http, blob, data, `/uploads/`, bare filename patterns).
 
+## Lounge Presence System
+
+- Presence is tracked in real-time in the Lounge using Firestore heartbeat indicators.
+- When a user logs in, `isOnline: true` and a `lastSeen` timestamp are written to Firestore (`users` collection).
+- A heartbeat interval regularly updates `lastSeen` while the Lounge is active.
+- Cleanup triggers reset `isOnline: false` on logout, session end, or page unload to prevent "zombie" users.
+- Status indicator colors ("semáforos") represent presence: active (online), recently active (away), inactive (offline).
+
+## Gamification & Progression Engine
+
+- Scale of 5 levels: 1-Aprendiz, 2-Assistente, 3-Alquimista, 4-Perito, 5-Mestre Alquimista.
+- Profile gamification tracks 9 user interaction types matching the **Interaction Matrix for Seal Achievement** (Selo Bronze, Prata, Ouro).
+- Progress targets scale dynamically: target counts for each interaction are multiplied by the user's level ID (e.g., base count * level ID).
+- Submitting an event (`POST /api/gamification/event`) triggers backend recalculation.
+- XP thresholds transition users to the next level. Surplus XP/credits exceeding the `meta_nivel` minimum are carried over into the new level.
+- Lockout guidance: profile rendering displays a **Dicas** (Tips) action trigger when an interaction is uninitiated (count is 0), pointing the user to lounge, profile edit, recipe sharing, or explore pages.
+- User profile shows cumulative progress and seal tiers directly inside level-based cards. Redundant progress panels under the Certificado grid must remain removed.
+
+## Admin Analytics Dashboard
+
+- The admin panel includes a consolidated analytics tab fetched via `/api/admin/analytics`.
+- Displays global indicators: active users, total recipes, lounge statistics, and level distribution.
+- Integrates data aggregates across PostgreSQL (Prisma interaction event count totals) and Firebase Firestore.
+- Graceful Quota Fallback: Firestore `RESOURCE_EXHAUSTED` (quota exceeded) errors are caught inside the API, defaulting chat-dependent stats to empty arrays/zeros, while keeping the Postgres-dependent metrics (users, levels, recipes) functional.
+
+## Model Context Protocol (MCP) & RAG
+
+- The backend serves an MCP Server over Server-Sent Events (SSE).
+- Floating persistent copilot chatbot allows global user queries from any view.
+- Uses pgvector (PostgreSQL) and Google Gemini Embeddings to enable retrieval augmented generation (RAG) across the culinary technical base (Acervo Técnico).
+
 ## UI / Locale
 
 - All UI text in **Portuguese (pt-BR)**.
@@ -70,3 +101,4 @@ API key check is bypassed in dev when `APP_API_KEY` is not a placeholder.
 - No postcss config needed (Tailwind v4 Vite plugin handles it).
 - `tsconfig.json` has `noEmit: true`; Vite does the actual bundling.
 - `.gitignore` excludes `public/uploads/` (user-uploaded images).
+- Changes to server-side code (Express endpoints) require a manual process restart as file watching is disabled.

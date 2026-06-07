@@ -18,6 +18,17 @@ export const ModerationService = {
    * @returns Retorna 'approved' se for pertinente, 'rejected' caso contrário.
    */
   async validateCulinaryRelevance(text: string): Promise<'approved' | 'rejected'> {
+    const lowerText = text.toLowerCase();
+    // Mensagens chamando o bot são sempre aprovadas
+    if (
+      lowerText.includes('@alchemist') || 
+      lowerText.includes('@copilot') || 
+      lowerText.includes('@chef') || 
+      lowerText.includes('@alquimista')
+    ) {
+      return 'approved';
+    }
+
     const apiKeys = getAvailableGeminiKeys();
 
     // Caso nenhuma chave esteja configurada, aprovamos por padrão (fail-open)

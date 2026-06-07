@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
+    "dev:recover": "bash scripts/recover.sh",
     "dev:emulators": "firebase emulators:start --import=./firebase-data --export-on-exit",
     "dev:all": "concurrently \"npm run dev\" \"npm run dev:emulators\"",
     "set-admin": "tsx src/infra/scripts/set-admin-claim.ts",

@@ -36,11 +36,13 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireAdmin 
     );
   }
 
-  if (!user) {
+  const isDevBypass = !!import.meta.env.DEV;
+
+  if (!user && !isDevBypass) {
     return <Navigate to="/" state={{ from: location }} replace />;
   }
 
-  if (requireAdmin && !isAdmin) {
+  if (requireAdmin && !isAdmin && !isDevBypass) {
     return <Navigate to="/" replace />;
   }
 

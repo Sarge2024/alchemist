@@ -208,5 +208,26 @@ export const loungeService = {
       id: doc.id,
       ...doc.data()
     })) as LoungeMessage[];
+  },
+
+  /**
+   * Recupera os dados analíticos consolidados do painel admin.
+   */
+  async getAnalyticsData() {
+    const apiKey = import.meta.env.VITE_APP_API_KEY;
+    const response = await fetch('/api/admin/analytics', {
+      method: 'GET',
+      headers: {
+        'x-api-key': apiKey || ''
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Falha ao obter dados analíticos');
+    }
+
+    const data = await response.json();
+    if (!data.success) throw new Error(data.error);
+    return data;
   }
 };

@@ -17,6 +17,103 @@ export class GamificationService {
     PRODUCT_PURCHASED: 25,            // Compras de Produtos
   };
 
+  public static readonly BADGE_REQUIREMENTS: Record<string, { badgeCode: string; required: number }> = {
+    PROFILE_PARTIAL: { badgeCode: 'perfil_iniciado', required: 1 },
+    PROFILE_QUIZ: { badgeCode: 'alquimista_curioso', required: 1 },
+    PROFILE_COMPLETE: { badgeCode: 'perfil_completo', required: 1 },
+    PRODUCT_PURCHASED: { badgeCode: 'cliente_vip', required: 3 },
+    COLLABORATION_MESSAGE: { badgeCode: 'comunicador_lounge', required: 50 },
+    RECIPE_PUBLISHED: { badgeCode: 'chef_ativo', required: 10 },
+    ARTICLE_PUBLISHED: { badgeCode: 'escritor_acervo', required: 5 },
+    REVIEW_WITH_PHOTO: { badgeCode: 'fotografo_culinario', required: 15 },
+    RECIPE_UPVOTE_RECEIVED: { badgeCode: 'receita_popular', required: 20 },
+  };
+
+  private static readonly BADGES_TO_SEED = [
+    { codigo_evento: 'perfil_iniciado', nome: 'Perfil Iniciado', descricao: 'Preenchimento de cadastro parcial', url_vercel_blob: 'https://placehold.co/150x150/78716c/ffffff?text=PI' },
+    { codigo_evento: 'alquimista_curioso', nome: 'Alquimista Curioso', descricao: 'Respondeu o quiz de preferências', url_vercel_blob: 'https://placehold.co/150x150/78716c/ffffff?text=AC' },
+    { codigo_evento: 'perfil_completo', nome: 'Perfil Completo', descricao: 'Preenchimento de cadastro completo', url_vercel_blob: 'https://placehold.co/150x150/10b981/ffffff?text=PC' },
+    { codigo_evento: 'cliente_vip', nome: 'Cliente VIP', descricao: 'Adquiriu 3 ou mais produtos na plataforma', url_vercel_blob: 'https://placehold.co/150x150/10b981/ffffff?text=CV' },
+    { codigo_evento: 'comunicador_lounge', nome: 'Comunicador do Lounge', descricao: 'Enviou 50 mensagens no Lounge', url_vercel_blob: 'https://placehold.co/150x150/f59e0b/ffffff?text=CL' },
+    { codigo_evento: 'chef_ativo', nome: 'Chef Ativo', descricao: 'Publicou 10 receitas no acervo', url_vercel_blob: 'https://placehold.co/150x150/f59e0b/ffffff?text=CA' },
+    { codigo_evento: 'escritor_acervo', nome: 'Escritor do Acervo', descricao: 'Publicou 5 artigos em PDF', url_vercel_blob: 'https://placehold.co/150x150/3b82f6/ffffff?text=EA' },
+    { codigo_evento: 'fotografo_culinario', nome: 'Fotógrafo Culinário', descricao: 'Realizou 15 avaliações com foto', url_vercel_blob: 'https://placehold.co/150x150/3b82f6/ffffff?text=FC' },
+    { codigo_evento: 'receita_popular', nome: 'Receita Popular', descricao: 'Recebeu 20 curtidas em suas receitas', url_vercel_blob: 'https://placehold.co/150x150/a855f7/ffffff?text=RP' },
+    { codigo_evento: 'mestre_fundador', nome: 'Mestre Fundador', descricao: 'Pioneiro da plataforma Alquimia do Prato', url_vercel_blob: 'https://placehold.co/150x150/FFD700/000000?text=MF' },
+    { codigo_evento: 'guardiao_lounge', nome: 'Guardião do Lounge', descricao: 'Mais de 100 mensagens moderadas no Lounge', url_vercel_blob: 'https://placehold.co/150x150/8A2BE2/FFFFFF?text=GL' },
+    { codigo_evento: 'criador_supremo', nome: 'Criador Supremo', descricao: 'Criou as 50 receitas originais da plataforma', url_vercel_blob: 'https://placehold.co/150x150/FF4500/FFFFFF?text=CS' },
+    { codigo_evento: 'degustador_elite', nome: 'Degustador de Elite', descricao: 'Aprovou receitas cruciais', url_vercel_blob: 'https://placehold.co/150x150/32CD32/FFFFFF?text=DE' }
+  ];
+
+  /**
+   * Garante que todas as badges estão presentes no banco de dados.
+   */
+  static async ensureBadgesSeeded() {
+    try {
+      console.log('[Gamification] Garantindo que os selos da matriz de interações estejam semeados...');
+      for (const b of this.BADGES_TO_SEED) {
+        await prisma.badge.upsert({
+          where: { codigo_evento: b.codigo_evento },
+          update: {
+            nome: b.nome,
+            descricao: b.descricao,
+            url_vercel_blob: b.url_vercel_blob
+          },
+          create: b
+        });
+      }
+      console.log('[Gamification] Selos da matriz de interações semeados com sucesso.');
+    } catch (error: any) {
+      console.error('[Gamification] Erro ao semear selos:', error.message);
+    }
+  }
+
+  /**
+   * Verifica se a quantidade atingida atende aos requisitos do selo correspondente
+   * e o atribui ou remove conforme necessário.
+   */
+  static async checkAndGrantBadges(userId: string, eventType: string, count: number) {
+    const requirement = this.BADGE_REQUIREMENTS[eventType];
+    if (requirement) {
+      const badge = await prisma.badge.findUnique({
+        where: { codigo_evento: requirement.badgeCode }
+      });
+      if (badge) {
+        if (count >= requirement.required) {
+          await prisma.userBadge.upsert({
+            where: {
+              userId_badgeId: {
+                userId: userId,
+                badgeId: badge.id
+              }
+            },
+            update: {},
+            create: {
+              userId: userId,
+              badgeId: badge.id
+            }
+          });
+          console.log(`[Gamification] Selo '${badge.nome}' atribuído ao usuário ${userId}`);
+        } else {
+          // Se o valor caiu abaixo (ex: ajuste manual de admin), remove o selo
+          try {
+            await prisma.userBadge.delete({
+              where: {
+                userId_badgeId: {
+                  userId: userId,
+                  badgeId: badge.id
+                }
+              }
+            });
+            console.log(`[Gamification] Selo '${badge.nome}' removido do usuário ${userId} por não atender mais o requisito.`);
+          } catch (e) {
+            // Ignora se não existia
+          }
+        }
+      }
+    }
+  }
+
   /**
    * Mapeia o nível numérico para o Grau correspondente.
    */
@@ -26,6 +123,60 @@ export class GamificationService {
     if (level === 3) return Grau.ALQUIMISTA;
     if (level === 4) return Grau.PERITO;
     return Grau.MESTRE_ALQUIMISTA;
+  }
+
+  /**
+   * Recalcula a pontuação total (XP) e o nível do usuário com base nas suas interações reais no banco de dados.
+   */
+  static async recalculateXPAndLevel(userId: string) {
+    const interactions = await prisma.userInteraction.findMany({
+      where: { userId }
+    });
+
+    let totalXp = 0;
+    for (const inter of interactions) {
+      const xpValue = this.EVENT_XP[inter.eventType as keyof typeof this.EVENT_XP] || 0;
+      totalXp += inter.count * xpValue;
+    }
+
+    let level = 1;
+    let metaNivel = 100;
+
+    if (totalXp < 100) {
+      level = 1;
+      metaNivel = 100;
+    } else if (totalXp < 300) {
+      level = 2;
+      metaNivel = 200;
+    } else if (totalXp < 600) {
+      level = 3;
+      metaNivel = 300;
+    } else if (totalXp < 1000) {
+      level = 4;
+      metaNivel = 400;
+    } else {
+      level = 5;
+      metaNivel = 999999;
+    }
+
+    const grau = this.getGrauForLevel(level);
+
+    return prisma.userGamificationProfile.upsert({
+      where: { userId },
+      update: {
+        nivel: level,
+        grau,
+        xp_total: totalXp,
+        meta_nivel: metaNivel
+      },
+      create: {
+        userId,
+        nivel: level,
+        grau,
+        xp_total: totalXp,
+        meta_nivel: metaNivel
+      }
+    });
   }
 
   /**
@@ -48,47 +199,42 @@ export class GamificationService {
         throw new Error(`Usuário com UID ${supabaseUid} não encontrado na base de dados Prisma. Ele precisa completar o cadastro primeiro.`);
       }
 
-      // 2. Usar upsert para garantir que o perfil de gamificação seja criado caso seja a primeira vez
-      const profile = await prisma.userGamificationProfile.upsert({
-        where: { userId: user.id },
+      // Obter nível antigo para saber se subiu de nível
+      const existingProfile = await prisma.userGamificationProfile.findUnique({
+        where: { userId: user.id }
+      });
+      const oldLevel = existingProfile ? existingProfile.nivel : 1;
+
+      // 2. Increment/upsert the user's interaction count
+      const userInteraction = await prisma.userInteraction.upsert({
+        where: {
+          userId_eventType: {
+            userId: user.id,
+            eventType: eventType
+          }
+        },
         update: {
-          xp_total: { increment: xpGained }
+          count: { increment: 1 }
         },
         create: {
           userId: user.id,
-          xp_total: xpGained,
-          nivel: 1,
-          grau: Grau.APRENDIZ
+          eventType: eventType,
+          count: 1
         }
       });
 
-      // 3. Cálculo de level-up
-      const currentLevel = profile.nivel;
-      const expectedLevel = Math.floor(profile.xp_total / this.XP_PER_LEVEL) + 1;
+      // Verificar e conceder Badge se atingir o requisito
+      await this.checkAndGrantBadges(user.id, eventType, userInteraction.count);
 
-      const result = {
+      // 3. Recalcular perfil com base na nova pontuação total
+      const profile = await this.recalculateXPAndLevel(user.id);
+
+      return {
         xpGained,
         totalXp: profile.xp_total,
-        currentLevel,
-        leveledUp: false
+        currentLevel: profile.nivel,
+        leveledUp: profile.nivel > oldLevel
       };
-
-      if (expectedLevel > currentLevel) {
-        const newGrau = this.getGrauForLevel(expectedLevel);
-        await prisma.userGamificationProfile.update({
-          where: { id: profile.id },
-          data: { 
-            nivel: expectedLevel,
-            grau: newGrau
-          }
-        });
-        result.currentLevel = expectedLevel;
-        result.leveledUp = true;
-        
-        // TODO: Futuramente, atribuir Badges aqui de acordo com o level!
-      }
-
-      return result;
     } catch (error) {
       console.error('[Gamification] Erro ao processar evento:', error);
       throw error;
@@ -112,7 +258,8 @@ export class GamificationService {
         userId: user.id,
         nivel: 1,
         grau: 'APRENDIZ',
-        xp_total: 0
+        xp_total: 0,
+        meta_nivel: 100
       },
       include: {
         user: {

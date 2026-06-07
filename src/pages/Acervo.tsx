@@ -41,7 +41,7 @@ const TYPE_CONFIG = {
 const CATEGORIES = ['Todos', 'História', 'Técnicas Culinárias', 'Cultura', 'Nutrição', 'Antropologia'];
 
 export default function Acervo() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [searchParams] = useSearchParams();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +134,25 @@ export default function Acervo() {
           createdAt: { toDate: () => new Date() }
         };
         setItems(prev => [localItem, ...prev]);
+
+        // Gamification: points for publishing a PDF article
+        if (newItemData.type === 'pdf' && user) {
+          try {
+            fetch('/api/gamification/event', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+              },
+              body: JSON.stringify({
+                uid: user.uid,
+                eventType: 'ARTICLE_PUBLISHED'
+              })
+            });
+          } catch (err) {
+            console.error("Gamification error on publishing article:", err);
+          }
+        }
       }
       
       setShowAddModal(false);
