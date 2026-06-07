@@ -910,13 +910,21 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
 // Endpoint to ask the RAG Assistant (AI Chat)
 app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, history } = req.body;
     if (!question) {
       return res.status(400).json({ error: "question is required" });
     }
     
-    // Calls the RAG Backend Service to retrieve context and ask Gemini
-    const answer = await RagBackendService.askGeminiWithContext(question);
+    // Sanitize conversation history (last 10 turns max to avoid token overflow)
+    const conversationHistory = Array.isArray(history)
+      ? history.slice(-10).map((t: any) => ({
+          role: t.role === 'user' ? 'user' as const : 'assistant' as const,
+          text: typeof t.text === 'string' ? t.text.substring(0, 1000) : ''
+        }))
+      : [];
+    
+    // Calls the RAG Backend Service with conversation history for multi-turn context
+    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory);
     
     res.json({ success: true, answer });
   } catch (error: any) {

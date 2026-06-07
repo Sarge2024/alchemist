@@ -8,6 +8,33 @@ interface ChatMessage {
   text: string;
 }
 
+const MarkdownText = ({ text }: { text: string }) => {
+  const escapeHtml = (unsafe: string) => {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const safeText = escapeHtml(text);
+  
+  const html = safeText
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-black mt-4 mb-2 text-primary">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-black mt-5 mb-2 text-primary">$1</h2>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-stone-900 dark:text-white">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-primary hover:underline font-medium">$1</a>')
+    .replace(/^\s*\*\s+(.*$)/gim, '<li class="ml-5 list-disc mb-1">$1</li>')
+    .replace(/\n/g, '<br />')
+    .replace(/<br \/>(<li)/g, '$1')
+    .replace(/(<\/li>)<br \/>/g, '$1')
+    .replace(/(<\/h[23]>)<br \/>/g, '$1');
+
+  return <div className="text-sm leading-relaxed font-sans" dangerouslySetInnerHTML={{ __html: html }} />;
+};
+
 export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeContext }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -18,8 +45,8 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
   useEffect(() => {
     // Welcome message based on context
     const welcomeText = recipeContext 
-      ? `Olá! Sou o Assistente Alchemist RAG. Como posso ajudar você com a receita de ${recipeContext}?`
-      : 'Olá! Sou o Assistente Alchemist RAG. Tire dúvidas técnicas ou de receitas!';
+      ? `Olá! 🧑‍🍳 Sou o **Chef IA Alchemist**. Vejo que você está explorando a receita de **${recipeContext}**! Me conte: quer dicas de preparo, substituições de ingredientes ou entender alguma técnica?`
+      : 'Olá, Alquimista! 🧑‍🍳 Sou o **Chef IA**, seu guia culinário pessoal. Me conte o que você quer preparar e juntos vamos encontrar a receita perfeita no nosso acervo!';
     
     setMessages([
       { id: 'welcome', sender: 'ai', text: welcomeText }
@@ -42,13 +69,21 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
     setIsTyping(true);
 
     try {
+      // Build conversation history from existing messages (exclude welcome)
+      const history = messages
+        .filter(m => m.id !== 'welcome')
+        .map(m => ({
+          role: m.sender === 'user' ? 'user' : 'assistant',
+          text: m.text
+        }));
+
       const response = await fetch('/api/chat/ask', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || 'alchemist-app-secret-2024'
         },
-        body: JSON.stringify({ question: userMsg.text })
+        body: JSON.stringify({ question: userMsg.text, history })
       });
 
       const data = await response.json();
@@ -56,7 +91,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
         const aiMsg: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'ai', text: data.answer };
         setMessages(prev => [...prev, aiMsg]);
       } else {
-        const errMsg: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'ai', text: 'Desculpe, tive um problema ao buscar a resposta.' };
+        const errMsg: ChatMessage = { id: (Date.now() + 1).toString(), sender: 'ai', text: data.error || 'Desculpe, tive um problema ao buscar a resposta.' };
         setMessages(prev => [...prev, errMsg]);
       }
     } catch (err) {
@@ -100,8 +135,8 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
                   <Bot className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold">Assistente RAG</h3>
-                  <p className="text-xs text-white/80">Acervo Técnico</p>
+                  <h3 className="font-bold">Chef IA Alchemist</h3>
+                  <p className="text-xs text-white/80">Seu guia culinário</p>
                 </div>
               </div>
               <button 
@@ -126,7 +161,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
                       ? 'bg-primary text-white rounded-br-sm' 
                       : 'bg-white dark:bg-stone-900 border border-surface-container-high dark:border-stone-800 text-on-surface rounded-bl-sm'
                   }`}>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
+                    <MarkdownText text={msg.text} />
                   </div>
                 </motion.div>
               ))}
@@ -152,7 +187,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
                   type="text" 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Faça uma pergunta técnica..."
+                  placeholder="O que você quer cozinhar hoje?"
                   className="w-full bg-surface-container-lowest border border-surface-container-high rounded-full pl-5 pr-12 py-3 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary text-sm text-on-surface"
                 />
                 <button 
