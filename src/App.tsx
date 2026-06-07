@@ -22,6 +22,7 @@ import SpicesHistory from './pages/SpicesHistory';
 import Acervo from './pages/Acervo';
 import SaucesGuide from './pages/acervo/SaucesGuide';
 import AlchemistPanel from './pages/AlchemistPanel';
+import BBQCalculator from './pages/BBQCalculator';
 
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
@@ -39,6 +40,7 @@ export default function App() {
             <Route path="/explore" element={<Explore />} />
             <Route path="/categories" element={<Categories />} />
             <Route path="/register-collaborator" element={<RegisterCollaborator />} />
+            <Route path="/register" element={<RegisterCollaborator />} />
             
             {/* Protected Client Routes */}
             <Route path="/submit" element={<ProtectedRoute><Submit /></ProtectedRoute>} />
@@ -57,8 +59,9 @@ export default function App() {
             <Route path="/receita/:slug" element={<RecipeDetail />} />
             <Route path="/manifesto" element={<Manifesto />} />
             <Route path="/historia-das-especiarias" element={<SpicesHistory />} />
-            <Route path="/acervo" element={<Acervo />} />
-            <Route path="/acervo/guia-dos-molhos" element={<SaucesGuide />} />
+            <Route path="/acervo" element={<ProtectedRoute><Acervo /></ProtectedRoute>} />
+            <Route path="/acervo/guia-dos-molhos" element={<ProtectedRoute><SaucesGuide /></ProtectedRoute>} />
+            <Route path="/calculadora-churrasco" element={<BBQCalculator />} />
 
             
             <Route path="*" element={<Home />} />

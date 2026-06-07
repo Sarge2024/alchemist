@@ -15,6 +15,7 @@ import html2pdf from 'html2pdf.js';
 import { reviewService, Review as ReviewType } from '../infra/services/reviewService';
 import { ChefHat, Info as InfoIcon, Lightbulb, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { ShareIncentive } from '../components/ShareIncentive';
 
 import { ASSETS, getAssetUrl } from '../lib/assets';
 
@@ -1125,6 +1126,9 @@ export default function RecipeDetail() {
           </div>
         </motion.section>
       )}
+
+      {/* Share & Referral Incentive Section */}
+      <ShareIncentive recipeTitle={recipe.title} />
 
       {/* Reviews Section */}
       <div className="mt-20 border-t border-surface-container-high pt-16 no-print">

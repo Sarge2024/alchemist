@@ -1,196 +1,3 @@
-var __defProp = Object.defineProperty;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __esm = (fn, res) => function __init() {
-  return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-
-// src/infra/services/geminiKeyManager.ts
-function getAvailableGeminiKeys() {
-  const keys = [];
-  const rawKeys = [
-    process.env.GEMINI_API_KEY_1,
-    process.env.GEMINI_API_KEY_2,
-    process.env.GEMINI_API_KEY_3,
-    process.env.GEMINI_API_KEY_4,
-    process.env.GEMINI_API_KEY_5,
-    process.env.GEMINI_API_KEY_6,
-    process.env.GEMINI_API_KEY_7,
-    process.env.GEMINI_API_KEY_8,
-    process.env.GEMINI_API_KEY_9,
-    process.env.GEMINI_API_KEY_10,
-    // Fallback para import.meta.env caso o bundler suporte mas o define falhe
-    // @ts-ignore
-    typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY_1,
-    // @ts-ignore
-    typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY_2
-  ];
-  for (const k of rawKeys) {
-    if (k && typeof k === "string" && k.trim().length > 0 && k !== "null" && k !== "undefined" && !keys.includes(k.trim())) {
-      keys.push(k.trim());
-    }
-  }
-  const envKeysList = process.env.GEMINI_API_KEYS || "";
-  if (envKeysList && envKeysList !== "null" && envKeysList !== "undefined") {
-    keys.push(...envKeysList.split(",").map((k) => k.trim()).filter((k) => k.length > 0 && !keys.includes(k)));
-  }
-  const defaultKey = process.env.GEMINI_API_KEY;
-  if (defaultKey && defaultKey.trim().length > 0 && defaultKey !== "null" && defaultKey !== "undefined" && !keys.includes(defaultKey.trim())) {
-    keys.push(defaultKey.trim());
-  }
-  return keys;
-}
-function isQuotaExhaustedError(error) {
-  const status = error?.status || error?.response?.status;
-  const message = error?.message?.toLowerCase() || "";
-  const reason = error?.response?.data?.error?.status || "";
-  return Number(status) === 429 || status === "RESOURCE_EXHAUSTED" || reason === "RESOURCE_EXHAUSTED" || message.includes("429") || message.includes("quota") || message.includes("exhausted");
-}
-var init_geminiKeyManager = __esm({
-  "src/infra/services/geminiKeyManager.ts"() {
-  }
-});
-
-// src/infra/prisma/client.ts
-import { PrismaClient } from "@prisma/client";
-import { Pool } from "pg";
-import { PrismaPg } from "@prisma/adapter-pg";
-var connectionString, pool, adapter, prisma;
-var init_client = __esm({
-  "src/infra/prisma/client.ts"() {
-    connectionString = process.env.DATABASE_URL;
-    pool = new Pool({ connectionString });
-    adapter = new PrismaPg(pool);
-    prisma = global.prisma || new PrismaClient({ adapter });
-    if (process.env.NODE_ENV !== "production") {
-      global.prisma = prisma;
-    }
-  }
-});
-
-// src/infra/services/ragBackendService.ts
-var ragBackendService_exports = {};
-__export(ragBackendService_exports, {
-  RagBackendService: () => RagBackendService
-});
-import { getFirestore } from "firebase-admin/firestore";
-import { GoogleGenAI as GoogleGenAI2 } from "@google/genai";
-var RagBackendService;
-var init_ragBackendService = __esm({
-  "src/infra/services/ragBackendService.ts"() {
-    init_client();
-    init_geminiKeyManager();
-    RagBackendService = class {
-      /**
-       * Helper function to get an active Gemini AI client
-       */
-      static async getGeminiClient() {
-        const apiKeys = getAvailableGeminiKeys();
-        if (apiKeys.length === 0) {
-          throw new Error("Nenhuma GEMINI_API_KEY configurada no backend.");
-        }
-        return new GoogleGenAI2({ apiKey: apiKeys[0] });
-      }
-      /**
-       * Realiza busca semântica via RAG combinando Embeddings e busca vetorial no Postgres.
-       */
-      static async askGeminiWithContext(userQuestion, limit = 5) {
-        const ai = await this.getGeminiClient();
-        const context = await this.getSemanticContext(userQuestion, limit);
-        const finalPrompt = `
-      Voc\xEA \xE9 o assistente culin\xE1rio Alchemist do portal "Alquimia do Prato".
-      
-      REGRA CR\xCDTICA DE CONTEXTO:
-      Primeiramente, interprete se a pergunta do usu\xE1rio possui afinidade com o contexto culin\xE1rio, gastron\xF4mico, receitas, ingredientes, t\xE9cnicas de cozinha ou heran\xE7a cultural alimentar.
-      Se a pergunta N\xC3O tiver nenhuma rela\xE7\xE3o com esses temas culin\xE1rios, voc\xEA DEVE pedir desculpas e solicitar que o usu\xE1rio seja mais claro em rela\xE7\xE3o \xE0 quest\xE3o ou avisar que a resposta est\xE1 fora do contexto deste chat. N\xE3o tente responder a perguntas de outros temas.
-      
-      Se a pergunta tiver afinidade culin\xE1ria, use as refer\xEAncias de contexto fornecidas abaixo para responder \xE0 pergunta de forma precisa. Se n\xE3o souber a resposta ou se o contexto n\xE3o for suficiente, use seus conhecimentos de forma honesta, indicando que as informa\xE7\xF5es hist\xF3ricas locais do portal n\xE3o mencionam o assunto.
-
-      CONTEXTO RECUPERADO:
-      ${context || "Nenhum contexto hist\xF3rico relevante foi encontrado no banco de dados."}
-
-      PERGUNTA DO USU\xC1RIO:
-      ${userQuestion}
-    `;
-        const generation = await ai.models.generateContent({
-          model: "gemini-3-flash-preview",
-          contents: finalPrompt
-        });
-        return generation.text || "Sem resposta.";
-      }
-      /**
-       * Retorna apenas o contexto semântico formatado para um dado texto de busca
-       */
-      static async getSemanticContext(queryText, limit = 5) {
-        const ai = await this.getGeminiClient();
-        const embeddingResponse = await ai.models.embedContent({
-          model: "text-embedding-004",
-          contents: queryText
-        });
-        const queryVector = embeddingResponse.embeddings?.[0]?.values;
-        if (!queryVector || queryVector.length !== 768) {
-          return "";
-        }
-        const vectorLiteral = `[${queryVector.join(",")}]`;
-        const matchedDocs = await prisma.$queryRaw`
-      SELECT id, title, content,
-             1 - (embedding <=> ${vectorLiteral}::vector) AS similarity
-      FROM "SemanticDocument"
-      ORDER BY embedding <=> ${vectorLiteral}::vector ASC
-      LIMIT ${limit};
-    `;
-        return matchedDocs.filter((doc) => doc.similarity > 0.6).map((doc) => `[Documento: ${doc.title}]
-${doc.content}`).join("\n\n");
-      }
-      /**
-       * Sincroniza mensagens do Lounge do Firestore para o PostgreSQL gerando Embeddings
-       */
-      static async syncChatsToPostgreSQL() {
-        console.log("[RAG Sync] Iniciando sincroniza\xE7\xE3o de chats para o PostgreSQL...");
-        const db = getFirestore();
-        const last24h = new Date(Date.now() - 24 * 60 * 60 * 1e3);
-        const snapshot = await db.collection("lounge_messages").where("status", "==", "approved").where("timestamp", ">=", last24h).get();
-        if (snapshot.empty) {
-          console.log("[RAG Sync] Nenhuma mensagem nova nas \xFAltimas 24h.");
-          return;
-        }
-        const messages = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          text: doc.data().text,
-          sender: doc.data().senderRole || "user"
-        }));
-        const ai = await this.getGeminiClient();
-        console.log(`[RAG Sync] Gerando embeddings para ${messages.length} mensagens...`);
-        const embeddingResponse = await ai.models.embedContent({
-          model: "text-embedding-004",
-          contents: messages.map((m) => `[${m.sender}]: ${m.text}`)
-        });
-        const embeddings = embeddingResponse.embeddings;
-        if (!embeddings || embeddings.length !== messages.length) {
-          throw new Error("Tamanho de embeddings gerados diverge do total de mensagens.");
-        }
-        console.log("[RAG Sync] Salvando vetores no PostgreSQL...");
-        for (let i = 0; i < messages.length; i++) {
-          const m = messages[i];
-          const queryVector = embeddings[i].values;
-          if (!queryVector || queryVector.length !== 768) continue;
-          const vectorLiteral = `[${queryVector.join(",")}]`;
-          await prisma.$executeRawUnsafe(`
-        INSERT INTO "SemanticDocument" (id, title, content, type, embedding, "updatedAt")
-        VALUES ($1, $2, $3, 'chat_summary', $4::vector, NOW())
-        ON CONFLICT (id) DO UPDATE 
-        SET content = EXCLUDED.content, embedding = EXCLUDED.embedding, "updatedAt" = NOW()
-      `, m.id, `Mensagem de Chat ${m.id}`, m.text, vectorLiteral);
-        }
-        console.log("[RAG Sync] Sincroniza\xE7\xE3o conclu\xEDda com sucesso.");
-      }
-    };
-  }
-});
-
 // server.ts
 import "dotenv/config";
 import express from "express";
@@ -247,8 +54,51 @@ var IdentityAccessService = class {
 };
 
 // src/infra/services/ModerationService.ts
-init_geminiKeyManager();
 import { GoogleGenAI } from "@google/genai";
+
+// src/infra/services/geminiKeyManager.ts
+function getAvailableGeminiKeys() {
+  const keys = [];
+  const rawKeys = [
+    process.env.GEMINI_API_KEY_1,
+    process.env.GEMINI_API_KEY_2,
+    process.env.GEMINI_API_KEY_3,
+    process.env.GEMINI_API_KEY_4,
+    process.env.GEMINI_API_KEY_5,
+    process.env.GEMINI_API_KEY_6,
+    process.env.GEMINI_API_KEY_7,
+    process.env.GEMINI_API_KEY_8,
+    process.env.GEMINI_API_KEY_9,
+    process.env.GEMINI_API_KEY_10,
+    // Fallback para import.meta.env caso o bundler suporte mas o define falhe
+    // @ts-ignore
+    typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY_1,
+    // @ts-ignore
+    typeof import.meta !== "undefined" && import.meta.env?.VITE_GEMINI_API_KEY_2
+  ];
+  for (const k of rawKeys) {
+    if (k && typeof k === "string" && k.trim().length > 0 && k !== "null" && k !== "undefined" && !keys.includes(k.trim())) {
+      keys.push(k.trim());
+    }
+  }
+  const envKeysList = process.env.GEMINI_API_KEYS || "";
+  if (envKeysList && envKeysList !== "null" && envKeysList !== "undefined") {
+    keys.push(...envKeysList.split(",").map((k) => k.trim()).filter((k) => k.length > 0 && !keys.includes(k)));
+  }
+  const defaultKey = process.env.GEMINI_API_KEY;
+  if (defaultKey && defaultKey.trim().length > 0 && defaultKey !== "null" && defaultKey !== "undefined" && !keys.includes(defaultKey.trim())) {
+    keys.push(defaultKey.trim());
+  }
+  return keys;
+}
+function isQuotaExhaustedError(error) {
+  const status = error?.status || error?.response?.status;
+  const message = error?.message?.toLowerCase() || "";
+  const reason = error?.response?.data?.error?.status || "";
+  return Number(status) === 429 || status === "RESOURCE_EXHAUSTED" || reason === "RESOURCE_EXHAUSTED" || message.includes("429") || message.includes("quota") || message.includes("exhausted");
+}
+
+// src/infra/services/ModerationService.ts
 var ModerationService = {
   /**
    * Analisa o texto da mensagem e determina se é relacionado à gastronomia.
@@ -303,10 +153,304 @@ var ModerationService = {
 };
 
 // src/infra/services/AtaGeneratorService.ts
-init_geminiKeyManager();
-init_ragBackendService();
 import { getFirestore as getFirestore2, FieldValue } from "firebase-admin/firestore";
 import { GoogleGenAI as GoogleGenAI3 } from "@google/genai";
+
+// src/infra/services/ragBackendService.ts
+import { getFirestore } from "firebase-admin/firestore";
+
+// src/infra/prisma/client.ts
+import { PrismaClient } from "@prisma/client";
+import { Pool } from "pg";
+import { PrismaPg } from "@prisma/adapter-pg";
+var connectionString = process.env.DATABASE_URL;
+var pool = new Pool({ connectionString });
+var adapter = new PrismaPg(pool);
+var prisma = global.prisma || new PrismaClient({ adapter });
+if (process.env.NODE_ENV !== "production") {
+  global.prisma = prisma;
+}
+
+// src/infra/services/ragBackendService.ts
+import { GoogleGenAI as GoogleGenAI2 } from "@google/genai";
+var RagBackendService = class {
+  /**
+   * Helper function to get an active Gemini AI client
+   */
+  static async getGeminiClient() {
+    const apiKeys = getAvailableGeminiKeys();
+    if (apiKeys.length === 0) {
+      throw new Error("Nenhuma GEMINI_API_KEY configurada no backend.");
+    }
+    return new GoogleGenAI2({ apiKey: apiKeys[0] });
+  }
+  /**
+   * Realiza busca semântica via RAG combinando Embeddings e busca vetorial no Postgres.
+   */
+  static async askGeminiWithContext(userQuestion, limit = 5) {
+    const ai = await this.getGeminiClient();
+    const context = await this.getSemanticContext(userQuestion, limit);
+    const finalPrompt = `
+      Voc\xEA \xE9 o assistente culin\xE1rio Alchemist do portal "Alquimia do Prato".
+      
+      REGRA CR\xCDTICA DE CONTEXTO:
+      Primeiramente, interprete se a pergunta do usu\xE1rio possui afinidade com o contexto culin\xE1rio, gastron\xF4mico, receitas, ingredientes, t\xE9cnicas de cozinha ou heran\xE7a cultural alimentar.
+      Se a pergunta N\xC3O tiver nenhuma rela\xE7\xE3o com esses temas culin\xE1rios, voc\xEA DEVE pedir desculpas e solicitar que o usu\xE1rio seja mais claro em rela\xE7\xE3o \xE0 quest\xE3o ou avisar que a resposta est\xE1 fora do contexto deste chat. N\xE3o tente responder a perguntas de outros temas.
+      
+      Se a pergunta tiver afinidade culin\xE1ria, use as refer\xEAncias de contexto fornecidas abaixo para responder \xE0 pergunta de forma precisa. Se n\xE3o souber a resposta ou se o contexto n\xE3o for suficiente, use seus conhecimentos de forma honesta, indicando que as informa\xE7\xF5es hist\xF3ricas locais do portal n\xE3o mencionam o assunto.
+
+      CONTEXTO RECUPERADO:
+      ${context || "Nenhum contexto hist\xF3rico relevante foi encontrado no banco de dados."}
+
+      PERGUNTA DO USU\xC1RIO:
+      ${userQuestion}
+    `;
+    const generation = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: finalPrompt
+    });
+    return generation.text || "Sem resposta.";
+  }
+  /**
+   * Retorna apenas o contexto semântico formatado para um dado texto de busca
+   */
+  static async getSemanticContext(queryText, limit = 5) {
+    const ai = await this.getGeminiClient();
+    const embeddingResponse = await ai.models.embedContent({
+      model: "gemini-embedding-2",
+      contents: queryText,
+      config: {
+        outputDimensionality: 768
+      }
+    });
+    const queryVector = embeddingResponse.embeddings?.[0]?.values;
+    if (!queryVector || queryVector.length !== 768) {
+      return "";
+    }
+    const vectorLiteral = `[${queryVector.join(",")}]`;
+    const matchedDocs = await prisma.$queryRaw`
+      SELECT id, title, content, url,
+             1 - (embedding <=> ${vectorLiteral}::vector) AS similarity
+      FROM "SemanticDocument"
+      ORDER BY embedding <=> ${vectorLiteral}::vector ASC
+      LIMIT ${limit};
+    `;
+    return matchedDocs.filter((doc) => doc.similarity > 0.6).map((doc) => {
+      const urlStr = doc.url ? ` | Link/URL: ${doc.url}` : "";
+      return `[Documento: ${doc.title}${urlStr}]
+${doc.content}`;
+    }).join("\n\n");
+  }
+  /**
+   * Sincroniza mensagens do Lounge do Firestore para o PostgreSQL gerando Embeddings
+   */
+  static async syncChatsToPostgreSQL() {
+    console.log("[RAG Sync] Iniciando sincroniza\xE7\xE3o de chats para o PostgreSQL...");
+    const db = getFirestore();
+    const last24h = new Date(Date.now() - 24 * 60 * 60 * 1e3);
+    const snapshot = await db.collection("lounge_messages").where("timestamp", ">=", last24h).get();
+    const approvedDocs = snapshot.docs.filter((doc) => doc.data().status === "approved");
+    if (approvedDocs.length === 0) {
+      console.log("[RAG Sync] Nenhuma mensagem nova nas \xFAltimas 24h.");
+      return;
+    }
+    const messages = approvedDocs.map((doc) => ({
+      id: doc.id,
+      text: doc.data().text,
+      sender: doc.data().senderRole || "user"
+    }));
+    const ai = await this.getGeminiClient();
+    console.log(`[RAG Sync] Gerando embeddings para ${messages.length} mensagens...`);
+    const embeddingResponse = await ai.models.embedContent({
+      model: "gemini-embedding-2",
+      contents: messages.map((m) => `[${m.sender}]: ${m.text}`),
+      config: {
+        outputDimensionality: 768
+      }
+    });
+    const embeddings = embeddingResponse.embeddings;
+    if (!embeddings || embeddings.length !== messages.length) {
+      throw new Error("Tamanho de embeddings gerados diverge do total de mensagens.");
+    }
+    console.log("[RAG Sync] Salvando vetores no PostgreSQL...");
+    for (let i = 0; i < messages.length; i++) {
+      const m = messages[i];
+      const queryVector = embeddings[i].values;
+      if (!queryVector || queryVector.length !== 768) continue;
+      const vectorLiteral = `[${queryVector.join(",")}]`;
+      await prisma.$executeRawUnsafe(`
+        INSERT INTO "SemanticDocument" (id, title, content, type, embedding, "updatedAt")
+        VALUES ($1, $2, $3, 'chat_summary', $4::vector, NOW())
+        ON CONFLICT (id) DO UPDATE 
+        SET content = EXCLUDED.content, embedding = EXCLUDED.embedding, "updatedAt" = NOW()
+      `, m.id, `Mensagem de Chat ${m.id}`, m.text, vectorLiteral);
+    }
+    console.log("[RAG Sync] Sincroniza\xE7\xE3o conclu\xEDda com sucesso.");
+  }
+  /**
+   * Sincroniza todas as receitas cadastradas do Firestore para o PostgreSQL (SemanticDocument) gerando Embeddings para RAG
+   */
+  static async syncRecipesToPostgreSQL() {
+    console.log("[RAG Recipe Sync] Iniciando sincroniza\xE7\xE3o de receitas para o PostgreSQL...");
+    const db = getFirestore();
+    const snapshot = await db.collection("recipes").get();
+    if (snapshot.empty) {
+      console.log("[RAG Recipe Sync] Nenhuma receita encontrada no Firestore.");
+      return;
+    }
+    const recipes = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+    const ai = await this.getGeminiClient();
+    let syncedCount = 0;
+    let skippedCount = 0;
+    for (const recipe of recipes) {
+      try {
+        const docId = `recipe-${recipe.id}`;
+        const firestoreUpdatedAt = recipe.updatedAt?.toDate ? recipe.updatedAt.toDate() : recipe.updatedAt?._seconds ? new Date(recipe.updatedAt._seconds * 1e3) : recipe.updatedAt ? new Date(recipe.updatedAt) : /* @__PURE__ */ new Date();
+        const existingDoc = await prisma.semanticDocument.findUnique({
+          where: { id: docId }
+        });
+        if (existingDoc && existingDoc.updatedAt.getTime() >= firestoreUpdatedAt.getTime()) {
+          skippedCount++;
+          continue;
+        }
+        const ingredientsText = Array.isArray(recipe.ingredients) ? recipe.ingredients.map((ing) => typeof ing === "string" ? ing : `${ing.quantity || ""} ${ing.name || ""}`.trim()).join(", ") : "";
+        const instructionsText = Array.isArray(recipe.instructions) ? recipe.instructions.join("\n") : "";
+        const content = `
+T\xEDtulo: ${recipe.title}
+Descri\xE7\xE3o: ${recipe.description || ""}
+Categoria/Momento: ${Array.isArray(recipe.momento) ? recipe.momento.join(", ") : ""}
+Tipo de Prato: ${Array.isArray(recipe.tipo_prato) ? recipe.tipo_prato.join(", ") : ""}
+Base do Alimento: ${Array.isArray(recipe.base_alimento) ? recipe.base_alimento.join(", ") : ""}
+Origem: ${recipe.origem || ""}
+Tempo de Preparo: ${recipe.time || recipe.prepTime || ""}
+Dificuldade: ${recipe.difficulty || ""}
+Tipo de Dieta: ${recipe.dietType || ""}
+Por\xE7\xF5es: ${recipe.servings || ""}
+Custo Estimado: ${recipe.custo_estimado || ""}
+Ingredientes: ${ingredientsText}
+Modo de Preparo:
+${instructionsText}
+Dicas do Chef: ${recipe.chefTips || ""}
+`.trim();
+        const embedResponse = await ai.models.embedContent({
+          model: "gemini-embedding-2",
+          contents: `[Receita] ${recipe.title}: ${content}`,
+          config: {
+            outputDimensionality: 768
+          }
+        });
+        const queryVector = embedResponse.embeddings?.[0]?.values;
+        if (!queryVector || queryVector.length !== 768) {
+          console.warn(`[RAG Recipe Sync] Falha ao gerar embedding para receita "${recipe.title}".`);
+          continue;
+        }
+        const vectorLiteral = `[${queryVector.join(",")}]`;
+        const recipeUrl = recipe.slug ? `/receita/${recipe.slug}` : `/recipe/${recipe.id}`;
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "SemanticDocument" (id, title, content, url, type, embedding, "updatedAt")
+          VALUES ($1, $2, $3, $4, 'recipe', $5::vector, $6)
+          ON CONFLICT (id) DO UPDATE 
+          SET title = EXCLUDED.title, content = EXCLUDED.content, url = EXCLUDED.url, type = EXCLUDED.type, embedding = EXCLUDED.embedding, "updatedAt" = EXCLUDED."updatedAt"
+        `, docId, `Receita: ${recipe.title}`, content, recipeUrl, vectorLiteral, firestoreUpdatedAt);
+        syncedCount++;
+      } catch (err) {
+        console.error(`[RAG Recipe Sync] Erro ao sincronizar receita "${recipe.title || recipe.id}":`, err);
+      }
+    }
+    console.log(`[RAG Recipe Sync] Sincroniza\xE7\xE3o conclu\xEDda. Sincronizadas: ${syncedCount}, Ignoradas (j\xE1 atualizadas): ${skippedCount}`);
+  }
+  /**
+   * Generates a proactive response based on a list of recent lounge messages to stimulate conversation.
+   */
+  static async generateProactiveResponse(recentMessages) {
+    const ai = await this.getGeminiClient();
+    const conversationHistory = recentMessages.map((m) => `${m.senderName}: "${m.text}"`).join("\n");
+    let semanticContext = "";
+    try {
+      const query = recentMessages.map((m) => m.text).join(" ").substring(0, 500);
+      semanticContext = await this.getSemanticContext(query, 2);
+    } catch (e) {
+      console.warn("[Proactive] Failed to get semantic context:", e);
+    }
+    const proactivePrompt = `
+      Voc\xEA \xE9 o assistente culin\xE1rio Alchemist do portal "Alquimia do Prato".
+      Voc\xEA est\xE1 acompanhando a conversa no Lounge Gastron\xF4mico. A comunidade est\xE1 ativa discutindo v\xE1rios temas.
+      Sua tarefa \xE9 intervir de forma natural, proativa e sutil para estimular a discuss\xE3o, acrescentando uma curiosidade, uma dica pr\xE1tica, um termo do acervo ou uma pergunta provocativa sobre culin\xE1ria/gastronomia.
+
+      REGRAS:
+      1. Seja extremamente natural e amig\xE1vel. N\xE3o pare\xE7a um rob\xF4.
+      2. Mantenha seu tom de "Alquimista do Prato" - algu\xE9m apaixonado por qu\xEDmica culin\xE1ria, hist\xF3ria dos alimentos e t\xE9cnicas.
+      3. Baseie-se no hist\xF3rico recente da conversa fornecido abaixo.
+      4. Se relevante, incorpore elementos do contexto hist\xF3rico recuperado.
+      5. Escreva em portugu\xEAs (pt-BR) e seja conciso (m\xE1ximo de 4-5 linhas).
+
+      HIST\xD3RICO RECENTE DA CONVERSA:
+      ${conversationHistory}
+
+      CONTEXTO HIST\xD3RICO RECUPERADO:
+      ${semanticContext || "Nenhum contexto espec\xEDfico do acervo encontrado."}
+    `;
+    const generation = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: proactivePrompt
+    });
+    return generation.text || "Continue cozinhando, alquimistas!";
+  }
+  /**
+   * Checks the interaction density in the Lounge and triggers a proactive bot response if appropriate.
+   */
+  static async checkAndTriggerProactiveEngagement(db) {
+    console.log("[Proactive] Checking interaction density...");
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1e3);
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1e3);
+    try {
+      const snapshot = await db.collection("lounge_messages").where("timestamp", ">=", oneHourAgo).get();
+      const docs = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        const t = data.timestamp?.toDate ? data.timestamp.toDate() : new Date(data.timestamp);
+        return { id: doc.id, ...data, timestampDate: t };
+      });
+      const botSpokeRecently = docs.some((d) => d.senderId === "copilot-agent");
+      if (botSpokeRecently) {
+        console.log("[Proactive] Bot spoke recently. Cooldown is active.");
+        return;
+      }
+      const recentUserMessages = docs.filter(
+        (d) => d.timestampDate.getTime() >= fifteenMinutesAgo.getTime() && d.status === "approved" && d.senderId !== "copilot-agent"
+      );
+      console.log(`[Proactive] Found ${recentUserMessages.length} user messages in the last 15 minutes.`);
+      if (recentUserMessages.length >= 5) {
+        console.log("[Proactive] High interaction density detected! Triggering proactive response.");
+        recentUserMessages.sort((a, b) => a.timestampDate.getTime() - b.timestampDate.getTime());
+        const messagesForContext = recentUserMessages.map((m) => ({
+          text: m.text || "",
+          senderName: m.senderName || "Alquimista"
+        }));
+        const answer = await this.generateProactiveResponse(messagesForContext);
+        const copilotMessage = {
+          text: answer,
+          senderId: "copilot-agent",
+          senderName: "Alchemist",
+          senderRole: "agent",
+          timestamp: /* @__PURE__ */ new Date(),
+          status: "approved",
+          reactions: {},
+          metadata: { isBot: true, proactive: true }
+        };
+        const FieldValue3 = (await import("firebase-admin/firestore")).FieldValue;
+        await db.collection("lounge_messages").add({
+          ...copilotMessage,
+          timestamp: FieldValue3.serverTimestamp()
+        });
+        console.log("[Proactive] Proactive Alchemist message posted successfully.");
+      }
+    } catch (error) {
+      console.error("[Proactive Error] Failed to check or trigger proactive response:", error);
+    }
+  }
+};
+
+// src/infra/services/AtaGeneratorService.ts
 var AtaGeneratorService = {
   /**
    * Coleta mensagens aprovadas nas últimas 24h e gera um resumo em formato JSON.
@@ -323,27 +467,77 @@ var AtaGeneratorService = {
     const now = /* @__PURE__ */ new Date();
     const last24h = new Date(now.getTime() - 24 * 60 * 60 * 1e3);
     try {
-      const messagesSnapshot = await db.collection("lounge_messages").where("status", "==", "approved").where("timestamp", ">=", last24h).orderBy("timestamp", "asc").get();
-      if (messagesSnapshot.empty) {
+      const messagesSnapshot = await db.collection("lounge_messages").where("timestamp", ">=", last24h).get();
+      const approvedDocs = messagesSnapshot.docs.map((doc) => ({ id: doc.id, data: doc.data() })).filter((item) => item.data.status === "approved").sort((a, b) => {
+        const tA = a.data.timestamp?.toDate ? a.data.timestamp.toDate().getTime() : new Date(a.data.timestamp).getTime();
+        const tB = b.data.timestamp?.toDate ? b.data.timestamp.toDate().getTime() : new Date(b.data.timestamp).getTime();
+        return tA - tB;
+      });
+      if (approvedDocs.length === 0) {
         console.log("[AtaGenerator] Nenhuma mensagem aprovada para processar nas \xFAltimas 24h.");
         return null;
       }
-      const messagesContent = messagesSnapshot.docs.map((doc) => {
-        const data = doc.data();
-        return `[${data.senderRole}] ${data.text}`;
-      }).join("\n---\n");
+      const messagesContent = approvedDocs.map((item) => `[${item.data.senderRole}] ${item.data.text}`).join("\n---\n");
       let semanticContext = "";
       try {
         semanticContext = await RagBackendService.getSemanticContext(messagesContent.substring(0, 800), 3);
       } catch (e) {
         console.warn("[AtaGenerator] N\xE3o foi poss\xEDvel buscar contexto sem\xE2ntico:", e);
       }
+      const ACERVO_SUMMARY_LIST = [
+        {
+          title: "Padr\xE3o de Qualidade da Carne Angus",
+          description: "Crit\xE9rios de certifica\xE7\xE3o de qualidade Angus, padr\xF5es de marmoreio e sele\xE7\xE3o de carnes premium.",
+          url: "/docs/acervo/Angus-2017.10.30-19.22.35.pdf"
+        },
+        {
+          title: "Manual e Cultura do Churrasco Brasileiro",
+          description: "Hist\xF3ria e rituais do churrasco, salga correta, fogo e brasa, e rea\xE7\xE3o de Maillard.",
+          url: "/docs/acervo/churrasco.pdf"
+        },
+        {
+          title: "Os 8 Melhores Tipos de Carne para Churrasco",
+          description: "An\xE1lise de cortes bovinos para churrasco (Picanha, Fraldinha, Contrafil\xE9/Ancho e Costela).",
+          url: "/docs/acervo/os-8-melhores-tipos-de-carne-para-churrasco.pdf"
+        },
+        {
+          title: "Qualidade Nutricional da Carne Vermelha",
+          description: "Benef\xEDcios nutricionais da carne vermelha: ferro heme, vitamina B12 e prote\xEDnas essenciais.",
+          url: "/docs/acervo/qualidade-nutricional-da-carne-vermelha.pdf"
+        },
+        {
+          title: "Fichas T\xE9cnicas de Cortes Bovinos",
+          description: "Rendimento, teor de gordura e m\xE9todos recomendados de preparo (dianteiro vs traseiro).",
+          url: "/docs/acervo/FICHAS-T\xC9CNICAS-TECMEAT-BOVINO.compressed.pdf"
+        },
+        {
+          title: "Brazilian Beef: Global Standards",
+          description: "Manual sobre rastreabilidade, pastagens tropicais, sustentabilidade e exporta\xE7\xE3o da carne brasileira.",
+          url: "/docs/acervo/Brazilian_Beef_Global_Standards.pdf"
+        },
+        {
+          title: "Apresenta\xE7\xE3o Interativa de Cortes Bovinos",
+          description: "Anatomia bovina, localiza\xE7\xE3o dos cortes, diferen\xE7a de maciez do traseiro/dianteiro e cupim.",
+          url: "/docs/acervo/apresenta_o_interativa_de_cortes_bovinos.html"
+        },
+        {
+          title: "Arte dos Molhos: Guia de Alta Gastronomia",
+          description: "Acompanhamentos culin\xE1rios, emuls\xF5es cl\xE1ssicas francesas, redu\xE7\xF5es e espessantes.",
+          url: "/acervo/guia-dos-molhos"
+        }
+      ];
+      const acervoSummaryText = ACERVO_SUMMARY_LIST.map(
+        (item) => `- T\xEDtulo: "${item.title}" | Descri\xE7\xE3o: ${item.description}`
+      ).join("\n");
       const prompt = `
         Voc\xEA \xE9 o Cronista Oficial da Alquimia do Prato. Sua miss\xE3o \xE9 ler as mensagens do Lounge Gastron\xF4mico 
         e sintetizar uma "Ata de Intera\xE7\xE3o Comunit\xE1ria" que inspire a nossa comunidade.
         Voc\xEA pode usar o "Contexto Hist\xF3rico do Acervo" para conectar as discuss\xF5es atuais com receitas ou temas do passado.
         
-        CONTEXTO HIST\xD3RICO DO ACERVO (Para refer\xEAncia e conex\xF5es na se\xE7\xE3o de Insights):
+        SUM\xC1RIO DE DOCUMENTOS DISPON\xCDVEIS NO ACERVO:
+        ${acervoSummaryText}
+
+        CONTEXTO HIST\xD3RICO DO ACERVO RETORNADO VIA RAG (Cont\xE9m trechos e links espec\xEDficos):
         ${semanticContext || "Nenhum contexto relacionado encontrado."}
 
         MENSAGENS APROVADAS (\xDALTIMAS 24H):
@@ -362,14 +556,20 @@ var AtaGeneratorService = {
            - Termo em Destaque: [Termo t\xE9cnico/hist\xF3rico] - [Explica\xE7\xE3o cultural]
            - Dica do Chef: [Conselho pr\xE1tico org\xE2nico]
            
-        3. Acervo Citado & Refer\xEAncias (Links do site):
-           - Artigo: [T\xEDtulo sugerido]
-           - E-book: [T\xEDtulo sugerido]
+        3. Acervo Citado & Refer\xEAncias:
+           - Artigo: [Selecione obrigatoriamente um T\xEDtulo do Acervo acima que seja mais relevante para a conversa]
+           - E-book: [Selecione obrigatoriamente outro T\xEDtulo do Acervo acima que complemente o assunto]
            
         4. Term\xF4metro da Comunidade:
            - Clima: [Produtivo/T\xE9cnico/Inspiracional]
            - Participa\xE7\xE3o: [N\xBA aproximado de colaboradores distintos]
            - Destaque do Dia: [Nome/ID do autor da contribui\xE7\xE3o mais relevante]
+
+        REGRAS IMPORTANTES PARA A SE\xC7\xC3O "referencias" DO JSON:
+        1. Voc\xEA DEVE OBRIGATORIAMENTE mapear a discuss\xE3o do Lounge a documentos existentes listados no "SUM\xC1RIO DE DOCUMENTOS DISPON\xCDVEIS NO ACERVO".
+        2. As propriedades "artigo" e "ebook" no objeto "referencias" do JSON devem conter o T\xCDTULO EXATO de um dos documentos listados acima (sem o link/URL, apenas o t\xEDtulo como por exemplo: "Os 8 Melhores Tipos de Carne para Churrasco" ou "Manual e Cultura do Churrasco Brasileiro" ou "Padr\xE3o de Qualidade da Carne Angus" ou "Qualidade Nutricional da Carne Vermelha").
+        3. N\xE3o deixe esses campos vazios ou com valores gen\xE9ricos como "Consultar Biblioteca" ou "Fundamentos da Gastronomia" se houver qualquer rela\xE7\xE3o m\xEDnima (exemplo: se a conversa for sobre carnes/churrasco, use os documentos de carne/churrasco; se for sobre molhos, use "Arte dos Molhos: Guia de Alta Gastronomia").
+        4. O t\xEDtulo exato inserido no JSON ser\xE1 usado diretamente pelo sistema para abrir a busca do respectivo documento no acervo.
 
         REGRAS DE RETORNO (JSON ESTRITO):
         {
@@ -383,15 +583,15 @@ var AtaGeneratorService = {
             "dicaDoChef": "..."
           },
           "referencias": {
-            "artigo": "...",
-            "ebook": "..."
+            "artigo": "T\xCDTULO EXATO DO ARTIGO SELECIONADO DO ACERVO",
+            "ebook": "T\xCDTULO EXATO DO EBOOK SELECIONADO DO ACERVO"
           },
           "termometro": {
             "clima": "...",
             "participacao": 0,
             "destaqueDoDia": "..."
           },
-          "stats": { "totalMessages": ${messagesSnapshot.size} }
+          "stats": { "totalMessages": ${approvedDocs.length} }
         }
       `;
       let response;
@@ -438,7 +638,6 @@ var AtaGeneratorService = {
 };
 
 // src/infra/services/GamificationService.ts
-init_client();
 import { Grau } from "@prisma/client";
 var GamificationService = class {
   static {
@@ -464,8 +663,10 @@ var GamificationService = class {
       // Postagem de Avaliação com foto (20 pts)
       WEEKLY_CHALLENGE_COMPLETED: 100,
       // Completar Desafio da Semana (100 pts)
-      PRODUCT_PURCHASED: 25
+      PRODUCT_PURCHASED: 25,
       // Compras de Produtos
+      REFERRAL_CONFIRMED: 5
+      // Indicação Confirmada (5 pts)
     };
   }
   static {
@@ -705,7 +906,6 @@ var GamificationService = class {
 };
 
 // src/infra/services/geminiService.ts
-init_geminiKeyManager();
 import { GoogleGenAI as GoogleGenAI4 } from "@google/genai";
 var geminiService = {
   /**
@@ -980,12 +1180,10 @@ var geminiService = {
 };
 
 // server.ts
-init_geminiKeyManager();
 import { put } from "@vercel/blob";
 import cron from "node-cron";
 
 // src/infra/mcp/mcpServer.ts
-init_ragBackendService();
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import {
@@ -1057,8 +1255,6 @@ function registerMcpRoutes(app2) {
 }
 
 // server.ts
-init_ragBackendService();
-init_client();
 var firecrawlKey = process.env.FIRECRAWL_API_KEY;
 var firecrawl = firecrawlKey && firecrawlKey !== "" && firecrawlKey !== "your_firecrawl_api_key_here" ? new FirecrawlApp({ apiKey: firecrawlKey }) : null;
 var uploadDir = path.join(process.cwd(), "public", "uploads");
@@ -1232,6 +1428,12 @@ app.use("/uploads", express.static(uploadsPath, {
     res.set("Cache-Control", "public, max-age=3600");
   }
 }));
+app.use("/docs/acervo", express.static(path.resolve(process.cwd(), "docs", "acervo"), {
+  setHeaders: (res) => {
+    res.set("Access-Control-Allow-Origin", "*");
+    res.set("Cross-Origin-Resource-Policy", "cross-origin");
+  }
+}));
 app.use(express.static(path.resolve(process.cwd(), "public"), {
   setHeaders: (res) => {
     res.set("Access-Control-Allow-Origin", "*");
@@ -1341,6 +1543,15 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
     });
   } catch (error) {
     console.error("[Migration] Erro cr\xEDtico:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+app.post("/api/admin/sync-recipes-rag", authenticateAPI, async (req, res) => {
+  try {
+    await RagBackendService.syncRecipesToPostgreSQL();
+    res.json({ success: true, message: "Sincroniza\xE7\xE3o de receitas conclu\xEDda com sucesso." });
+  } catch (error) {
+    console.error("[Admin RAG Sync] Erro:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1464,11 +1675,11 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
     const finalMetadata = { ...metadata || {} };
     if (status === "rejected") {
       const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1e3);
-      const userRecentMessages = await db.collection("lounge_messages").where("senderId", "==", senderId).where("timestamp", ">=", tenMinutesAgo).get();
+      const recentMessagesSnapshot = await db.collection("lounge_messages").where("timestamp", ">=", tenMinutesAgo).get();
       let restrictedCount = 0;
-      userRecentMessages.forEach((doc) => {
+      recentMessagesSnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.status === "rejected" || data.metadata && data.metadata.restricted === true) {
+        if (data.senderId === senderId && (data.status === "rejected" || data.metadata && data.metadata.restricted === true)) {
           restrictedCount++;
         }
       });
@@ -1509,8 +1720,9 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
     const lowerText = text.toLowerCase();
     if (status === "approved" && (lowerText.includes("@alchemist") || lowerText.includes("@copilot") || lowerText.includes("@chef") || lowerText.includes("@alquimista"))) {
       console.log(`[Lounge API] Bot acionado! Iniciando processamento do Alchemist RAG...`);
-      Promise.resolve().then(() => (init_ragBackendService(), ragBackendService_exports)).then(({ RagBackendService: RagBackendService2 }) => {
-        RagBackendService2.askGeminiWithContext(text).then(async (answer) => {
+      Promise.resolve().then(async () => {
+        try {
+          const answer = await RagBackendService.askGeminiWithContext(text);
           const copilotMessage = {
             text: answer,
             senderId: "copilot-agent",
@@ -1523,8 +1735,15 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
           };
           await db.collection("lounge_messages").add(copilotMessage);
           console.log(`[Lounge API] Resposta do Alchemist salva com sucesso!`);
-        }).catch((err) => console.error("[Lounge API] Erro ao gerar resposta do Alchemist:", err));
-      }).catch((err) => console.error("[Lounge API] Erro ao carregar m\xF3dulo do RAG:", err));
+        } catch (err) {
+          console.error("[Lounge API] Erro ao gerar resposta do Alchemist:", err);
+        }
+      });
+    }
+    if (status === "approved" && !(lowerText.includes("@alchemist") || lowerText.includes("@copilot") || lowerText.includes("@chef") || lowerText.includes("@alquimista"))) {
+      RagBackendService.checkAndTriggerProactiveEngagement(db).catch(
+        (err) => console.error("[Lounge API] Erro no fluxo de engajamento proativo:", err)
+      );
     }
     res.json({
       success: true,
@@ -1755,6 +1974,28 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
     if (!uid || !eventType) {
       return res.status(400).json({ error: "uid and eventType are required" });
     }
+    let user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) {
+      const db = getFirestore3();
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        user = await prisma.user.create({
+          data: {
+            uid,
+            displayName: userData?.displayName || "Sem Nome",
+            email: userData?.email || `${uid}@example.com`,
+            photoURL: userData?.photoURL || null,
+            whatsapp: userData?.whatsapp || null,
+            state: userData?.state || "ES",
+            country: userData?.country || "BR"
+          }
+        });
+        console.log(`[Gamification Event API] Usu\xE1rio ${user.displayName} auto-sincronizado para o Prisma.`);
+      } else {
+        return res.json({ success: false, error: `Usu\xE1rio com UID ${uid} n\xE3o encontrado no Firestore nem no Prisma.` });
+      }
+    }
     const result = await GamificationService.processEvent(uid, eventType);
     res.json({ success: true, ...result });
   } catch (error) {
@@ -1803,6 +2044,26 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
 app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
   const { uid } = req.params;
   try {
+    let user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) {
+      const db = getFirestore3();
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        user = await prisma.user.create({
+          data: {
+            uid,
+            displayName: userData?.displayName || "Sem Nome",
+            email: userData?.email || `${uid}@example.com`,
+            photoURL: userData?.photoURL || null,
+            whatsapp: userData?.whatsapp || null,
+            state: userData?.state || "ES",
+            country: userData?.country || "BR"
+          }
+        });
+        console.log(`[Profile API] Usu\xE1rio ${user.displayName} auto-sincronizado para o Prisma.`);
+      }
+    }
     const profile = await GamificationService.getProfile(uid);
     if (!profile) {
       return res.status(404).json({ error: "Perfil de gamifica\xE7\xE3o n\xE3o encontrado." });
@@ -2037,6 +2298,9 @@ app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async 
 });
 async function startServer() {
   await GamificationService.ensureBadgesSeeded();
+  RagBackendService.syncRecipesToPostgreSQL().catch((err) => {
+    console.error("[Startup] Falha na sincroniza\xE7\xE3o de receitas para RAG:", err);
+  });
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
@@ -2074,6 +2338,7 @@ if (process.env.VERCEL !== "1") {
     console.log("[Cron] Iniciando sincroniza\xE7\xE3o RAG: Firebase -> PostgreSQL...");
     try {
       await RagBackendService.syncChatsToPostgreSQL();
+      await RagBackendService.syncRecipesToPostgreSQL();
     } catch (error) {
       console.error("[Cron] Falha na sincroniza\xE7\xE3o RAG:", error);
     }

@@ -26,7 +26,8 @@ import {
   Tag,
   Pencil,
   Eye,
-  PieChart
+  PieChart,
+  Upload
 } from 'lucide-react';
 import { libraryService, LibraryItem, LibraryItemType } from '../infra/services/libraryService';
 import { useAuth } from '../context/AuthContext';
@@ -63,6 +64,43 @@ export default function Acervo() {
     url: '',
     tags: ''
   });
+
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const uploadData = new FormData();
+    uploadData.append("image", file); // Multer expects the field name to be "image"
+
+    try {
+      const response = await fetch("/api/upload", {
+        method: "POST",
+        headers: {
+          "X-API-KEY": (import.meta.env.VITE_APP_API_KEY as string) || ""
+        },
+        body: uploadData
+      });
+
+      if (!response.ok) {
+        throw new Error("Erro no upload do arquivo");
+      }
+
+      const data = await response.json();
+      if (data.success && data.imageUrl) {
+        setFormData(prev => ({ ...prev, url: data.imageUrl }));
+      } else {
+        alert("Falha no upload do arquivo.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao realizar o upload do arquivo.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const openAddModal = () => {
     setEditingId(null);
@@ -213,15 +251,9 @@ export default function Acervo() {
               >
                 <div className="p-4 bg-white border-b flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <button 
-                      onClick={() => setPreviewUrl(null)}
-                      className="p-2 hover:bg-stone-100 rounded-full transition-colors"
-                    >
-                      <X className="w-6 h-6" />
-                    </button>
                     <h3 className="font-bold text-on-surface line-clamp-1">Visualizando Documento</h3>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     <a 
                       href={previewUrl} 
                       target="_blank"
@@ -231,6 +263,13 @@ export default function Acervo() {
                       <Download className="w-4 h-4" />
                       Baixar Original
                     </a>
+                    <button 
+                      onClick={() => setPreviewUrl(null)}
+                      className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-full text-sm font-bold transition-all"
+                    >
+                      <X className="w-4 h-4" />
+                      Fechar
+                    </button>
                   </div>
                 </div>
                 
@@ -571,14 +610,36 @@ export default function Acervo() {
 
                 <div className="space-y-2">
                   <label className="text-xs font-black uppercase tracking-widest text-on-surface-variant ml-1">URL do Arquivo</label>
-                  <input 
-                    required
-                    type="url" 
-                    value={formData.url}
-                    onChange={e => setFormData({...formData, url: e.target.value})}
-                    className="w-full px-4 py-3 rounded-xl bg-surface-container border-none outline-none focus:ring-2 focus:ring-primary"
-                    placeholder="https://exemplo.com/arquivo.pdf"
-                  />
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <input 
+                      required
+                      type="text" 
+                      value={formData.url}
+                      onChange={e => setFormData({...formData, url: e.target.value})}
+                      className="flex-1 px-4 py-3 rounded-xl bg-surface-container border-none outline-none focus:ring-2 focus:ring-primary min-w-0 text-sm"
+                      placeholder="https://exemplo.com/arquivo.pdf ou /docs/acervo/nome.pdf"
+                    />
+                    <label className="flex items-center justify-center px-4 py-3 rounded-xl bg-secondary/10 hover:bg-secondary/20 text-secondary font-bold text-sm cursor-pointer transition-colors border border-dashed border-secondary/30 select-none whitespace-nowrap">
+                      {isUploading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          <span>Enviando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 mr-2" />
+                          <span>Upload local</span>
+                        </>
+                      )}
+                      <input 
+                        type="file"
+                        accept="application/pdf,image/*"
+                        className="hidden"
+                        onChange={handleFileUpload}
+                        disabled={isUploading}
+                      />
+                    </label>
+                  </div>
                 </div>
 
                 <div className="space-y-2">

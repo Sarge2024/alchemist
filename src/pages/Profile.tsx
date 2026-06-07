@@ -30,7 +30,9 @@ import {
   Sparkles,
   Target,
   PlusCircle,
-  MinusCircle
+  MinusCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { userService, UserProfile } from '../infra/services/userService';
 import { MemberService } from '../infra/services/MemberService';
@@ -146,6 +148,9 @@ export default function Profile() {
   const [userInteractions, setUserInteractions] = useState<Record<string, number>>({});
   const [selectedLevelForTips, setSelectedLevelForTips] = useState<number | null>(null);
   const [showTipsPopup, setShowTipsPopup] = useState(false);
+  const [friendPhone, setFriendPhone] = useState('');
+  const [copied, setCopied] = useState(false);
+  const baseUrl = (import.meta.env.VITE_APP_URL as string) || window.location.origin;
 
   const INTERACTION_MATRIX = [
     { id: 'COLLABORATION_MESSAGE', label: 'Mensagens no Lounge', required: 50 },
@@ -823,6 +828,96 @@ export default function Profile() {
                 )}
               </AnimatePresence>
             </form>
+
+            {user?.uid === targetUid && (
+              <div className="mt-12 pt-12 border-t border-surface-container-high">
+                <div className="bg-gradient-to-br from-emerald-50/60 to-teal-50/40 dark:from-emerald-950/10 dark:to-teal-950/5 border border-emerald-500/20 rounded-[2.5rem] p-6 md:p-10 relative overflow-hidden shadow-sm">
+                  {/* Decorative glowing sphere */}
+                  <div className="absolute -top-10 -left-10 w-[200px] h-[200px] bg-primary/10 rounded-full blur-[60px] pointer-events-none" />
+                  <div className="absolute -bottom-10 -right-10 w-[200px] h-[200px] bg-teal-500/10 rounded-full blur-[60px] pointer-events-none" />
+
+                  <div className="relative z-10 flex flex-col lg:flex-row gap-8 items-center justify-between">
+                    <div className="flex-1 text-center lg:text-left">
+                      <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-black uppercase tracking-widest mb-4">
+                        <Sparkles className="w-3.5 h-3.5 animate-pulse" />
+                        Indique e Ganhe
+                      </div>
+                      <h3 className="text-2xl sm:text-3xl font-serif font-medium text-stone-900 mb-3 tracking-tight">
+                        Traga um amigo alquimista!
+                      </h3>
+                      <p className="text-stone-600 text-sm sm:text-base leading-relaxed max-w-xl">
+                        Compartilhe o seu link de indicação personalizado. Quando seu amigo concluir o cadastro de colaborador, você receberá <strong>+5 XP</strong> instantaneamente para subir de nível!
+                      </p>
+                    </div>
+
+                    <div className="w-full lg:w-auto min-w-[280px] sm:min-w-[400px] bg-white rounded-3xl p-5 border border-stone-200 shadow-sm flex flex-col gap-4">
+                      {/* Friend's WhatsApp Input */}
+                      <div>
+                        <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 ml-1">
+                          WhatsApp do amigo (opcional):
+                        </label>
+                        <div className="relative">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-400" />
+                          <input 
+                            type="tel"
+                            placeholder="Ex: 5511999999999"
+                            value={friendPhone}
+                            onChange={(e) => setFriendPhone(e.target.value.replace(/\D/g, ''))}
+                            className="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:ring-4 focus:ring-primary/10 outline-none text-stone-850"
+                          />
+                        </div>
+                        <span className="text-[10px] text-stone-400 mt-1 block leading-tight ml-1">
+                          Se preenchido, o número virá preenchido no cadastro dele e abrirá a conversa diretamente.
+                        </span>
+                      </div>
+
+                      {/* Referral Link Field */}
+                      <div>
+                        <label className="block text-[10px] font-black text-stone-400 uppercase tracking-widest mb-2 ml-1">
+                          Seu link de indicação:
+                        </label>
+                        <div className="flex gap-2">
+                          <input 
+                            type="text"
+                            readOnly
+                            value={`${baseUrl}/register?ref=${targetUid}${friendPhone ? '&phone=' + friendPhone : ''}`}
+                            className="flex-1 px-3 py-3 bg-stone-50 border border-stone-200 rounded-xl text-xs font-mono outline-none text-stone-655 overflow-ellipsis"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const referralLink = `${baseUrl}/register?ref=${targetUid}${friendPhone ? '&phone=' + friendPhone : ''}`;
+                              navigator.clipboard.writeText(referralLink);
+                              setCopied(true);
+                              setTimeout(() => setCopied(false), 2000);
+                            }}
+                            className="px-4 py-3 bg-stone-100 hover:bg-stone-200 border border-stone-200 rounded-xl text-stone-750 transition-all flex items-center justify-center shrink-0 cursor-pointer"
+                            title="Copiar Link"
+                          >
+                            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Share WhatsApp Action */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const referralLink = `${baseUrl}/register?ref=${targetUid}${friendPhone ? '&phone=' + friendPhone : ''}`;
+                          const text = `Olá! Junte-se a mim na Alquimia do Prato para compartilharmos receitas e conversarmos com o Chef IA! Cadastre-se pelo link: ${referralLink}`;
+                          const whatsappUrl = `https://api.whatsapp.com/send?${friendPhone ? 'phone=' + friendPhone + '&' : ''}text=${encodeURIComponent(text)}`;
+                          window.open(whatsappUrl, '_blank');
+                        }}
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-sm shadow-emerald-600/10 active:scale-95 cursor-pointer"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                        Enviar no WhatsApp
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="mt-12 pt-12 border-t border-surface-container-high">
               <div className="mb-8 text-center">

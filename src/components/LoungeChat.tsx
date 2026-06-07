@@ -246,7 +246,7 @@ export const LoungeChat: React.FC = () => {
                       {msg.senderId === user?.uid ? 'Você' : (msg.senderName || userNamesCache[msg.senderId] || 'Membro')}
                     </span>
                     {msg.senderRole === 'chef' && (
-                      <span className="bg-amber-100 text-amber-700 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5 border border-amber-200">
+                      <span className="bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5 border border-amber-200 dark:border-amber-800/50">
                         <ChefHat className="w-2.5 h-2.5" /> CHEF
                       </span>
                     )}
@@ -256,7 +256,7 @@ export const LoungeChat: React.FC = () => {
                       </span>
                     )}
                     {msg.senderRole === 'agent' && (
-                      <span className="bg-emerald-100 text-emerald-700 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5 border border-emerald-200">
+                      <span className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 p-0.5 rounded flex items-center gap-0.5 text-[8px] font-black px-1.5 border border-emerald-200 dark:border-emerald-800/50">
                         <Sparkles className="w-2.5 h-2.5" /> ALCHEMIST
                       </span>
                     )}
@@ -270,7 +270,7 @@ export const LoungeChat: React.FC = () => {
                       : msg.senderId === user?.uid
                         ? 'bg-on-surface text-background rounded-tr-none'
                         : msg.senderRole === 'agent'
-                          ? 'bg-emerald-50 text-emerald-900 border border-emerald-200 rounded-tl-none shadow-emerald-200/50'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-950 dark:text-emerald-50 border border-emerald-200 dark:border-emerald-900/50 rounded-tl-none shadow-emerald-200/50 dark:shadow-none'
                           : msg.metadata?.type === 'new_recipe'
                             ? 'bg-primary/10 border-2 border-primary/30 text-on-surface shadow-primary/10 cursor-pointer hover:bg-primary/20 transition-all'
                             : 'bg-surface-container-lowest text-on-surface border border-surface-container-high rounded-tl-none shadow-stone-200/50'}
@@ -350,7 +350,9 @@ export const LoungeChat: React.FC = () => {
                             ? 'text-stone-300 dark:text-stone-700 font-light italic line-through decoration-stone-300/30' 
                             : msg.senderId === user?.uid 
                               ? 'font-medium text-background' 
-                              : 'font-medium text-on-surface'}
+                              : msg.senderRole === 'agent'
+                                ? 'font-medium text-emerald-950 dark:text-emerald-50'
+                                : 'font-medium text-on-surface'}
                         `}>
                           {msg.text}
                         </p>

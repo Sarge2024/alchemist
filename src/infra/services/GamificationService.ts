@@ -15,6 +15,7 @@ export class GamificationService {
     REVIEW_WITH_PHOTO: 20,            // Postagem de Avaliação com foto (20 pts)
     WEEKLY_CHALLENGE_COMPLETED: 100,  // Completar Desafio da Semana (100 pts)
     PRODUCT_PURCHASED: 25,            // Compras de Produtos
+    REFERRAL_CONFIRMED: 5,            // Indicação Confirmada (5 pts)
   };
 
   public static readonly BADGE_REQUIREMENTS: Record<string, { badgeCode: string; required: number }> = {

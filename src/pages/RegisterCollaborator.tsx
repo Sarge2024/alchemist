@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Camera, Mail, User, Phone, MapPin, Globe, CheckCircle2, ArrowRight, Lock, ArrowLeft } from 'lucide-react';
+import { Camera, Mail, User, Phone, MapPin, Globe, CheckCircle2, ArrowRight, Lock, ArrowLeft, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { userService, UserProfile } from '../infra/services/userService';
@@ -32,10 +32,41 @@ export default function RegisterCollaborator() {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [showAvatarSelector, setShowAvatarSelector] = useState(false);
   const [avatarsList, setAvatarsList] = useState<AvatarOptionData[]>([]);
+  const [referrerProfile, setReferrerProfile] = useState<UserProfile | null>(null);
 
   useEffect(() => {
     fetchAvatars();
   }, [user?.uid]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const ref = searchParams.get('ref');
+    const phone = searchParams.get('phone');
+    
+    if (ref) {
+      localStorage.setItem('referral_referrer_uid', ref);
+      userService.getUserProfile(ref).then(profile => {
+        if (profile) setReferrerProfile(profile);
+      });
+    } else {
+      const savedRef = localStorage.getItem('referral_referrer_uid');
+      if (savedRef) {
+        userService.getUserProfile(savedRef).then(profile => {
+          if (profile) setReferrerProfile(profile);
+        });
+      }
+    }
+    
+    if (phone) {
+      localStorage.setItem('referral_phone', phone);
+      setFormData(prev => ({ ...prev, whatsapp: phone }));
+    } else {
+      const savedPhone = localStorage.getItem('referral_phone');
+      if (savedPhone) {
+        setFormData(prev => ({ ...prev, whatsapp: prev.whatsapp || savedPhone }));
+      }
+    }
+  }, [user]);
 
   const fetchAvatars = async () => {
     try {
@@ -151,6 +182,39 @@ export default function RegisterCollaborator() {
 
       await userService.createUserProfile(profile);
 
+      // Sincronizar indicação se houver referrer UID no localStorage
+      const referrerUid = localStorage.getItem('referral_referrer_uid');
+      if (referrerUid) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          const token = session?.access_token;
+          const headers: any = {
+            'Content-Type': 'application/json',
+            'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+          };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+
+          const res = await fetch('/api/gamification/event', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              uid: referrerUid,
+              eventType: 'REFERRAL_CONFIRMED'
+            })
+          });
+          const resData = await res.json();
+          if (resData.success) {
+            console.log(`[Referral] Evento REFERRAL_CONFIRMED enviado com sucesso para ${referrerUid}.`);
+            localStorage.removeItem('referral_referrer_uid');
+            localStorage.removeItem('referral_phone');
+          } else {
+            console.error('[Referral] Erro ao enviar evento de indicação:', resData.error);
+          }
+        } catch (err) {
+          console.error('[Referral] Erro na requisição de indicação:', err);
+        }
+      }
+
       // Atualiza o perfil centralizado do Supabase para que o avatar mude no header em tempo real
       await supabase.auth.updateUser({
         data: {
@@ -159,7 +223,7 @@ export default function RegisterCollaborator() {
         }
       });
       setSuccess(true);
-      setTimeout(() => navigate('/'), 3000);
+      setTimeout(() => navigate('/'), 4000); // 4 segundos para dar tempo de ver o popup de indicação aceita
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro ao salvar seu perfil.');
     } finally {
@@ -200,6 +264,22 @@ export default function RegisterCollaborator() {
                   : 'Escolha como deseja se conectar à nossa comunidade.'
                 }
               </p>
+
+              {referrerProfile && !success && (
+                <div className="mb-8 p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3 shadow-sm">
+                  <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 shrink-0">
+                    <Sparkles className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <p className="text-stone-800 text-sm">
+                      Você foi convidado por <strong className="text-emerald-950">{referrerProfile.displayName}</strong>!
+                    </p>
+                    <p className="text-stone-500 text-xs mt-0.5">
+                      Ao concluir seu cadastro, ele ganhará 5 pontos de XP.
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {!user ? (
                 <div className="space-y-6">
@@ -336,6 +416,28 @@ export default function RegisterCollaborator() {
                       {formData.displayName.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, '.')}@alquimiadoprato.com.br
                     </code>
                   </div>
+
+                  {referrerProfile && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.4 }}
+                      className="mt-6 p-6 bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-100 rounded-3xl shadow-sm flex flex-col items-center text-center max-w-md mx-auto"
+                    >
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-600 mb-3">
+                        <Sparkles className="w-6 h-6 animate-pulse" />
+                      </div>
+                      <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-[10px] font-black uppercase tracking-widest rounded-full mb-2">
+                        Indicação Confirmada
+                      </span>
+                      <h4 className="text-emerald-950 font-bold text-base mb-1">
+                        Indicação Aceita!
+                      </h4>
+                      <p className="text-emerald-800 text-sm leading-relaxed">
+                        Agradecemos o convite! <strong>+5 XP</strong> foram creditados para <strong>{referrerProfile.displayName}</strong> por indicar você.
+                      </p>
+                    </motion.div>
+                  )}
                 </motion.div>
               ) : (
                 <form onSubmit={handleSubmitProfile} className="space-y-6">

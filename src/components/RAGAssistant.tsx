@@ -113,7 +113,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
             </div>
 
             {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#fdf8f4]">
+            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-[#fdf8f4] dark:bg-stone-950">
               {messages.map((msg) => (
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
@@ -124,7 +124,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
                   <div className={`max-w-[85%] rounded-2xl p-4 ${
                     msg.sender === 'user' 
                       ? 'bg-primary text-white rounded-br-sm' 
-                      : 'bg-white border border-surface-container-high text-on-surface rounded-bl-sm'
+                      : 'bg-white dark:bg-stone-900 border border-surface-container-high dark:border-stone-800 text-on-surface rounded-bl-sm'
                   }`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
                   </div>
@@ -136,7 +136,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
                   animate={{ opacity: 1, y: 0 }}
                   className="flex justify-start"
                 >
-                  <div className="bg-white border border-surface-container-high rounded-2xl rounded-bl-sm p-4 flex items-center gap-2">
+                  <div className="bg-white dark:bg-stone-900 border border-surface-container-high dark:border-stone-800 rounded-2xl rounded-bl-sm p-4 flex items-center gap-2">
                     <Loader2 className="w-4 h-4 text-primary animate-spin" />
                     <span className="text-xs text-on-surface-variant font-medium">Consultando acervo...</span>
                   </div>
@@ -146,7 +146,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
             </div>
 
             {/* Input Area */}
-            <form onSubmit={handleSend} className="p-4 bg-white border-t border-surface-container">
+            <form onSubmit={handleSend} className="p-4 bg-white dark:bg-stone-900 border-t border-surface-container dark:border-stone-800">
               <div className="relative">
                 <input 
                   type="text" 

@@ -35,6 +35,22 @@ export default function Layout({ children }: LayoutProps) {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
+  // Capture referral query parameters globally
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const ref = searchParams.get('ref');
+    const phone = searchParams.get('phone');
+    
+    if (ref) {
+      localStorage.setItem('referral_referrer_uid', ref);
+      console.log(`[Referral] Referrer UID captured globally: ${ref}`);
+    }
+    if (phone) {
+      localStorage.setItem('referral_phone', phone);
+      console.log(`[Referral] Referral phone captured globally: ${phone}`);
+    }
+  }, [location.search]);
+
   const handleLogin = async () => {
     setAuthError(null);
     setIsLoggingIn(true);
@@ -86,6 +102,7 @@ export default function Layout({ children }: LayoutProps) {
     { path: '/', label: 'Início' },
     { path: '/explore', label: 'Explorar' },
     { path: '/categories', label: 'Categorias' },
+    { path: '/calculadora-churrasco', label: 'Churrasco' },
     { path: '/acervo', label: 'Acervo' },
     { path: '/submit', label: 'Enviar' },
     { path: '/register-collaborator', label: 'Seja um Colaborador' },
@@ -137,7 +154,6 @@ export default function Layout({ children }: LayoutProps) {
             </Link>
           </div>
 
-          {/* CENTRO: Links de Navegação (Desktop) */}
           <div className="hidden md:flex flex-[2] justify-center items-center gap-1 lg:gap-4 font-sans font-medium text-on-surface-variant text-sm">
             {navLinks.slice(0, 4).map(link => (
               <Link 
@@ -150,12 +166,20 @@ export default function Layout({ children }: LayoutProps) {
             ))}
             
             {user && (
-              <Link 
-                to="/lounge" 
-                className={`px-3 py-2 rounded-xl transition-all ${isActive('/lounge') ? 'text-primary font-bold bg-primary/10' : 'hover:text-primary hover:bg-surface-container-high'}`}
-              >
-                Lounge
-              </Link>
+              <>
+                <Link 
+                  to="/acervo" 
+                  className={`px-3 py-2 rounded-xl transition-all ${isActive('/acervo') ? 'text-primary font-bold bg-primary/10' : 'hover:text-primary hover:bg-surface-container-high'}`}
+                >
+                  Acervo
+                </Link>
+                <Link 
+                  to="/lounge" 
+                  className={`px-3 py-2 rounded-xl transition-all ${isActive('/lounge') ? 'text-primary font-bold bg-primary/10' : 'hover:text-primary hover:bg-surface-container-high'}`}
+                >
+                  Lounge
+                </Link>
+              </>
             )}
 
             {isAdmin && (
@@ -269,7 +293,7 @@ export default function Layout({ children }: LayoutProps) {
                   className="w-full pl-10 pr-4 py-3 rounded-xl border-none bg-surface-container text-base focus:ring-2 focus:ring-primary outline-none"
                 />
               </form>
-              {navLinks.map(link => (
+              {navLinks.filter(link => link.path !== '/acervo').map(link => (
                 <Link 
                   key={link.path}
                   to={link.path} 
@@ -279,12 +303,20 @@ export default function Layout({ children }: LayoutProps) {
                 </Link>
               ))}
               {user && (
-                <Link 
-                  to="/lounge" 
-                  className={`block p-3 rounded-xl font-bold transition-all ${isActive('/lounge') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
-                >
-                  Lounge
-                </Link>
+                <>
+                  <Link 
+                    to="/acervo" 
+                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/acervo') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  >
+                    Acervo
+                  </Link>
+                  <Link 
+                    to="/lounge" 
+                    className={`block p-3 rounded-xl font-bold transition-all ${isActive('/lounge') ? 'bg-primary/10 text-primary' : 'text-on-surface-variant hover:bg-surface-container'}`}
+                  >
+                    Lounge
+                  </Link>
+                </>
               )}
 
               {user && (

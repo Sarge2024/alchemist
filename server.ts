@@ -398,6 +398,19 @@ app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) =
   }
 });
 
+/**
+ * Endpoint de Administração: Sincroniza manualmente receitas no banco de dados vetorial para RAG
+ */
+app.post("/api/admin/sync-recipes-rag", authenticateAPI, async (req, res) => {
+  try {
+    await RagBackendService.syncRecipesToPostgreSQL();
+    res.json({ success: true, message: "Sincronização de receitas concluída com sucesso." });
+  } catch (error: any) {
+    console.error("[Admin RAG Sync] Erro:", error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // API Route for Admin Role Management
 app.post("/api/admin/set-role", async (req, res) => {
   const { uid, role } = req.body;
@@ -921,6 +934,30 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
       return res.status(400).json({ error: "uid and eventType are required" });
     }
 
+    // Garantir que o usuário existe no Prisma (Postgres) buscando do Firestore se necessário
+    let user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) {
+      const db = getFirestore();
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        user = await prisma.user.create({
+          data: {
+            uid,
+            displayName: userData?.displayName || 'Sem Nome',
+            email: userData?.email || `${uid}@example.com`,
+            photoURL: userData?.photoURL || null,
+            whatsapp: userData?.whatsapp || null,
+            state: userData?.state || 'ES',
+            country: userData?.country || 'BR'
+          }
+        });
+        console.log(`[Gamification Event API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
+      } else {
+        return res.json({ success: false, error: `Usuário com UID ${uid} não encontrado no Firestore nem no Prisma.` });
+      }
+    }
+
     const result = await GamificationService.processEvent(uid, eventType);
     res.json({ success: true, ...result });
   } catch (error: any) {
@@ -985,6 +1022,28 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
 app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
   const { uid } = req.params;
   try {
+    // Garantir que o usuário existe no Prisma (Postgres) buscando do Firestore se necessário
+    let user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) {
+      const db = getFirestore();
+      const userDoc = await db.collection("users").doc(uid).get();
+      if (userDoc.exists) {
+        const userData = userDoc.data();
+        user = await prisma.user.create({
+          data: {
+            uid,
+            displayName: userData?.displayName || 'Sem Nome',
+            email: userData?.email || `${uid}@example.com`,
+            photoURL: userData?.photoURL || null,
+            whatsapp: userData?.whatsapp || null,
+            state: userData?.state || 'ES',
+            country: userData?.country || 'BR'
+          }
+        });
+        console.log(`[Profile API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
+      }
+    }
+
     const profile = await GamificationService.getProfile(uid);
     if (!profile) {
       return res.status(404).json({ error: "Perfil de gamificação não encontrado." });
@@ -1263,6 +1322,11 @@ async function startServer() {
   // Garantir a semeadura automática dos selos no startup
   await GamificationService.ensureBadgesSeeded();
 
+  // Sincronizar receitas no banco de dados vetorial em background (para RAG)
+  RagBackendService.syncRecipesToPostgreSQL().catch(err => {
+    console.error("[Startup] Falha na sincronização de receitas para RAG:", err);
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
@@ -1312,6 +1376,7 @@ if (process.env.VERCEL !== "1") {
     console.log("[Cron] Iniciando sincronização RAG: Firebase -> PostgreSQL...");
     try {
       await RagBackendService.syncChatsToPostgreSQL();
+      await RagBackendService.syncRecipesToPostgreSQL();
     } catch (error) {
       console.error("[Cron] Falha na sincronização RAG:", error);
     }

@@ -164,6 +164,109 @@ export class RagBackendService {
   }
 
   /**
+   * Sincroniza todas as receitas cadastradas do Firestore para o PostgreSQL (SemanticDocument) gerando Embeddings para RAG
+   */
+  static async syncRecipesToPostgreSQL() {
+    console.log("[RAG Recipe Sync] Iniciando sincronização de receitas para o PostgreSQL...");
+    const db = getFirestore();
+    
+    // 1. Ler todas as receitas do Firestore
+    const snapshot = await db.collection("recipes").get();
+    if (snapshot.empty) {
+      console.log("[RAG Recipe Sync] Nenhuma receita encontrada no Firestore.");
+      return;
+    }
+
+    const recipes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any);
+    const ai = await this.getGeminiClient();
+
+    let syncedCount = 0;
+    let skippedCount = 0;
+
+    for (const recipe of recipes) {
+      try {
+        const docId = `recipe-${recipe.id}`;
+        
+        // Obter updatedAt do Firestore de forma segura
+        const firestoreUpdatedAt = recipe.updatedAt?.toDate 
+          ? recipe.updatedAt.toDate() 
+          : (recipe.updatedAt?._seconds 
+            ? new Date(recipe.updatedAt._seconds * 1000) 
+            : (recipe.updatedAt ? new Date(recipe.updatedAt) : new Date()));
+
+        // Verificar se já existe e está atualizado
+        const existingDoc = await prisma.semanticDocument.findUnique({
+          where: { id: docId }
+        });
+
+        if (existingDoc && existingDoc.updatedAt.getTime() >= firestoreUpdatedAt.getTime()) {
+          skippedCount++;
+          continue;
+        }
+
+        // Construir o conteúdo semântico da receita
+        const ingredientsText = Array.isArray(recipe.ingredients)
+          ? recipe.ingredients.map((ing: any) => typeof ing === 'string' ? ing : `${ing.quantity || ''} ${ing.name || ''}`.trim()).join(', ')
+          : '';
+
+        const instructionsText = Array.isArray(recipe.instructions)
+          ? recipe.instructions.join('\n')
+          : '';
+
+        const content = `
+Título: ${recipe.title}
+Descrição: ${recipe.description || ''}
+Categoria/Momento: ${Array.isArray(recipe.momento) ? recipe.momento.join(', ') : ''}
+Tipo de Prato: ${Array.isArray(recipe.tipo_prato) ? recipe.tipo_prato.join(', ') : ''}
+Base do Alimento: ${Array.isArray(recipe.base_alimento) ? recipe.base_alimento.join(', ') : ''}
+Origem: ${recipe.origem || ''}
+Tempo de Preparo: ${recipe.time || recipe.prepTime || ''}
+Dificuldade: ${recipe.difficulty || ''}
+Tipo de Dieta: ${recipe.dietType || ''}
+Porções: ${recipe.servings || ''}
+Custo Estimado: ${recipe.custo_estimado || ''}
+Ingredientes: ${ingredientsText}
+Modo de Preparo:
+${instructionsText}
+Dicas do Chef: ${recipe.chefTips || ''}
+`.trim();
+
+        // Gerar Embedding usando gemini-embedding-2
+        const embedResponse = await ai.models.embedContent({
+          model: "gemini-embedding-2",
+          contents: `[Receita] ${recipe.title}: ${content}`,
+          config: {
+            outputDimensionality: 768
+          }
+        } as any);
+
+        const queryVector = embedResponse.embeddings?.[0]?.values;
+        if (!queryVector || queryVector.length !== 768) {
+          console.warn(`[RAG Recipe Sync] Falha ao gerar embedding para receita "${recipe.title}".`);
+          continue;
+        }
+
+        const vectorLiteral = `[${queryVector.join(',')}]`;
+        const recipeUrl = recipe.slug ? `/receita/${recipe.slug}` : `/recipe/${recipe.id}`;
+
+        // Executar upsert no SemanticDocument
+        await prisma.$executeRawUnsafe(`
+          INSERT INTO "SemanticDocument" (id, title, content, url, type, embedding, "updatedAt")
+          VALUES ($1, $2, $3, $4, 'recipe', $5::vector, $6)
+          ON CONFLICT (id) DO UPDATE 
+          SET title = EXCLUDED.title, content = EXCLUDED.content, url = EXCLUDED.url, type = EXCLUDED.type, embedding = EXCLUDED.embedding, "updatedAt" = EXCLUDED."updatedAt"
+        `, docId, `Receita: ${recipe.title}`, content, recipeUrl, vectorLiteral, firestoreUpdatedAt);
+
+        syncedCount++;
+      } catch (err) {
+        console.error(`[RAG Recipe Sync] Erro ao sincronizar receita "${recipe.title || recipe.id}":`, err);
+      }
+    }
+
+    console.log(`[RAG Recipe Sync] Sincronização concluída. Sincronizadas: ${syncedCount}, Ignoradas (já atualizadas): ${skippedCount}`);
+  }
+
+  /**
    * Generates a proactive response based on a list of recent lounge messages to stimulate conversation.
    */
   static async generateProactiveResponse(recentMessages: { text: string; senderName: string }[]): Promise<string> {
