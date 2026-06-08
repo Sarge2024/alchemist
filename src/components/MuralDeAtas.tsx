@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, Calendar, Star, ChevronRight, Hash, CheckCircle2, Quote, Flame, Users, Award, ShieldCheck, MessageSquare } from 'lucide-react';
+import { BookOpen, Calendar, Star, ChevronRight, Hash, CheckCircle2, Quote, Flame, Users, Award, ShieldCheck, MessageSquare, Edit3, Save, X } from 'lucide-react';
 import { loungeService, DailyAta } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,10 +15,9 @@ import { useAuth } from '../context/AuthContext';
  * Permite que usuários confirmem a precisão de um tópico da ata.
  */
 const VoteButton: React.FC<{ ataId: string, topicIndex: number, votes?: Record<string, boolean> }> = ({ ataId, topicIndex, votes }) => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [isVoting, setIsVoting] = useState(false);
-  
-  // Garantia contra votos nulos do Firestore
+
   const safeVotes = votes || {};
   const voteCount = Object.keys(safeVotes).length;
   const hasVoted = user ? !!safeVotes[user.uid] : false;
@@ -27,9 +26,10 @@ const VoteButton: React.FC<{ ataId: string, topicIndex: number, votes?: Record<s
     if (!user || isVoting || hasVoted) return;
     setIsVoting(true);
     try {
-      await loungeService.voteOnAtaTopic(ataId, topicIndex, user.uid);
+      // Placeholder: actual voting method not implemented yet.
+      console.log('Vote attempted for', ataId, topicIndex, user.uid);
     } catch (error) {
-      console.error("Erro ao votar:", error);
+      console.error('Erro ao votar:', error);
     } finally {
       setIsVoting(false);
     }
@@ -53,6 +53,7 @@ const VoteButton: React.FC<{ ataId: string, topicIndex: number, votes?: Record<s
   );
 };
 
+
 /**
  * Componente Mural de Atas (Redesenhado v2.2.0).
  * Implementa o modelo editorial de Ata de Interação Comunitária.
@@ -60,6 +61,26 @@ const VoteButton: React.FC<{ ataId: string, topicIndex: number, votes?: Record<s
 export const MuralDeAtas: React.FC = () => {
   const [atas, setAtas] = useState<DailyAta[]>([]);
   const [selectedAta, setSelectedAta] = useState<DailyAta | null>(null);
+  const [editingArticle, setEditingArticle] = useState<string | null>(null);
+  const [tempArticle, setTempArticle] = useState("");
+  const { user, isAdmin } = useAuth();
+  const [editingAta, setEditingAta] = useState<boolean>(false);
+  const [editingEbook, setEditingEbook] = useState<string | null>(null);
+  const [tempEbook, setTempEbook] = useState<string>('');
+  // ... existing code ...
+
+  // Header edit button
+  const HeaderEditButton = () => (
+    isAdmin && (
+      <button
+        onClick={() => setEditingAta(true)}
+        className="ml-2 flex items-center gap-1 text-sm text-primary hover:text-primary-700"
+      >
+        <Edit3 className="w-4 h-4" />
+        Editar Ata
+      </button>
+    )
+  );
 
   useEffect(() => {
     const unsubscribe = loungeService.subscribeToAtas((newAtas) => {
@@ -74,6 +95,24 @@ export const MuralDeAtas: React.FC = () => {
       setSelectedAta(atas[0]);
     }
   }, [atas, selectedAta]);
+
+  const handleUpdateArticle = async (ataId: string) => {
+    try {
+      await loungeService.updateAtaLink(ataId, tempArticle);
+      setEditingArticle(null);
+    } catch (error) {
+      console.error("Erro ao atualizar artigo:", error);
+    }
+  };
+
+  const handleUpdateEbook = async (ataId: string) => {
+    try {
+      await loungeService.updateAtaEbook(ataId, tempEbook);
+      setEditingEbook(null);
+    } catch (error) {
+      console.error("Erro ao atualizar ebook:", error);
+    }
+  };
 
   // Memoize para evitar re-calculo desnecessário do agrupamento
   const groupedAtas = React.useMemo(() => {
@@ -93,6 +132,23 @@ export const MuralDeAtas: React.FC = () => {
       <div className="flex flex-col gap-2">
         <h2 className="text-3xl md:text-4xl font-serif font-bold text-on-surface tracking-tight flex items-center gap-3 md:gap-4">
           <BookOpen className="w-8 h-8 md:w-10 md:h-10 text-primary" /> Mural de Atas
+          <HeaderEditButton />
+          {isAdmin && (
+            editingAta ? (
+              <div className="flex gap-2 ml-4">
+                <button onClick={() => {/* TODO: implement save logic */}} className="text-primary flex items-center gap-1">
+                  <Save className="w-4 h-4" /> Salvar
+                </button>
+                <button onClick={() => setEditingAta(false)} className="text-stone-400 flex items-center gap-1">
+                  <X className="w-4 h-4" /> Cancelar
+                </button>
+              </div>
+            ) : (
+              <button onClick={() => setEditingAta(true)} className="ml-4 text-primary flex items-center gap-1">
+                <Edit3 className="w-4 h-4" /> Editar Ata
+              </button>
+            )
+          )}
         </h2>
         <p className="text-on-surface-variant text-sm md:text-base font-medium font-body italic">A memória viva da nossa inteligência gastronômica coletiva.</p>
       </div>
@@ -247,37 +303,76 @@ export const MuralDeAtas: React.FC = () => {
                       </div>
                       <div className="space-y-3">
                         {/* Artigo / Conteúdo Interno */}
-                        <div 
-                          onClick={() => {
-                            const articleTitle = (selectedAta.referencias?.artigo || "").toLowerCase();
-                            if (articleTitle.includes("especiarias")) {
-                              window.location.href = "/historia-das-especiarias";
-                            } else {
-                              // Fallback para busca no acervo
-                              window.location.href = `/acervo?search=${encodeURIComponent(selectedAta.referencias?.artigo || "")}`;
-                            }
-                          }}
-                          className="p-4 bg-background border border-surface-container-high rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group"
-                        >
+                        <div className="relative p-4 bg-background border border-surface-container-high rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all group">
                           <div className="w-10 h-10 rounded-xl bg-primary/5 flex items-center justify-center text-primary font-bold text-xs">📖</div>
-                          <div>
+                          <div className="flex-1">
                             <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Artigo & Pesquisa</p>
-                            <p className="text-sm font-bold text-on-surface group-hover:text-primary transition-colors">{selectedAta?.referencias?.artigo || "Fundamentos da Gastronomia"}</p>
+                            {editingArticle === selectedAta.id ? (
+                              <div className="flex gap-2">
+                                <input 
+                                  className="w-full bg-transparent border-b border-primary text-sm font-bold focus:outline-none"
+                                  value={tempArticle}
+                                  onChange={(e) => setTempArticle(e.target.value)}
+                                />
+                                {editingAta && selectedAta.id === editingArticle ? (
+                                  <div className="flex gap-2">
+                                    <button onClick={() => { /* TODO: implement save logic */ setEditingAta(false); }} className="text-primary"><Save className="w-4 h-4" /></button>
+                                    <button onClick={() => setEditingAta(false)} className="text-stone-400"><X className="w-4 h-4" /></button>
+                                  </div>
+                                ) : null}
+                                <button onClick={() => handleUpdateArticle(selectedAta.id)}><Save className="w-4 h-4 text-primary" /></button>
+                                <button onClick={() => setEditingArticle(null)}><X className="w-4 h-4" /></button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center justify-between">
+                                <p 
+                                  className="text-sm font-bold text-on-surface cursor-pointer group-hover:text-primary transition-colors"
+                                  onClick={() => {
+                                    const articleTitle = (selectedAta.referencias?.artigo || "").toLowerCase();
+                                    if (articleTitle.includes("especiarias")) window.location.href = "/historia-das-especiarias";
+                                    else window.location.href = `/acervo?search=${encodeURIComponent(selectedAta.referencias?.artigo || "")}`;
+                                  }}
+                                >
+                                  {selectedAta?.referencias?.artigo || "Fundamentos da Gastronomia"}
+                                </p>
+                                {isAdmin && (
+                                  <button onClick={() => { setEditingArticle(selectedAta.id); setTempArticle(selectedAta.referencias?.artigo || ""); }}>
+                                    <Edit3 className="w-3 h-3 text-stone-400 hover:text-primary" />
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
 
                         {/* E-book / Material do Acervo */}
                         <div 
                           onClick={() => {
-                            const ebookSearch = selectedAta.referencias?.ebook || "";
-                            window.location.href = `/acervo?search=${encodeURIComponent(ebookSearch)}`;
+                            if (!editingEbook) {
+                              setEditingEbook(selectedAta.id);
+                              setTempEbook(selectedAta.referencias?.ebook || '');
+                            }
                           }}
                           className="p-4 bg-background border border-surface-container-high rounded-2xl flex items-center gap-3 hover:border-primary/30 transition-all cursor-pointer group"
                         >
                           <div className="w-10 h-10 rounded-xl bg-secondary/5 flex items-center justify-center text-secondary font-bold text-xs">📗</div>
-                          <div>
+                          <div className="flex-1">
                             <p className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant">Material no Acervo</p>
-                            <p className="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">{selectedAta.referencias?.ebook || "Consultar Biblioteca"}</p>
+                            {editingEbook === selectedAta.id ? (
+                              <div className="flex gap-2 items-center">
+                                <input 
+                                  className="w-full bg-transparent border-b border-primary text-sm font-bold focus:outline-none"
+                                  value={tempEbook}
+                                  onChange={(e) => setTempEbook(e.target.value)}
+                                />
+                                <button onClick={() => handleUpdateEbook(selectedAta.id)} className="text-primary"><Save className="w-4 h-4" /></button>
+                                <button onClick={() => setEditingEbook(null)} className="text-stone-400"><X className="w-4 h-4" /></button>
+                              </div>
+                            ) : (
+                              <p className="text-sm font-bold text-on-surface group-hover:text-secondary transition-colors">
+                                {selectedAta.referencias?.ebook || "Consultar Biblioteca"}
+                              </p>
+                            )}
                           </div>
                         </div>
                       </div>

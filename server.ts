@@ -108,7 +108,7 @@ const storage = multer.memoryStorage();
 
 const upload = multer({ 
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") {
       cb(null, true);
@@ -262,29 +262,36 @@ app.use(express.static(path.resolve(process.cwd(), 'public'), {
 }));
 
 // API Route for File Upload
-app.post("/api/upload", authenticateAPI, upload.single("image"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "Nenhum arquivo enviado" });
-  }
+app.post("/api/upload", authenticateAPI, (req, res) => {
+  upload.single("image")(req, res, async (err) => {
+    if (err) {
+      console.error("[Upload] Multer error:", err);
+      return res.status(400).json({ error: "Erro no upload do arquivo: " + err.message });
+    }
 
-  try {
-    // Determine a content type for the blob
-    const contentType = req.file.mimetype || 'image/jpeg';
-    
-    // Upload to Vercel Blob
-    const blob = await put(req.file.originalname, req.file.buffer, {
-      access: 'public',
-      contentType: contentType,
-      addRandomSuffix: true,
-      token: process.env.BLOB_READ_WRITE_TOKEN
-    });
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    }
 
-    console.log(`[Upload] File uploaded to Vercel Blob: ${blob.url}`);
-    res.json({ success: true, imageUrl: blob.url });
-  } catch (error: any) {
-    console.error("[Upload] Error uploading to Vercel Blob:", error);
-    res.status(500).json({ error: "Falha no upload para o Vercel Blob: " + error.message });
-  }
+    try {
+      // Determine a content type for the blob
+      const contentType = req.file.mimetype || 'image/jpeg';
+      
+      // Upload to Vercel Blob
+      const blob = await put(req.file.originalname, req.file.buffer, {
+        access: 'public',
+        contentType: contentType,
+        addRandomSuffix: true,
+        token: process.env.BLOB_READ_WRITE_TOKEN
+      });
+
+      console.log(`[Upload] File uploaded to Vercel Blob: ${blob.url}`);
+      res.json({ success: true, imageUrl: blob.url });
+    } catch (error: any) {
+      console.error("[Upload] Error uploading to Vercel Blob:", error);
+      res.status(500).json({ error: "Falha no upload para o Vercel Blob: " + error.message });
+    }
+  });
 });
 
 // API Route for Checking Gemini API Keys Status

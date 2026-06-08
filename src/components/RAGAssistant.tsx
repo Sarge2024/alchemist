@@ -35,7 +35,10 @@ const MarkdownText = ({ text }: { text: string }) => {
   return <div className="text-sm leading-relaxed font-sans" dangerouslySetInnerHTML={{ __html: html }} />;
 };
 
+import { useAuth } from '../context/AuthContext';
+
 export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeContext }) => {
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
@@ -58,6 +61,8 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
+
+  if (!user) return null;
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();

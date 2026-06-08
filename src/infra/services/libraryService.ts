@@ -56,11 +56,11 @@ export const libraryService = {
 
   async addItem(item: Omit<LibraryItem, 'id' | 'createdAt'>) {
     try {
-      const sanitizedItem = deepSanitize({
-        ...item,
+      const sanitizedItem = deepSanitize(item);
+      const docRef = await addDoc(collection(db, LIBRARY_COLLECTION), {
+        ...sanitizedItem,
         createdAt: serverTimestamp()
       });
-      const docRef = await addDoc(collection(db, LIBRARY_COLLECTION), sanitizedItem);
       return docRef.id;
     } catch (error) {
       console.error("Erro ao adicionar item ao acervo:", error);
