@@ -186,25 +186,61 @@ var RagBackendService = class {
   }
   /**
    * Realiza busca semântica via RAG combinando Embeddings e busca vetorial no Postgres.
+   * Suporta histórico de conversa para manter contexto multi-turno.
    */
-  static async askGeminiWithContext(userQuestion, limit = 5) {
+  static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5) {
     const ai = await this.getGeminiClient();
     const context = await this.getSemanticContext(userQuestion, limit);
+    const historyBlock = conversationHistory.length > 0 ? conversationHistory.map((t) => `${t.role === "user" ? "USU\xC1RIO" : "ASSISTENTE"}: ${t.text}`).join("\n") : "";
     const finalPrompt = `
-      Voc\xEA \xE9 o assistente culin\xE1rio Alchemist do portal "Alquimia do Prato".
-      
-      REGRA CR\xCDTICA DE CONTEXTO:
-      Primeiramente, interprete se a pergunta do usu\xE1rio possui afinidade com o contexto culin\xE1rio, gastron\xF4mico, receitas, ingredientes, t\xE9cnicas de cozinha ou heran\xE7a cultural alimentar.
-      Se a pergunta N\xC3O tiver nenhuma rela\xE7\xE3o com esses temas culin\xE1rios, voc\xEA DEVE pedir desculpas e solicitar que o usu\xE1rio seja mais claro em rela\xE7\xE3o \xE0 quest\xE3o ou avisar que a resposta est\xE1 fora do contexto deste chat. N\xE3o tente responder a perguntas de outros temas.
-      
-      Se a pergunta tiver afinidade culin\xE1ria, use as refer\xEAncias de contexto fornecidas abaixo para responder \xE0 pergunta de forma precisa. Se n\xE3o souber a resposta ou se o contexto n\xE3o for suficiente, use seus conhecimentos de forma honesta, indicando que as informa\xE7\xF5es hist\xF3ricas locais do portal n\xE3o mencionam o assunto.
+Voc\xEA \xE9 o **Chef IA Alchemist**, o assistente culin\xE1rio mestre do portal "Alquimia do Prato".
+Voc\xEA \xE9 apaixonado por culin\xE1ria, t\xE9cnicas de cozinha, hist\xF3ria dos alimentos e alquimia gastron\xF4mica.
 
-      CONTEXTO RECUPERADO:
-      ${context || "Nenhum contexto hist\xF3rico relevante foi encontrado no banco de dados."}
+## PERSONALIDADE
+- Acolhedor, curioso e entusiasmado. Trate o usu\xE1rio como um aprendiz de alquimista.
+- Use linguagem natural e quente em portugu\xEAs (pt-BR). Nunca soe rob\xF3tico.
+- Seja conciso: respostas devem ter no m\xE1ximo 10-15 linhas, a menos que o usu\xE1rio pe\xE7a mais detalhes.
 
-      PERGUNTA DO USU\xC1RIO:
-      ${userQuestion}
-    `;
+## COMPORTAMENTO SOCR\xC1TICO (OBRIGAT\xD3RIO)
+Voc\xEA deve GUIAR o usu\xE1rio passo a passo com perguntas de acompanhamento ao inv\xE9s de despejar toda a informa\xE7\xE3o de uma vez.
+1. Quando o usu\xE1rio faz uma pergunta ampla (ex: "quero fazer uma torta"), responda brevemente e fa\xE7a 1-2 perguntas para refinar:
+   - Tipo de torta? (doce, salgada)
+   - Para quantas pessoas?
+   - Tem algum ingrediente em m\xE3os ou restri\xE7\xE3o alimentar?
+2. A cada resposta do usu\xE1rio, refine sua sugest\xE3o e fa\xE7a novas perguntas at\xE9 chegar a uma receita ou solu\xE7\xE3o espec\xEDfica.
+3. Quando chegar a algo concreto, apresente a resposta final completa.
+
+## REGRAS DE CONTEXTO DO ACERVO
+- O CONTEXTO RECUPERADO abaixo cont\xE9m receitas e artigos do nosso Acervo T\xE9cnico (banco de dados vetorial).
+- Se houver receitas relevantes no contexto, SEMPRE apresente-as com links clic\xE1veis no formato: [Nome da Receita](/recipe/ID)
+- Destaque que "temos isso no nosso acervo" ou "encontrei receitas no portal" para dar valor ao conte\xFAdo propriet\xE1rio.
+- Se o contexto inclui artigos ou discuss\xF5es hist\xF3ricas, mencione: "No nosso Acervo T\xE9cnico, h\xE1 artigos que discutem isso."
+- Se N\xC3O encontrou nada no contexto, seja honesto: "Ainda n\xE3o temos essa receita no nosso acervo, mas posso te ajudar com o que sei!"
+
+## RESTRI\xC7\xC3O DE ESCOPO
+- Se a pergunta N\xC3O tem NENHUMA rela\xE7\xE3o com culin\xE1ria, gastronomia, ingredientes, t\xE9cnicas ou cultura alimentar:
+  Responda gentilmente: "Sou especializado em culin\xE1ria e gastronomia. Posso ajudar com receitas, t\xE9cnicas de cozinha ou qualquer d\xFAvida sobre alimentos! \u{1F9D1}\u200D\u{1F373}"
+
+## FORMATA\xC7\xC3O
+- Use Markdown: **negrito** para destaques, ### para t\xEDtulos de se\xE7\xE3o, listas com * para ingredientes/passos.
+- Links de receitas no formato: [Nome da Receita](/recipe/ID)
+- Finalize SEMPRE com uma pergunta de acompanhamento ou oferta de ajuda, EXCETO quando a conversa claramente chegou a uma conclus\xE3o.
+
+---
+
+${historyBlock ? `## HIST\xD3RICO DA CONVERSA ATUAL
+${historyBlock}
+
+---
+
+` : ""}## CONTEXTO RECUPERADO DO ACERVO T\xC9CNICO
+${context || "Nenhum resultado encontrado no acervo para esta consulta."}
+
+---
+
+## MENSAGEM ATUAL DO USU\xC1RIO
+${userQuestion}
+`;
     const generation = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: finalPrompt
@@ -1323,8 +1359,8 @@ var identityService = new IdentityAccessService();
 var storage = multer.memoryStorage();
 var upload = multer({
   storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  // 5MB limit
+  limits: { fileSize: 20 * 1024 * 1024 },
+  // 20MB limit
   fileFilter: (req, file, cb) => {
     if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") {
       cb(null, true);
@@ -1439,24 +1475,30 @@ app.use(express.static(path.resolve(process.cwd(), "public"), {
     res.set("Access-Control-Allow-Origin", "*");
   }
 }));
-app.post("/api/upload", authenticateAPI, upload.single("image"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ error: "Nenhum arquivo enviado" });
-  }
-  try {
-    const contentType = req.file.mimetype || "image/jpeg";
-    const blob = await put(req.file.originalname, req.file.buffer, {
-      access: "public",
-      contentType,
-      addRandomSuffix: true,
-      token: process.env.BLOB_READ_WRITE_TOKEN
-    });
-    console.log(`[Upload] File uploaded to Vercel Blob: ${blob.url}`);
-    res.json({ success: true, imageUrl: blob.url });
-  } catch (error) {
-    console.error("[Upload] Error uploading to Vercel Blob:", error);
-    res.status(500).json({ error: "Falha no upload para o Vercel Blob: " + error.message });
-  }
+app.post("/api/upload", authenticateAPI, (req, res) => {
+  upload.single("image")(req, res, async (err) => {
+    if (err) {
+      console.error("[Upload] Multer error:", err);
+      return res.status(400).json({ error: "Erro no upload do arquivo: " + err.message });
+    }
+    if (!req.file) {
+      return res.status(400).json({ error: "Nenhum arquivo enviado" });
+    }
+    try {
+      const contentType = req.file.mimetype || "image/jpeg";
+      const blob = await put(req.file.originalname, req.file.buffer, {
+        access: "public",
+        contentType,
+        addRandomSuffix: true,
+        token: process.env.BLOB_READ_WRITE_TOKEN
+      });
+      console.log(`[Upload] File uploaded to Vercel Blob: ${blob.url}`);
+      res.json({ success: true, imageUrl: blob.url });
+    } catch (error) {
+      console.error("[Upload] Error uploading to Vercel Blob:", error);
+      res.status(500).json({ error: "Falha no upload para o Vercel Blob: " + error.message });
+    }
+  });
 });
 app.post("/api/admin/check-keys", authenticateAPI, async (req, res) => {
   try {
@@ -1957,11 +1999,15 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
 });
 app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   try {
-    const { question } = req.body;
+    const { question, history } = req.body;
     if (!question) {
       return res.status(400).json({ error: "question is required" });
     }
-    const answer = await RagBackendService.askGeminiWithContext(question);
+    const conversationHistory = Array.isArray(history) ? history.slice(-10).map((t) => ({
+      role: t.role === "user" ? "user" : "assistant",
+      text: typeof t.text === "string" ? t.text.substring(0, 1e3) : ""
+    })) : [];
+    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory);
     res.json({ success: true, answer });
   } catch (error) {
     console.error("[Chat RAG API] Erro:", error);

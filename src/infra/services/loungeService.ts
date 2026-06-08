@@ -134,11 +134,26 @@ export const loungeService = {
   /**
    * Vota em um tópico específico dentro de uma Ata.
    */
+  async voteOnAtaTopic(ataId: string, topicIndex: number, userId: string) {
+    const docRef = doc(db, 'daily_summaries', ataId);
+    const voteKey = `topics.${topicIndex}.votes.${userId}`;
+    
+    await updateDoc(docRef, {
+      [voteKey]: true
+    });
+  },
+
   /**
   * Atualiza o link do artigo associado a uma Ata.
   * @param ataId ID da Ata a ser atualizada.
   * @param newArtigo Novo título ou referência do artigo.
   */
+  async updateAtaLink(ataId: string, newArtigo: string) {
+    const docRef = doc(db, 'daily_summaries', ataId);
+    const fieldPath = 'referencias.artigo';
+    await updateDoc(docRef, { [fieldPath]: newArtigo });
+  },
+
   /**
   * Atualiza o link do ebook associado a uma Ata.
   * @param ataId ID da Ata a ser atualizada.

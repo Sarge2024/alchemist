@@ -4,7 +4,7 @@
  * Ponto de encontro da comunidade para discussões em tempo real (Chat) e 
  * consulta de registros históricos da comunidade (Mural de Atas).
  */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { LoungeChat } from '../components/LoungeChat';
 import { MuralDeAtas } from '../components/MuralDeAtas';
@@ -21,33 +21,73 @@ import { Navigate } from 'react-router-dom';
 const Lounge: React.FC = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'chat' | 'atas'>('chat');
+  // Welcome popup state
+  const [showWelcome, setShowWelcome] = useState<boolean>(false);
+  const [welcomeSubject, setWelcomeSubject] = useState<string>('');
+  // Check if user is first visit of the day
+  useEffect(() => {
+    if (!user) return;
+    const today = new Date().toDateString();
+    const lastVisit = localStorage.getItem('loungeLastVisit');
+    if (lastVisit !== today) {
+      setShowWelcome(true);
+    }
+  }, [user]);
+  const handleWelcomeSubmit = () => {
+    // Store today's date to prevent showing again
+    localStorage.setItem('loungeLastVisit', new Date().toDateString());
+    setShowWelcome(false);
+  };
 
   // Enquanto verifica estado de autenticação, pode exibir loading (ou nada)
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
 
   return (
-    <div className="min-h-screen bg-background pb-20">
-      {/* Hero Section */}
-      <section className="pt-8 pb-6 px-4 md:px-8 max-w-[1600px] mx-auto w-full">
-        <div className="w-full">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row md:items-end justify-between gap-8"
-          >
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
-                  <UtensilsCrossed className="w-7 h-7" />
+    <>
+      {/* Welcome Popup */}
+      {showWelcome && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 w-80 text-center shadow-lg border border-primary/20">
+            <h2 className="text-xl font-semibold mb-4 text-primary">Bom dia!</h2>
+            <p className="mb-2 text-primary/80">Eai! O que vamos ver hoje?</p>
+            <input
+              type="text"
+              value={welcomeSubject}
+              onChange={e => setWelcomeSubject(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { handleWelcomeSubmit(); } }}
+              className="w-full mb-4 px-3 py-2 bg-white/20 rounded border border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary"
+              placeholder="Digite um assunto"
+              autoFocus
+            />
+            <button
+              onClick={handleWelcomeSubmit}
+              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition"
+            >
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+      <div className="min-h-screen bg-background pb-20">
+        <section className="pt-8 pb-6 px-4 md:px-8 max-w-[1600px] mx-auto w-full">
+          <div className="w-full">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-col md:flex-row md:items-end justify-between gap-8">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/20">
+                    <UtensilsCrossed className="w-7 h-7" />
+                  </div>
+                  <span className="text-primary font-black uppercase tracking-[0.2em] text-xs">Fase 2: Interatividade</span>
                 </div>
-                <span className="text-primary font-black uppercase tracking-[0.2em] text-xs">Fase 2: Interatividade</span>
+                <h1 className="text-4xl md:text-6xl font-bold text-on-surface tracking-tighter leading-[0.9]">
+                  Lounge <br />
+                  <span className="text-stone-300 dark:text-stone-700">Gastronômico</span>
+                </h1>
               </div>
-              <h1 className="text-4xl md:text-6xl font-bold text-on-surface tracking-tighter leading-[0.9]">
-                Lounge <br />
-                <span className="text-stone-300 dark:text-stone-700">Gastronômico</span>
-              </h1>
-            </div>
 
             {/* Tab Selector */}
             <div className="bg-surface-container p-1.5 md:p-2 rounded-2xl border border-stone-100 dark:border-stone-800 shadow-xl flex flex-row gap-1 w-full md:w-fit overflow-x-auto no-scrollbar">
@@ -129,6 +169,7 @@ const Lounge: React.FC = () => {
         </div>
       </main>
     </div>
+    </>
   );
 };
 
