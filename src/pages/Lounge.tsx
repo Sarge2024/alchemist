@@ -12,7 +12,7 @@ import { ActiveCollaborators } from '../components/ActiveCollaborators';
 import { ChefList } from '../components/ChefList';
 import { MessageSquare, BookOpen, UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 
 /**
  * Página do Lounge Gastronômico (v2.1.0).
@@ -21,9 +21,11 @@ import { Navigate } from 'react-router-dom';
 const Lounge: React.FC = () => {
   const { user, loading } = useAuth();
   const [activeTab, setActiveTab] = useState<'chat' | 'atas'>('chat');
+  const navigate = useNavigate();
   // Welcome popup state
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const [welcomeSubject, setWelcomeSubject] = useState<string>('');
+  const [welcomeStep, setWelcomeStep] = useState<1 | 2>(1);
   // Check if user is first visit of the day
   useEffect(() => {
     if (!user) return;
@@ -33,10 +35,19 @@ const Lounge: React.FC = () => {
       setShowWelcome(true);
     }
   }, [user]);
-  const handleWelcomeSubmit = () => {
+
+  const closeWelcome = () => {
     // Store today's date to prevent showing again
     localStorage.setItem('loungeLastVisit', new Date().toDateString());
     setShowWelcome(false);
+  };
+
+  const handleWelcomeSubmit = () => {
+    if (welcomeSubject.trim()) {
+      setWelcomeStep(2);
+    } else {
+      closeWelcome();
+    }
   };
 
   // Enquanto verifica estado de autenticação, pode exibir loading (ou nada)
@@ -48,24 +59,59 @@ const Lounge: React.FC = () => {
       {/* Welcome Popup */}
       {showWelcome && (
         <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 w-80 text-center shadow-lg border border-primary/20">
-            <h2 className="text-xl font-semibold mb-4 text-primary">Bom dia!</h2>
-            <p className="mb-2 text-primary/80">Eai! O que vamos ver hoje?</p>
-            <input
-              type="text"
-              value={welcomeSubject}
-              onChange={e => setWelcomeSubject(e.target.value)}
-              onKeyDown={e => { if (e.key === 'Enter') { handleWelcomeSubmit(); } }}
-              className="w-full mb-4 px-3 py-2 bg-white/20 rounded border border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Digite um assunto"
-              autoFocus
-            />
-            <button
-              onClick={handleWelcomeSubmit}
-              className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition"
-            >
-              OK
-            </button>
+          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 w-[350px] text-center shadow-lg border border-primary/20">
+            {welcomeStep === 1 ? (
+              <>
+                <h2 className="text-xl font-semibold mb-4 text-primary">Bom dia!</h2>
+                <p className="mb-2 text-primary/80">Eai! O que vamos ver hoje?</p>
+                <input
+                  type="text"
+                  value={welcomeSubject}
+                  onChange={e => setWelcomeSubject(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { handleWelcomeSubmit(); } }}
+                  className="w-full mb-4 px-3 py-2 bg-white/20 rounded border border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Digite um assunto"
+                  autoFocus
+                />
+                <button
+                  onClick={handleWelcomeSubmit}
+                  className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition"
+                >
+                  OK
+                </button>
+              </>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold mb-4 text-primary">Onde procurar?</h2>
+                <p className="mb-4 text-primary/80 text-sm">Escolha onde deseja buscar sobre "{welcomeSubject}":</p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => {
+                      closeWelcome();
+                      navigate(`/explore?q=${encodeURIComponent(welcomeSubject.trim())}`);
+                    }}
+                    className="w-full px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition flex items-center justify-center gap-2"
+                  >
+                    <UtensilsCrossed className="w-4 h-4" /> Receitas
+                  </button>
+                  <button
+                    onClick={() => {
+                      closeWelcome();
+                      navigate(`/acervo?search=${encodeURIComponent(welcomeSubject.trim())}`);
+                    }}
+                    className="w-full px-4 py-2 bg-stone-800 text-white rounded hover:bg-stone-700 transition flex items-center justify-center gap-2"
+                  >
+                    <BookOpen className="w-4 h-4" /> Acervo
+                  </button>
+                  <button
+                    onClick={closeWelcome}
+                    className="w-full px-4 py-2 bg-transparent text-stone-400 border border-stone-600 rounded hover:bg-stone-800 transition mt-2 text-sm"
+                  >
+                    Ficar no Lounge
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
