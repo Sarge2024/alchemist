@@ -13,6 +13,34 @@ import { ChefList } from '../components/ChefList';
 import { MessageSquare, BookOpen, UtensilsCrossed } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+
+const MarkdownText = ({ text }: { text: string }) => {
+  const escapeHtml = (unsafe: string) => {
+    return unsafe
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  };
+
+  const safeText = escapeHtml(text);
+  
+  const html = safeText
+    .replace(/^### (.*$)/gim, '<h3 class="text-lg font-black mt-4 mb-2 text-stone-900 dark:text-white">$1</h3>')
+    .replace(/^## (.*$)/gim, '<h2 class="text-xl font-black mt-5 mb-2 text-stone-900 dark:text-white">$1</h2>')
+    .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-stone-900 dark:text-white">$1</strong>')
+    .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" class="text-primary hover:underline font-medium">$1</a>')
+    .replace(/^\s*\*\s+(.*$)/gim, '<li class="ml-5 list-disc mb-1 text-stone-800 dark:text-stone-300">$1</li>')
+    .replace(/\n/g, '<br />')
+    .replace(/<br \/>(<li)/g, '$1')
+    .replace(/(<\/li>)<br \/>/g, '$1')
+    .replace(/(<\/h[23]>)<br \/>/g, '$1');
+
+  return <div className="text-sm leading-relaxed font-sans text-left text-stone-800 dark:text-stone-300" dangerouslySetInnerHTML={{ __html: html }} />;
+};
 
 /**
  * Página do Lounge Gastronômico (v2.1.0).
@@ -26,6 +54,8 @@ const Lounge: React.FC = () => {
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const [welcomeSubject, setWelcomeSubject] = useState<string>('');
   const [welcomeStep, setWelcomeStep] = useState<1 | 2>(1);
+  const [isLoadingSemantic, setIsLoadingSemantic] = useState(false);
+  const [semanticResult, setSemanticResult] = useState('');
   // Check if user is first visit of the day
   useEffect(() => {
     if (!user) return;
@@ -42,9 +72,36 @@ const Lounge: React.FC = () => {
     setShowWelcome(false);
   };
 
-  const handleWelcomeSubmit = () => {
+  const handleWelcomeSubmit = async () => {
     if (welcomeSubject.trim()) {
       setWelcomeStep(2);
+      setIsLoadingSemantic(true);
+      
+      try {
+        const prompt = `Gere uma lista de links e opções de navegação baseadas no termo: '${welcomeSubject.trim()}'. 
+Pense em elementos semânticos e periféricos. Por exemplo, se for 'churrasco', sugira receitas de carnes, técnicas, e especificamente ferramentas como a [Calculadora de Churrasco](/calculadora-churrasco).
+Seja extremamente sucinto. Retorne apenas uma frase de introdução e uma lista com links em Markdown. Use o formato [Nome do Recurso](/caminho).
+Lembre-se das rotas principais: /explore?q=... e /acervo?search=...`;
+
+        const response = await fetch('/api/chat/ask', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-API-KEY': import.meta.env.VITE_APP_API_KEY || 'alchemist-app-secret-2024'
+          },
+          body: JSON.stringify({ question: prompt, history: [] })
+        });
+        const data = await response.json();
+        if (data.success) {
+          setSemanticResult(data.answer);
+        } else {
+          setSemanticResult('Desculpe, ocorreu um erro ao gerar as opções.');
+        }
+      } catch (error) {
+        setSemanticResult('Não foi possível conectar ao assistente no momento.');
+      } finally {
+        setIsLoadingSemantic(false);
+      }
     } else {
       closeWelcome();
     }
@@ -58,54 +115,71 @@ const Lounge: React.FC = () => {
     <>
       {/* Welcome Popup */}
       {showWelcome && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-50">
-          <div className="bg-white/10 backdrop-blur-lg rounded-xl p-6 w-[350px] text-center shadow-lg border border-primary/20">
+        <div className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-md z-50 p-4">
+          <div className="bg-white dark:bg-stone-900 rounded-xl p-6 w-full max-w-lg text-center shadow-2xl border border-stone-200 dark:border-stone-800">
             {welcomeStep === 1 ? (
               <>
-                <h2 className="text-xl font-semibold mb-4 text-primary">Bom dia!</h2>
-                <p className="mb-2 text-primary/80">Eai! O que vamos ver hoje?</p>
+                <h2 className="text-2xl font-bold mb-4 text-stone-900 dark:text-stone-100">Bom dia!</h2>
+                <p className="mb-4 text-stone-700 dark:text-stone-300">Eai! O que vamos ver hoje?</p>
                 <input
                   type="text"
                   value={welcomeSubject}
                   onChange={e => setWelcomeSubject(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { handleWelcomeSubmit(); } }}
-                  className="w-full mb-4 px-3 py-2 bg-white/20 rounded border border-primary/30 focus:outline-none focus:ring-2 focus:ring-primary"
-                  placeholder="Digite um assunto"
+                  className="w-full mb-6 px-4 py-3 bg-stone-50 dark:bg-stone-950 rounded-lg border border-stone-200 dark:border-stone-800 text-stone-900 dark:text-stone-100 focus:outline-none focus:ring-2 focus:ring-primary"
+                  placeholder="Digite um assunto (ex: churrasco, massas...)"
                   autoFocus
                 />
                 <button
                   onClick={handleWelcomeSubmit}
-                  className="px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition"
+                  className="w-full px-4 py-3 font-semibold bg-primary text-white rounded-lg hover:bg-primary/90 transition"
                 >
                   OK
                 </button>
               </>
             ) : (
               <>
-                <h2 className="text-xl font-semibold mb-4 text-primary">Onde procurar?</h2>
-                <p className="mb-4 text-primary/80 text-sm">Escolha onde deseja buscar sobre "{welcomeSubject}":</p>
+                <h2 className="text-xl font-bold mb-4 text-stone-900 dark:text-stone-100">Sugestões para "{welcomeSubject}"</h2>
+                <div className="bg-stone-50 dark:bg-stone-950 p-4 rounded-lg border border-stone-200 dark:border-stone-800 max-h-80 overflow-y-auto mb-4">
+                  {isLoadingSemantic ? (
+                    <div className="flex flex-col items-center justify-center py-8 text-stone-500 dark:text-stone-400">
+                      <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                      <p>Buscando no acervo...</p>
+                    </div>
+                  ) : (
+                    <div className="prose prose-sm dark:prose-invert text-left" onClick={(e) => {
+                      if ((e.target as HTMLElement).tagName === 'A') {
+                        closeWelcome(); // Close the modal if a link is clicked
+                      }
+                    }}>
+                      <MarkdownText text={semanticResult} />
+                    </div>
+                  )}
+                </div>
                 <div className="flex flex-col gap-3">
-                  <button
-                    onClick={() => {
-                      closeWelcome();
-                      navigate(`/explore?q=${encodeURIComponent(welcomeSubject.trim())}`);
-                    }}
-                    className="w-full px-4 py-2 bg-primary text-white rounded hover:bg-primary/80 transition flex items-center justify-center gap-2"
-                  >
-                    <UtensilsCrossed className="w-4 h-4" /> Receitas
-                  </button>
-                  <button
-                    onClick={() => {
-                      closeWelcome();
-                      navigate(`/acervo?search=${encodeURIComponent(welcomeSubject.trim())}`);
-                    }}
-                    className="w-full px-4 py-2 bg-stone-800 text-white rounded hover:bg-stone-700 transition flex items-center justify-center gap-2"
-                  >
-                    <BookOpen className="w-4 h-4" /> Acervo
-                  </button>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={() => {
+                        closeWelcome();
+                        navigate(`/explore?q=${encodeURIComponent(welcomeSubject.trim())}`);
+                      }}
+                      className="w-full px-4 py-2 bg-primary text-white font-medium rounded-lg hover:bg-primary/90 transition flex items-center justify-center gap-2"
+                    >
+                      <UtensilsCrossed className="w-4 h-4" /> Receitas
+                    </button>
+                    <button
+                      onClick={() => {
+                        closeWelcome();
+                        navigate(`/acervo?search=${encodeURIComponent(welcomeSubject.trim())}`);
+                      }}
+                      className="w-full px-4 py-2 bg-stone-800 dark:bg-stone-700 text-white font-medium rounded-lg hover:bg-stone-700 transition flex items-center justify-center gap-2"
+                    >
+                      <BookOpen className="w-4 h-4" /> Acervo
+                    </button>
+                  </div>
                   <button
                     onClick={closeWelcome}
-                    className="w-full px-4 py-2 bg-transparent text-stone-400 border border-stone-600 rounded hover:bg-stone-800 transition mt-2 text-sm"
+                    className="w-full px-4 py-2 bg-transparent text-stone-500 dark:text-stone-400 font-medium border border-stone-300 dark:border-stone-700 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800 transition"
                   >
                     Ficar no Lounge
                   </button>
