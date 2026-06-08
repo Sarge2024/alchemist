@@ -72,6 +72,56 @@ const BRAZILIAN_STATES = [
   { value: 'TO', label: 'Tocantins' },
 ];
 
+const EXPERIENCIA_OPTIONS = [
+  { value: 'Iniciante', label: 'Iniciante: Sei o básico para sobrevivência (ovos, arroz, massas simples).' },
+  { value: 'Intermediário', label: 'Intermediário: Sigo receitas com facilidade e arrisco algumas criações.' },
+  { value: 'Avançado', label: 'Avançado: Tenho ótima técnica, domino cortes e cozinho intuitivamente.' },
+  { value: 'Profissional', label: 'Profissional: Atuo ou tenho formação na área gastronômica.' }
+];
+
+const FREQUENCIA_OPTIONS = [
+  'Diariamente',
+  'Algumas vezes por semana',
+  'Apenas nos fins de semana / Ocasiões especiais',
+  'Raramente / Nunca'
+];
+
+const PREFERENCIAS_OPTIONS = [
+  'Italiana (Massas, pizzas)',
+  'Japonesa / Asiática (Sushi, lamen, wok)',
+  'Árabe / Do Oriente Médio',
+  'Francesa (Clássica, molhos, alta gastronomia)',
+  'Contemporânea / Fusão',
+  'Comida de Boteco / Petiscos',
+  'Churrasco e Grelhados',
+  'Confeitaria e Panificação'
+];
+
+const RESTRICOES_OPTIONS = [
+  'Nenhuma (Como de tudo)',
+  'Vegetariana',
+  'Vegana',
+  'Restrição a Glúten (Celíaco / Intolerante)',
+  'Intolerância a Lactose',
+  'Dieta Low Carb'
+];
+
+const NUTRICAO_OPTIONS = [
+  'Alto: Busco receitas com contagem de macros/calorias e foco em performance/saúde.',
+  'Moderado: Prefiro opções equilibradas e saudáveis, mas sem rigidez.',
+  'Baixo: Foco apenas no sabor e na experiência, sem preocupação nutricional imediata.',
+  'Foco em Alimentos Funcionais (Imunidade, digestão, etc.)',
+  'Foco em Ingredientes Orgânicos / Naturais'
+];
+
+const CULTURA_OPTIONS = [
+  'História da Gastronomia: Origem dos pratos, evolução dos ingredientes e técnicas ancestrais.',
+  'Turismo Gastronômico: Roteiros de viagem focados em experiências culinárias locais.',
+  'Processos Artesanais: Produção de queijos, vinhos, cervejas, embutidos e fermentação natural.',
+  'Antropologia Alimentar: Como a comida conecta comunidades e molda sociedades.',
+  'Sustentabilidade: Cadeia de suprimentos integrada, desperdício zero e pequenos produtores.'
+];
+
 const MOCK_LEVELS = [
   {
     id: 1,
@@ -249,10 +299,22 @@ export default function Profile() {
   const [formData, setFormData] = useState({
     displayName: '',
     whatsapp: '',
+    birthDate: '',
+    zipcode: '',
+    address: '',
+    addressNumber: '',
+    addressComplement: '',
+    neighborhood: '',
     city: '',
     state: '',
     country: 'Brasil',
     photoURL: '',
+    cookingExperienceLevel: '',
+    cookingFrequency: '',
+    gastronomicPreferences: [] as string[],
+    dietaryRestrictions: [] as string[],
+    nutritionalFocus: [] as string[],
+    culturalInterests: [] as string[],
     role: 'member' as UserProfile['role']
   });
 
@@ -375,10 +437,22 @@ export default function Profile() {
         setFormData({
           displayName: data.displayName || '',
           whatsapp: data.whatsapp || '',
+          birthDate: data.birthDate || '',
+          zipcode: data.zipcode || '',
+          address: data.address || '',
+          addressNumber: data.addressNumber || '',
+          addressComplement: data.addressComplement || '',
+          neighborhood: data.neighborhood || '',
           city: data.city || '',
           state: data.state || '',
           country: data.country || 'Brasil',
           photoURL: data.photoURL || '',
+          cookingExperienceLevel: data.cookingExperienceLevel || '',
+          cookingFrequency: data.cookingFrequency || '',
+          gastronomicPreferences: data.gastronomicPreferences || [],
+          dietaryRestrictions: data.dietaryRestrictions || [],
+          nutritionalFocus: data.nutritionalFocus || [],
+          culturalInterests: data.culturalInterests || [],
           role: data.role || 'member'
         });
       }
@@ -675,43 +749,117 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">WhatsApp</label>
-                  <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
-                    <input 
-                      type="text"
-                      disabled={!isEditing}
-                      value={formData.whatsapp}
-                      onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
-                      className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
-                    />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">WhatsApp</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
+                      <input 
+                        type="text"
+                        disabled={!isEditing}
+                        value={formData.whatsapp}
+                        placeholder="(XX) XXXXX-XXXX"
+                        onChange={(e) => setFormData(prev => ({ ...prev, whatsapp: e.target.value }))}
+                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Data de Nascimento</label>
+                    <div className="relative">
+                      <input 
+                        type="date"
+                        disabled={!isEditing}
+                        value={formData.birthDate}
+                        onChange={(e) => setFormData(prev => ({ ...prev, birthDate: e.target.value }))}
+                        className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-6">
                 <div>
-                  <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Localização</label>
+                  <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Endereço Completo</label>
                   <div className="space-y-4">
-                    <div className="relative">
-                      <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
-                      <input 
-                        type="text"
-                        placeholder="País"
-                        disabled={true}
-                        value="Brasil"
-                        className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all opacity-70 cursor-not-allowed text-on-surface"
-                      />
-                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="relative">
                         <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
+                        <input 
+                          type="text"
+                          placeholder="CEP (XXXXX-XXX)"
+                          disabled={!isEditing}
+                          value={formData.zipcode}
+                          onChange={(e) => setFormData(prev => ({ ...prev, zipcode: e.target.value }))}
+                          className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          placeholder="Logradouro (Rua/Avenida)"
+                          disabled={!isEditing}
+                          value={formData.address}
+                          onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                          className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          placeholder="Número"
+                          disabled={!isEditing}
+                          value={formData.addressNumber}
+                          onChange={(e) => setFormData(prev => ({ ...prev, addressNumber: e.target.value }))}
+                          className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          placeholder="Complemento"
+                          disabled={!isEditing}
+                          value={formData.addressComplement}
+                          onChange={(e) => setFormData(prev => ({ ...prev, addressComplement: e.target.value }))}
+                          className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          placeholder="Bairro"
+                          disabled={!isEditing}
+                          value={formData.neighborhood}
+                          onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                          className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
+                      <div className="relative">
+                        <input 
+                          type="text"
+                          placeholder="Cidade"
+                          disabled={!isEditing}
+                          value={formData.city}
+                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                          className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="relative">
                         <select 
                           disabled={!isEditing}
                           value={formData.state}
                           onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
-                          className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 appearance-none text-on-surface"
+                          className="w-full px-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 appearance-none text-on-surface"
                         >
                           <option value="" disabled>Selecione um Estado</option>
                           {BRAZILIAN_STATES.map(state => (
@@ -720,14 +868,13 @@ export default function Profile() {
                         </select>
                       </div>
                       <div className="relative">
-                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
+                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
                         <input 
                           type="text"
-                          placeholder="Cidade"
-                          disabled={!isEditing}
-                          value={formData.city}
-                          onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
-                          className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
+                          placeholder="País"
+                          disabled={true}
+                          value="Brasil"
+                          className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all opacity-70 cursor-not-allowed text-on-surface"
                         />
                       </div>
                     </div>
@@ -743,86 +890,214 @@ export default function Profile() {
                     </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Box de Classificação como Chef (Admin Only) */}
-                {isAdmin && isEditing && (
-                  <div className="pt-6">
-                    <div className="p-6 bg-amber-50 dark:bg-amber-950/20 rounded-[2rem] border border-amber-200 dark:border-amber-900/50">
-                      <div className="flex items-center gap-3 mb-4">
-                        <Shield className="w-5 h-5 text-amber-600" />
-                        <h3 className="text-sm font-black uppercase tracking-widest text-amber-900 dark:text-amber-400">
-                          Configurações de Acesso
-                        </h3>
+              <div className="col-span-1 md:col-span-2 mt-8 space-y-8 border-t border-surface-container-high pt-8">
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <ChefHat className="w-6 h-6 text-primary" /> Perfil Culinário e Experiência
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Nível de Experiência na Cozinha</label>
+                      <div className="space-y-3">
+                        {EXPERIENCIA_OPTIONS.map(opt => (
+                          <label key={opt.value} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input 
+                              type="radio"
+                              name="cookingExperienceLevel"
+                              value={opt.value}
+                              disabled={!isEditing}
+                              checked={formData.cookingExperienceLevel === opt.value}
+                              onChange={(e) => setFormData(prev => ({ ...prev, cookingExperienceLevel: e.target.value }))}
+                              className="mt-1"
+                            />
+                            <span className="text-sm text-on-surface">{opt.label}</span>
+                          </label>
+                        ))}
                       </div>
-                      
-                      <div className="flex items-center justify-between p-4 bg-surface-container/50 rounded-2xl border border-amber-100/20">
-                        <div>
-                          <div className="font-bold text-on-surface flex items-center gap-2">
-                            Classificar como Chef
-                          </div>
-                          <p className="text-xs text-on-surface-variant">Exibe o selo de Mestre Culinário no Lounge.</p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ 
-                            ...prev, 
-                            role: prev.role === 'chef' ? 'collaborator' : 'chef' 
-                          }))}
-                          className={`
-                            w-12 h-6 rounded-full p-1 transition-colors
-                            ${formData.role === 'chef' ? 'bg-amber-500' : 'bg-surface-container-high'}
-                          `}
-                        >
-                          <div className={`
-                            w-4 h-4 bg-white rounded-full transition-transform
-                            ${formData.role === 'chef' ? 'translate-x-6' : 'translate-x-0'}
-                          `} />
-                        </button>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, role: 'member' }))}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.role === 'member' ? 'bg-on-surface text-background' : 'bg-surface-container-lowest border border-surface-container-high text-on-surface-variant'}`}
-                        >
-                          Membro
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, role: 'collaborator' }))}
-                          className={`px-3 py-2 rounded-xl text-[10px] font-bold uppercase transition-all ${formData.role === 'collaborator' ? 'bg-emerald-500 text-white' : 'bg-surface-container-lowest border border-surface-container-high text-on-surface-variant'}`}
-                        >
-                          Colaborador
-                        </button>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Frequência com que Cozinha</label>
+                      <div className="space-y-3">
+                        {FREQUENCIA_OPTIONS.map(opt => (
+                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input 
+                              type="radio"
+                              name="cookingFrequency"
+                              value={opt}
+                              disabled={!isEditing}
+                              checked={formData.cookingFrequency === opt}
+                              onChange={(e) => setFormData(prev => ({ ...prev, cookingFrequency: e.target.value }))}
+                              className="mt-1"
+                            />
+                            <span className="text-sm text-on-surface">{opt}</span>
+                          </label>
+                        ))}
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <Utensils className="w-6 h-6 text-primary" /> Preferências Gastronômicas e Restrições
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Estilos e Tipos de Cozinha</label>
+                      <div className="space-y-3">
+                        {PREFERENCIAS_OPTIONS.map(opt => (
+                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input 
+                              type="checkbox"
+                              disabled={!isEditing}
+                              checked={formData.gastronomicPreferences.includes(opt)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  gastronomicPreferences: checked 
+                                    ? [...prev.gastronomicPreferences, opt]
+                                    : prev.gastronomicPreferences.filter(p => p !== opt)
+                                }));
+                              }}
+                              className="mt-1"
+                            />
+                            <span className="text-sm text-on-surface">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Restrições ou Dietas Específicas</label>
+                      <div className="space-y-3">
+                        {RESTRICOES_OPTIONS.map(opt => (
+                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input 
+                              type="checkbox"
+                              disabled={!isEditing}
+                              checked={formData.dietaryRestrictions.includes(opt)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  dietaryRestrictions: checked 
+                                    ? [...prev.dietaryRestrictions, opt]
+                                    : prev.dietaryRestrictions.filter(p => p !== opt)
+                                }));
+                              }}
+                              className="mt-1"
+                            />
+                            <span className="text-sm text-on-surface">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <Leaf className="w-6 h-6 text-primary" /> Aspectos Nutricionais e Saúde
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="col-span-1 md:col-span-2">
+                      <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Interesse em Aspectos Nutricionais</label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {NUTRICAO_OPTIONS.map(opt => (
+                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                            <input 
+                              type="checkbox"
+                              disabled={!isEditing}
+                              checked={formData.nutritionalFocus.includes(opt)}
+                              onChange={(e) => {
+                                const checked = e.target.checked;
+                                setFormData(prev => ({
+                                  ...prev,
+                                  nutritionalFocus: checked 
+                                    ? [...prev.nutritionalFocus, opt]
+                                    : prev.nutritionalFocus.filter(p => p !== opt)
+                                }));
+                              }}
+                              className="mt-1"
+                            />
+                            <span className="text-sm text-on-surface">{opt}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <BookOpen className="w-6 h-6 text-primary" /> Cultura Gastronômica
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Interesse em Cultura Gastronômica</label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {CULTURA_OPTIONS.map(opt => (
+                        <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                          <input 
+                            type="checkbox"
+                            disabled={!isEditing}
+                            checked={formData.culturalInterests.includes(opt)}
+                            onChange={(e) => {
+                              const checked = e.target.checked;
+                              setFormData(prev => ({
+                                ...prev,
+                                culturalInterests: checked 
+                                  ? [...prev.culturalInterests, opt]
+                                  : prev.culturalInterests.filter(p => p !== opt)
+                              }));
+                            }}
+                            className="mt-1"
+                          />
+                          <span className="text-sm text-on-surface">{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <AnimatePresence>
                 {isEditing && (
                   <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    className="md:col-span-2 flex justify-end gap-4 mt-8"
+                    exit={{ opacity: 0, y: -20 }}
+                    className="col-span-1 md:col-span-2 pt-8 flex gap-4"
                   >
-                    <button 
-                      type="button"
-                      onClick={() => setIsEditing(false)}
-                      className="px-8 py-4 text-on-surface-variant font-bold hover:text-on-surface transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                    <button 
+                    <button
                       type="submit"
                       disabled={saving}
-                      className="px-12 py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-primary/20 hover:bg-primary-hover transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50"
+                      className="flex-1 px-8 py-4 bg-primary text-white rounded-2xl font-bold shadow-xl shadow-primary/20 hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-70 flex items-center justify-center gap-2"
                     >
-                      {saving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                      Salvar Alterações
+                      {saving ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Salvando...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-5 h-5" />
+                          Salvar Alterações
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => {
+                        setIsEditing(false);
+                        fetchProfile();
+                      }}
+                      className="px-8 py-4 bg-surface-container-high text-on-surface rounded-2xl font-bold hover:bg-surface-container transition-all active:scale-[0.98] disabled:opacity-70 flex items-center gap-2"
+                    >
+                      <X className="w-5 h-5" />
+                      Cancelar
                     </button>
                   </motion.div>
                 )}
