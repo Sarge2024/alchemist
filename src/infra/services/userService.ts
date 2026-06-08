@@ -35,7 +35,7 @@ export interface UserProfile {
   cookingFrequency?: string;
   gastronomicPreferences?: string[];
   dietaryRestrictions?: string[];
-  nutritionalFocus?: string[];
+  nutritionalFocus?: string;
   culturalInterests?: string[];
   role: UserRole;
   internalEmail?: string;

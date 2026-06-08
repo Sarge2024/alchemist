@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import { 
   User, 
   Mail, 
@@ -198,6 +199,7 @@ export default function Profile() {
   const [userInteractions, setUserInteractions] = useState<Record<string, number>>({});
   const [selectedLevelForTips, setSelectedLevelForTips] = useState<number | null>(null);
   const [showTipsPopup, setShowTipsPopup] = useState(false);
+  const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [friendPhone, setFriendPhone] = useState('');
   const [copied, setCopied] = useState(false);
   const baseUrl = (import.meta.env.VITE_APP_URL as string) || window.location.origin;
@@ -313,7 +315,7 @@ export default function Profile() {
     cookingFrequency: '',
     gastronomicPreferences: [] as string[],
     dietaryRestrictions: [] as string[],
-    nutritionalFocus: [] as string[],
+    nutritionalFocus: '' as string,
     culturalInterests: [] as string[],
     role: 'member' as UserProfile['role']
   });
@@ -451,7 +453,7 @@ export default function Profile() {
           cookingFrequency: data.cookingFrequency || '',
           gastronomicPreferences: data.gastronomicPreferences || [],
           dietaryRestrictions: data.dietaryRestrictions || [],
-          nutritionalFocus: data.nutritionalFocus || [],
+          nutritionalFocus: data.nutritionalFocus || '',
           culturalInterests: data.culturalInterests || [],
           role: data.role || 'member'
         });
@@ -537,22 +539,58 @@ export default function Profile() {
       }
       
       // Trigger gamificação do perfil
-      const isComplete = !!(formData.displayName && formData.whatsapp && formData.city && formData.state && formData.photoURL);
-      const profileEvent = isComplete ? 'PROFILE_COMPLETE' : 'PROFILE_PARTIAL';
+      const hadCompleteBadgeBefore = (userInteractions['PROFILE_COMPLETE'] || 0) > 0;
+      
+      const isBasicComplete = !!(
+        formData.displayName && 
+        formData.whatsapp && 
+        formData.city && 
+        formData.state && 
+        formData.photoURL
+      );
+
+      const isFullComplete = !!(
+        isBasicComplete &&
+        formData.birthDate &&
+        formData.address &&
+        formData.cookingExperienceLevel &&
+        formData.cookingFrequency &&
+        formData.gastronomicPreferences.length > 0 &&
+        formData.nutritionalFocus
+      );
+
+      let profileEvent = '';
+      if (isFullComplete) {
+        profileEvent = 'PROFILE_COMPLETE';
+      } else if (isBasicComplete) {
+        profileEvent = 'PROFILE_PARTIAL';
+      }
 
       try {
-        await fetch('/api/gamification/event', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
-          },
-          body: JSON.stringify({
-            uid: targetUid,
-            eventType: profileEvent
-          })
-        });
-        await fetchInteractions();
+        if (profileEvent) {
+          await fetch('/api/gamification/event', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
+            },
+            body: JSON.stringify({
+              uid: targetUid,
+              eventType: profileEvent
+            })
+          });
+          await fetchInteractions();
+          
+          if (profileEvent === 'PROFILE_COMPLETE' && !hadCompleteBadgeBefore) {
+            setShowCelebrationModal(true);
+            confetti({
+              particleCount: 150,
+              spread: 70,
+              origin: { y: 0.6 },
+              colors: ['#10b981', '#fbbf24', '#f59e0b', '#3b82f6', '#ec4899']
+            });
+          }
+        }
       } catch (gamiErr) {
         console.error("Erro ao registrar evento de gamificação de perfil:", gamiErr);
       }
@@ -563,6 +601,28 @@ export default function Profile() {
       setError('Falha ao salvar alterações.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const fetchAddressFromCep = async (cep: string) => {
+    const cleanCep = cep.replace(/\D/g, '');
+    if (cleanCep.length === 8) {
+      try {
+        const response = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+        const data = await response.json();
+        
+        if (!data.erro) {
+          setFormData(prev => ({
+            ...prev,
+            address: data.logradouro || prev.address,
+            neighborhood: data.bairro || prev.neighborhood,
+            city: data.localidade || prev.city,
+            state: data.uf || prev.state
+          }));
+        }
+      } catch (err) {
+        console.error("Erro ao buscar CEP:", err);
+      }
     }
   };
 
@@ -791,7 +851,16 @@ export default function Profile() {
                           placeholder="CEP (XXXXX-XXX)"
                           disabled={!isEditing}
                           value={formData.zipcode}
-                          onChange={(e) => setFormData(prev => ({ ...prev, zipcode: e.target.value }))}
+                          onChange={(e) => {
+                            let val = e.target.value.replace(/\D/g, '');
+                            if (val.length > 8) val = val.slice(0, 8);
+                            if (val.length > 5) val = val.slice(0, 5) + '-' + val.slice(5);
+                            setFormData(prev => ({ ...prev, zipcode: val }));
+                            
+                            if (val.replace(/\D/g, '').length === 8) {
+                              fetchAddressFromCep(val);
+                            }
+                          }}
                           className="w-full pl-12 pr-4 py-4 bg-background border border-surface-container-high rounded-2xl focus:ring-4 focus:ring-primary/10 outline-none transition-all disabled:opacity-70 text-on-surface"
                         />
                       </div>
@@ -900,9 +969,9 @@ export default function Profile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Nível de Experiência na Cozinha</label>
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-2 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                         {EXPERIENCIA_OPTIONS.map(opt => (
-                          <label key={opt.value} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                          <label key={opt.value} className="flex items-start gap-3 py-1.5 cursor-pointer hover:text-primary transition-colors group">
                             <input 
                               type="radio"
                               name="cookingExperienceLevel"
@@ -912,16 +981,16 @@ export default function Profile() {
                               onChange={(e) => setFormData(prev => ({ ...prev, cookingExperienceLevel: e.target.value }))}
                               className="mt-1"
                             />
-                            <span className="text-sm text-on-surface">{opt.label}</span>
+                            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt.label}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                     <div>
                       <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Frequência com que Cozinha</label>
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-2 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                         {FREQUENCIA_OPTIONS.map(opt => (
-                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                          <label key={opt} className="flex items-start gap-3 py-1.5 cursor-pointer hover:text-primary transition-colors group">
                             <input 
                               type="radio"
                               name="cookingFrequency"
@@ -931,7 +1000,7 @@ export default function Profile() {
                               onChange={(e) => setFormData(prev => ({ ...prev, cookingFrequency: e.target.value }))}
                               className="mt-1"
                             />
-                            <span className="text-sm text-on-surface">{opt}</span>
+                            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt}</span>
                           </label>
                         ))}
                       </div>
@@ -946,9 +1015,9 @@ export default function Profile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                       <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Estilos e Tipos de Cozinha</label>
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-2 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                         {PREFERENCIAS_OPTIONS.map(opt => (
-                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                          <label key={opt} className="flex items-start gap-3 py-1.5 cursor-pointer hover:text-primary transition-colors group">
                             <input 
                               type="checkbox"
                               disabled={!isEditing}
@@ -964,16 +1033,16 @@ export default function Profile() {
                               }}
                               className="mt-1"
                             />
-                            <span className="text-sm text-on-surface">{opt}</span>
+                            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt}</span>
                           </label>
                         ))}
                       </div>
                     </div>
                     <div>
                       <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Restrições ou Dietas Específicas</label>
-                      <div className="space-y-3">
+                      <div className="flex flex-col gap-2 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                         {RESTRICOES_OPTIONS.map(opt => (
-                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                          <label key={opt} className="flex items-start gap-3 py-1.5 cursor-pointer hover:text-primary transition-colors group">
                             <input 
                               type="checkbox"
                               disabled={!isEditing}
@@ -989,7 +1058,7 @@ export default function Profile() {
                               }}
                               className="mt-1"
                             />
-                            <span className="text-sm text-on-surface">{opt}</span>
+                            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt}</span>
                           </label>
                         ))}
                       </div>
@@ -1004,25 +1073,19 @@ export default function Profile() {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="col-span-1 md:col-span-2">
                       <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Interesse em Aspectos Nutricionais</label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                         {NUTRICAO_OPTIONS.map(opt => (
-                          <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                          <label key={opt} className="flex items-start gap-3 py-1.5 cursor-pointer hover:text-primary transition-colors group">
                             <input 
-                              type="checkbox"
+                              type="radio"
+                              name="nutritionalFocus"
+                              value={opt}
                               disabled={!isEditing}
-                              checked={formData.nutritionalFocus.includes(opt)}
-                              onChange={(e) => {
-                                const checked = e.target.checked;
-                                setFormData(prev => ({
-                                  ...prev,
-                                  nutritionalFocus: checked 
-                                    ? [...prev.nutritionalFocus, opt]
-                                    : prev.nutritionalFocus.filter(p => p !== opt)
-                                }));
-                              }}
+                              checked={formData.nutritionalFocus === opt}
+                              onChange={(e) => setFormData(prev => ({ ...prev, nutritionalFocus: e.target.value }))}
                               className="mt-1"
                             />
-                            <span className="text-sm text-on-surface">{opt}</span>
+                            <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt}</span>
                           </label>
                         ))}
                       </div>
@@ -1036,9 +1099,9 @@ export default function Profile() {
                   </h3>
                   <div className="grid grid-cols-1 gap-3">
                     <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Interesse em Cultura Gastronômica</label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                       {CULTURA_OPTIONS.map(opt => (
-                        <label key={opt} className="flex items-start gap-3 p-3 bg-surface-container-lowest border border-surface-container-high rounded-xl cursor-pointer hover:bg-surface-container-low transition-colors">
+                        <label key={opt} className="flex items-start gap-3 py-1.5 cursor-pointer hover:text-primary transition-colors group">
                           <input 
                             type="checkbox"
                             disabled={!isEditing}
@@ -1054,7 +1117,7 @@ export default function Profile() {
                             }}
                             className="mt-1"
                           />
-                          <span className="text-sm text-on-surface">{opt}</span>
+                          <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt}</span>
                         </label>
                       ))}
                     </div>
@@ -1598,6 +1661,51 @@ export default function Profile() {
         onClose={handleCloseLevelUpPopup}
         onChooseAvatar={handleChooseNewAvatar}
       />
+
+      {/* Celebration Modal */}
+      <AnimatePresence>
+        {showCelebrationModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowCelebrationModal(false)}
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ type: "spring", duration: 0.6, bounce: 0.4 }}
+              className="bg-surface dark:bg-surface-container rounded-3xl p-8 max-w-sm w-full border-2 border-emerald-500/30 shadow-2xl relative z-10 overflow-hidden text-center"
+            >
+              <div className="absolute top-0 right-0 w-[150px] h-[150px] bg-emerald-500/10 rounded-full blur-[40px] -mr-10 -mt-10 pointer-events-none"></div>
+              <div className="absolute bottom-0 left-0 w-[150px] h-[150px] bg-primary/10 rounded-full blur-[40px] -ml-10 -mb-10 pointer-events-none"></div>
+              
+              <div className="mx-auto w-24 h-24 mb-6 relative">
+                <div className="absolute inset-0 bg-emerald-500/20 rounded-full animate-ping opacity-75"></div>
+                <div className="relative w-full h-full bg-gradient-to-tr from-emerald-400 to-teal-500 rounded-full flex items-center justify-center border-4 border-surface shadow-xl">
+                  <CheckCircle2 className="w-12 h-12 text-white" />
+                </div>
+              </div>
+
+              <h2 className="text-2xl font-black text-on-surface mb-2">Cadastro Completo!</h2>
+              <p className="text-on-surface-variant text-sm mb-6 font-medium">
+                Selo alcançado! Você desbloqueou uma nova meta em seu Certificado de Conquistas.
+              </p>
+
+              <button
+                onClick={() => setShowCelebrationModal(false)}
+                className="w-full py-3.5 bg-on-surface dark:bg-primary text-background dark:text-white rounded-xl font-bold hover:opacity-90 transition-opacity cursor-pointer"
+              >
+                Continuar Jornada
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
