@@ -966,7 +966,7 @@ var geminiService = {
       
       REGRAS ESTRITAS DE RETORNO (JSON):
       - title, description.
-      - momento (string[]): USE APENAS: 'Caf\xE9 da Manh\xE3', 'Brunch', 'Almo\xE7o', 'Lanche / Ch\xE1 da Tarde', 'Jantar', 'Ceia', 'Petiscos / Aperitivos', 'Bebidas'. (Pode ser mais de um).
+      - momento (string[]): USE APENAS: 'Caf\xE9 da Manh\xE3', 'Brunch', 'Almo\xE7o', 'Lanche / Ch\xE1 da Tarde', 'Jantar', 'Ceia', 'Entradas', 'B\xE1sicas', 'Petiscos&Food Tricks', 'Bebidas'. (Pode ser mais de um).
       - tipo_prato (string[]): USE APENAS: 'Assados', 'Frituras', 'Grelhados', 'Sopas e Caldos', 'Cremes e Pur\xE9s', 'Massas e Risotos', 'Saladas e Pratos Frios', 'Cozidos / Guisados', 'Padaria e Pastelaria', 'Bebidas', 'Doces e Sobremesas'.
       - base_alimento (string[]): USE APENAS: 'Carnes', 'Frutos do Mar', 'Vegetais e Legumes', 'Ovos e Latic\xEDnios', 'Gr\xE3os e Leguminosas'.
       - origem (string): USE PREFERENCIALMENTE: 'Latino-Americana', 'Brasileira', 'Mexicana', 'Argentina', 'Asi\xE1tica', 'Japonesa', 'Chinesa', 'Tailandesa', 'Coreana', 'Indiana', 'Europeia', 'Italiana', 'Francesa', 'Portuguesa', 'Espanhola', '\xC1rabe / M\xE9dio Oriente', 'Americana'.
@@ -997,9 +997,13 @@ var geminiService = {
     const contentPrompt = isUrlOnly ? `Acesse e pesquise PROFUNDAMENTE os detalhes da receita no seguinte link: ${options.url}. 
          O site pode estar bloqueando acessos diretos, ent\xE3o use sua ferramenta de busca (Google Search) para encontrar o conte\xFAdo desta URL exata ou de fontes que repliquem esta receita espec\xEDfica.
          Procure por: T\xEDtulo, Ingredientes, Modo de Preparo, Tempo e Imagens.
-         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.` : `Extraia os dados da receita do seguinte HTML: ${html.substring(0, 3e4)}. 
+         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos&Food Tricks'.
+         Se for uma entrada, antipasto ou couvert, classifique como 'Entradas'.
+         Se for uma receita b\xE1sica do cotidiano (arroz, feij\xE3o, molhos base), classifique como 'B\xE1sicas'.` : `Extraia os dados da receita do seguinte HTML: ${html.substring(0, 3e4)}. 
          Ignore an\xFAncios e navega\xE7\xE3o. Foque no conte\xFAdo central da receita.
-         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.`;
+         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos&Food Tricks'.
+         Se for uma entrada, antipasto ou couvert, classifique como 'Entradas'.
+         Se for uma receita b\xE1sica do cotidiano (arroz, feij\xE3o, molhos base), classifique como 'B\xE1sicas'.`;
     const prompt = `
       ${basePrompt}
       ${contentPrompt}
@@ -1059,7 +1063,7 @@ var geminiService = {
       }
       recipeData.title = String(recipeData.title || "").substring(0, 300);
       recipeData.description = String(recipeData.description || "").substring(0, 5e3);
-      const ALL_MOMENTOS = ["Caf\xE9 da Manh\xE3", "Brunch", "Almo\xE7o", "Lanche / Ch\xE1 da Tarde", "Jantar", "Ceia", "Petiscos / Aperitivos", "Bebidas"];
+      const ALL_MOMENTOS = ["Caf\xE9 da Manh\xE3", "Brunch", "Almo\xE7o", "Lanche / Ch\xE1 da Tarde", "Jantar", "Ceia", "Entradas", "B\xE1sicas", "Petiscos&Food Tricks", "Bebidas"];
       recipeData.momento = Array.isArray(recipeData.momento) ? recipeData.momento.filter((m) => ALL_MOMENTOS.includes(m)) : [];
       if (recipeData.momento.length === 0) recipeData.momento = ["Almo\xE7o"];
       const ALL_TIPOS = ["Assados", "Frituras", "Grelhados", "Sopas e Caldos", "Cremes e Pur\xE9s", "Massas e Risotos", "Saladas e Pratos Frios", "Cozidos / Guisados", "Padaria e Pastelaria", "Bebidas", "Doces e Sobremesas"];
@@ -1250,6 +1254,17 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
           },
           required: ["query"]
         }
+      },
+      {
+        name: "check_gamification_status",
+        description: "Verifica o status de gamifica\xE7\xE3o do usu\xE1rio, incluindo n\xEDvel, XP, selos e contagem de eventos que pontuam (ex: publica\xE7\xE3o de receitas, perfil completo). O MCP deve usar essa ferramenta para validar os eventos do usu\xE1rio.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            uid: { type: "string", description: "O UID (Supabase) do usu\xE1rio para verificar o status." }
+          },
+          required: ["uid"]
+        }
       }
     ]
   };
@@ -1266,6 +1281,37 @@ mcpServer.setRequestHandler(CallToolRequestSchema, async (request) => {
       console.error("[MCP] Erro na ferramenta get_gastronomic_context:", error);
       return {
         content: [{ type: "text", text: `Erro ao buscar contexto: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+  if (request.params.name === "check_gamification_status") {
+    const uid = request.params.arguments?.uid;
+    try {
+      const profile = await GamificationService.getProfile(uid);
+      if (!profile) {
+        return {
+          content: [{ type: "text", text: `Perfil de gamifica\xE7\xE3o n\xE3o encontrado para o UID: ${uid}` }]
+        };
+      }
+      const user = await prisma.user.findUnique({ where: { uid } });
+      const interactions = await prisma.userInteraction.findMany({
+        where: { userId: user?.id }
+      });
+      const statusText = `Status de Gamifica\xE7\xE3o do Usu\xE1rio:
+N\xEDvel Atual: ${profile.nivel} (${profile.grau})
+XP Total: ${profile.xp_total} / Meta Pr\xF3ximo N\xEDvel: ${profile.meta_nivel}
+Selos Conquistados: ${profile.user?.badges.map((b) => b.badge.nome).join(", ") || "Nenhum"}
+
+Eventos e Pontua\xE7\xF5es Registradas:
+${interactions.length > 0 ? interactions.map((i) => `- Evento: ${i.eventType} | Contagem: ${i.count}`).join("\n") : "Nenhuma intera\xE7\xE3o registrada ainda."}`;
+      return {
+        content: [{ type: "text", text: statusText }]
+      };
+    } catch (error) {
+      console.error("[MCP] Erro na ferramenta check_gamification_status:", error);
+      return {
+        content: [{ type: "text", text: `Erro ao buscar status de gamifica\xE7\xE3o: ${error.message}` }],
         isError: true
       };
     }

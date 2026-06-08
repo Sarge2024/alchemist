@@ -10,6 +10,8 @@ import { useState, useEffect } from 'react';
 import { recipeService, Recipe } from '../infra/services/recipeService';
 import { RecipeCard } from '../components/RecipeCard';
 import { ASSETS, getAssetUrl } from '../lib/assets';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const CATEGORIES = [
   { 
@@ -50,10 +52,26 @@ export default function Home() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [customImages, setCustomImages] = useState<Record<string, string>>({});
+  const [loadingImages, setLoadingImages] = useState(true);
 
   useEffect(() => {
     loadRecentRecipes();
+    loadCustomImages();
   }, []);
+
+  const loadCustomImages = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'categoryImages'));
+      if (snap.exists()) {
+        setCustomImages(snap.data() as Record<string, string>);
+      }
+    } catch (err) {
+      console.error('Error loading custom images:', err);
+    } finally {
+      setLoadingImages(false);
+    }
+  };
 
   const loadRecentRecipes = async () => {
     try {
@@ -181,8 +199,14 @@ export default function Home() {
             </Link>
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap md:justify-center gap-3 md:gap-16">
-          {CATEGORIES.map((cat, i) => (
+        
+        {loadingImages ? (
+          <div className="flex justify-center items-center py-12">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap md:justify-center gap-3 md:gap-16">
+            {CATEGORIES.map((cat, i) => (
             <Link 
               key={i} 
               to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}
@@ -196,7 +220,7 @@ export default function Home() {
                 whileHover={{ y: -5 }}
                 className="hidden md:block w-32 h-32 rounded-full overflow-hidden border-4 border-transparent group-hover:border-primary transition-all duration-300 p-1 bg-surface-container shadow-inner"
               >
-                <img src={getAssetUrl(cat.img)} alt={cat.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                <img src={getAssetUrl(customImages[cat.name] || cat.img)} alt={cat.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
               </motion.div>
 
               <div className="flex flex-col md:items-center min-w-0">
@@ -213,7 +237,8 @@ export default function Home() {
               </div>
             </Link>
           ))}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* Recent Recipes */}

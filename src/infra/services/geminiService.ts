@@ -38,7 +38,7 @@ export const geminiService = {
       
       REGRAS ESTRITAS DE RETORNO (JSON):
       - title, description.
-      - momento (string[]): USE APENAS: 'Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Petiscos / Aperitivos', 'Bebidas'. (Pode ser mais de um).
+      - momento (string[]): USE APENAS: 'Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Entradas', 'Básicas', 'Petiscos&Food Tricks', 'Bebidas'. (Pode ser mais de um).
       - tipo_prato (string[]): USE APENAS: 'Assados', 'Frituras', 'Grelhados', 'Sopas e Caldos', 'Cremes e Purés', 'Massas e Risotos', 'Saladas e Pratos Frios', 'Cozidos / Guisados', 'Padaria e Pastelaria', 'Bebidas', 'Doces e Sobremesas'.
       - base_alimento (string[]): USE APENAS: 'Carnes', 'Frutos do Mar', 'Vegetais e Legumes', 'Ovos e Laticínios', 'Grãos e Leguminosas'.
       - origem (string): USE PREFERENCIALMENTE: 'Latino-Americana', 'Brasileira', 'Mexicana', 'Argentina', 'Asiática', 'Japonesa', 'Chinesa', 'Tailandesa', 'Coreana', 'Indiana', 'Europeia', 'Italiana', 'Francesa', 'Portuguesa', 'Espanhola', 'Árabe / Médio Oriente', 'Americana'.
@@ -71,10 +71,14 @@ export const geminiService = {
       ? `Acesse e pesquise PROFUNDAMENTE os detalhes da receita no seguinte link: ${options.url}. 
          O site pode estar bloqueando acessos diretos, então use sua ferramenta de busca (Google Search) para encontrar o conteúdo desta URL exata ou de fontes que repliquem esta receita específica.
          Procure por: Título, Ingredientes, Modo de Preparo, Tempo e Imagens.
-         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.`
+         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos&Food Tricks'.
+         Se for uma entrada, antipasto ou couvert, classifique como 'Entradas'.
+         Se for uma receita básica do cotidiano (arroz, feijão, molhos base), classifique como 'Básicas'.`
       : `Extraia os dados da receita do seguinte HTML: ${html.substring(0, 30000)}. 
          Ignore anúncios e navegação. Foque no conteúdo central da receita.
-         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos / Aperitivos'.`;
+         Se for um petisco, quitute ou acompanhamento para coffee break, classifique como 'Petiscos&Food Tricks'.
+         Se for uma entrada, antipasto ou couvert, classifique como 'Entradas'.
+         Se for uma receita básica do cotidiano (arroz, feijão, molhos base), classifique como 'Básicas'.`;
 
     const prompt = `
       ${basePrompt}
@@ -158,7 +162,7 @@ export const geminiService = {
 
       recipeData.description = String(recipeData.description || "").substring(0, 5000);
       
-      const ALL_MOMENTOS = ['Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Petiscos / Aperitivos', 'Bebidas'];
+      const ALL_MOMENTOS = ['Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Entradas', 'Básicas', 'Petiscos&Food Tricks', 'Bebidas'];
       recipeData.momento = Array.isArray(recipeData.momento) 
         ? recipeData.momento.filter((m: string) => ALL_MOMENTOS.includes(m))
         : [];

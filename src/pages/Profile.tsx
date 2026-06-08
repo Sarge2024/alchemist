@@ -583,12 +583,27 @@ export default function Profile() {
           
           if (profileEvent === 'PROFILE_COMPLETE' && !hadCompleteBadgeBefore) {
             setShowCelebrationModal(true);
-            confetti({
-              particleCount: 150,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: ['#10b981', '#fbbf24', '#f59e0b', '#3b82f6', '#ec4899']
-            });
+            const duration = 15 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000, colors: ['#10b981', '#fbbf24', '#f59e0b', '#3b82f6', '#ec4899'] };
+
+            const interval: any = setInterval(function() {
+              const timeLeft = animationEnd - Date.now();
+
+              if (timeLeft <= 0) {
+                return clearInterval(interval);
+              }
+
+              const particleCount = 50 * (timeLeft / duration);
+              confetti({
+                ...defaults, particleCount,
+                origin: { x: Math.random() * 0.5, y: Math.random() * 0.5 }
+              });
+              confetti({
+                ...defaults, particleCount,
+                origin: { x: Math.random() * 0.5 + 0.5, y: Math.random() * 0.5 }
+              });
+            }, 250);
           }
         }
       } catch (gamiErr) {

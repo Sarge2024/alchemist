@@ -19,7 +19,9 @@ export const ASSETS = {
     DINNER: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?auto=format&fit=crop&q=80&w=800',
     DRINKS: 'https://images.unsplash.com/photo-1541529086526-db283c563270?auto=format&fit=crop&q=80&w=800',
     DESSERTS: 'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&q=80&w=800',
-    SNACKS: 'https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?auto=format&fit=crop&q=80&w=800',
+    SNACKS: '/images/categories/petiscos.png',
+    ENTRADAS: '/images/categories/entradas.png',
+    BASICAS: '/images/categories/basicas.png',
   },
   MOCKS: {
     TAPIOCA: 'https://images.unsplash.com/photo-1541519227354-08fa5d50c44d?auto=format&fit=crop&q=80&w=800',

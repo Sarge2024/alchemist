@@ -10,7 +10,7 @@
         "image": { "type": "string", "description": "URL da imagem da receita" },
         "momento": { 
           "type": "array", 
-          "items": { "type": "string", "enum": ["Café da Manhã", "Brunch", "Almoço", "Lanche / Chá da Tarde", "Jantar", "Ceia", "Petiscos / Aperitivos", "Bebidas"] },
+          "items": { "type": "string", "enum": ["Café da Manhã", "Brunch", "Almoço", "Lanche / Chá da Tarde", "Jantar", "Ceia", "Entradas", "Básicas", "Petiscos&Food Tricks", "Bebidas"] },
           "description": "Momentos de consumo ideais" 
         },
         "tipo_prato": {

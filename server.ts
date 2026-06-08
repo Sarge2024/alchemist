@@ -956,18 +956,29 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
-        user = await prisma.user.create({
-          data: {
-            uid,
-            displayName: userData?.displayName || 'Sem Nome',
-            email: userData?.email || `${uid}@example.com`,
-            photoURL: userData?.photoURL || null,
-            whatsapp: userData?.whatsapp || null,
-            state: userData?.state || 'ES',
-            country: userData?.country || 'BR'
-          }
-        });
-        console.log(`[Gamification Event API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
+        const emailToUse = userData?.email || `${uid}@example.com`;
+        let existingUserByEmail = await prisma.user.findUnique({ where: { email: emailToUse } });
+        
+        if (existingUserByEmail) {
+          user = await prisma.user.update({
+            where: { email: emailToUse },
+            data: { uid: uid, displayName: userData?.displayName || existingUserByEmail.displayName }
+          });
+          console.log(`[Gamification Event API] Usuário ${user.displayName} teve o UID atualizado no Prisma.`);
+        } else {
+          user = await prisma.user.create({
+            data: {
+              uid,
+              displayName: userData?.displayName || 'Sem Nome',
+              email: emailToUse,
+              photoURL: userData?.photoURL || null,
+              whatsapp: userData?.whatsapp || null,
+              state: userData?.state || 'ES',
+              country: userData?.country || 'BR'
+            }
+          });
+          console.log(`[Gamification Event API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
+        }
       } else {
         return res.json({ success: false, error: `Usuário com UID ${uid} não encontrado no Firestore nem no Prisma.` });
       }
@@ -1044,18 +1055,29 @@ app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
-        user = await prisma.user.create({
-          data: {
-            uid,
-            displayName: userData?.displayName || 'Sem Nome',
-            email: userData?.email || `${uid}@example.com`,
-            photoURL: userData?.photoURL || null,
-            whatsapp: userData?.whatsapp || null,
-            state: userData?.state || 'ES',
-            country: userData?.country || 'BR'
-          }
-        });
-        console.log(`[Profile API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
+        const emailToUse = userData?.email || `${uid}@example.com`;
+        let existingUserByEmail = await prisma.user.findUnique({ where: { email: emailToUse } });
+        
+        if (existingUserByEmail) {
+          user = await prisma.user.update({
+            where: { email: emailToUse },
+            data: { uid: uid, displayName: userData?.displayName || existingUserByEmail.displayName }
+          });
+          console.log(`[Profile API] Usuário ${user.displayName} teve o UID atualizado no Prisma.`);
+        } else {
+          user = await prisma.user.create({
+            data: {
+              uid,
+              displayName: userData?.displayName || 'Sem Nome',
+              email: emailToUse,
+              photoURL: userData?.photoURL || null,
+              whatsapp: userData?.whatsapp || null,
+              state: userData?.state || 'ES',
+              country: userData?.country || 'BR'
+            }
+          });
+          console.log(`[Profile API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
+        }
       }
     }
 

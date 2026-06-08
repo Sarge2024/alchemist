@@ -102,10 +102,12 @@ export default function Explore() {
       case 'Café da Manhã': return 'bg-yellow-100 text-yellow-700';
       case 'Almoço': return 'bg-primary-fixed text-on-primary-fixed';
       case 'Jantar': return 'bg-secondary-container text-on-secondary-container';
-      case 'Petiscos / Aperitivos': return 'bg-orange-100 text-orange-700';
+      case 'Petiscos&Food Tricks': return 'bg-orange-100 text-orange-700';
       case 'Lanche / Chá da Tarde': return 'bg-blue-100 text-blue-700';
       case 'Brunch': return 'bg-indigo-100 text-indigo-700';
       case 'Bebidas': return 'bg-cyan-100 text-cyan-700';
+      case 'Entradas': return 'bg-rose-100 text-rose-700';
+      case 'Básicas': return 'bg-lime-100 text-lime-700';
       default: return 'bg-stone-100 text-stone-700';
     }
   };
@@ -269,7 +271,7 @@ export default function Explore() {
                   Momento <ChevronDown className="w-4 h-4" />
                 </button>
                 <div className="mt-3 space-y-2 text-sm text-on-surface-variant">
-                  {['Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Petiscos / Aperitivos', 'Bebidas'].map(cat => (
+                  {['Café da Manhã', 'Brunch', 'Almoço', 'Lanche / Chá da Tarde', 'Jantar', 'Ceia', 'Entradas', 'Básicas', 'Petiscos&Food Tricks', 'Bebidas'].map(cat => (
                     <label key={cat} className="flex items-center gap-2 cursor-pointer">
                       <input 
                         type="radio" 

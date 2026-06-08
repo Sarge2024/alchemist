@@ -299,7 +299,7 @@ export default function Submit() {
     setFormData(prev => ({ ...prev, [field]: current }));
   };
 
-  const MOMENTOS = ["Café da Manhã", "Brunch", "Almoço", "Lanche / Chá da Tarde", "Jantar", "Ceia", "Petiscos / Aperitivos", "Bebidas"];
+  const MOMENTOS = ["Café da Manhã", "Brunch", "Almoço", "Lanche / Chá da Tarde", "Jantar", "Ceia", "Entradas", "Básicas", "Petiscos&Food Tricks", "Bebidas"];
   const TIPOS_PRATO = ["Assados", "Frituras", "Grelhados", "Sopas e Caldos", "Cremes e Purés", "Massas e Risotos", "Saladas e Pratos Frios", "Cozidos / Guisados", "Padaria e Pastelaria", "Bebidas", "Doces e Sobremesas"];
   const BASES_ALIMENTO = ["Carnes", "Frutos do Mar", "Vegetais e Legumes", "Ovos e Laticínios", "Grãos e Leguminosas"];
   const ORIGENS = ["Latino-Americana", "Brasileira", "Mexicana", "Argentina", "Asiática", "Japonesa", "Chinesa", "Tailandesa", "Coreana", "Indiana", "Europeia", "Italiana", "Francesa", "Portuguesa", "Espanhola", "Árabe / Médio Oriente", "Americana"];
