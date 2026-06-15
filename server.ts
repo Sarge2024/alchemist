@@ -1368,6 +1368,97 @@ app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async 
   }
 });
 
+// ==========================================
+// ACERVO (Library) API - PostgreSQL
+// ==========================================
+
+// Listar Acervo
+app.get("/api/library", authenticateAPI, async (req, res) => {
+  try {
+    const items = await prisma.libraryItem.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json(items);
+  } catch (error) {
+    console.error("Erro ao listar acervo:", error);
+    res.status(500).json({ error: "Erro ao listar acervo" });
+  }
+});
+
+// Criar Item no Acervo
+app.post("/api/library", authenticateAPI, async (req, res) => {
+  try {
+    const { title, description, type, category, tags, url, thumbnail, author } = req.body;
+    
+    if (!title || !description || !type || !url) {
+      return res.status(400).json({ error: "Dados incompletos para criar item no acervo." });
+    }
+
+    const newItem = await prisma.libraryItem.create({
+      data: {
+        title,
+        description,
+        type,
+        category: category || '',
+        tags: tags || [],
+        url,
+        thumbnail,
+        author: author || 'Autor Desconhecido'
+      }
+    });
+
+    // Sincronizar com o RAG (PostgreSQL SemanticDocument) de forma assíncrona
+    RagBackendService.indexLibraryItemToRAG(newItem).catch(err => {
+      console.error("[RAG] Falha ao indexar novo item do acervo:", err);
+    });
+
+    res.json({ success: true, item: newItem, id: newItem.id });
+  } catch (error) {
+    console.error("Erro ao criar item no acervo:", error);
+    res.status(500).json({ error: "Erro ao criar item no acervo" });
+  }
+});
+
+// Atualizar Item no Acervo
+app.put("/api/library/:id", authenticateAPI, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, type, category, tags, url, thumbnail, author } = req.body;
+
+    const updated = await prisma.libraryItem.update({
+      where: { id },
+      data: { title, description, type, category, tags, url, thumbnail, author }
+    });
+
+    // Sincronizar com o RAG
+    RagBackendService.indexLibraryItemToRAG(updated).catch(err => {
+      console.error("[RAG] Falha ao re-indexar item do acervo:", err);
+    });
+
+    res.json({ success: true, item: updated });
+  } catch (error) {
+    console.error("Erro ao atualizar acervo:", error);
+    res.status(500).json({ error: "Erro ao atualizar item no acervo" });
+  }
+});
+
+// Deletar Item no Acervo
+app.delete("/api/library/:id", authenticateAPI, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.libraryItem.delete({ where: { id } });
+    
+    // Deletar o vetor associado
+    const docId = `library-${id}`;
+    await prisma.semanticDocument.deleteMany({ where: { id: docId } });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Erro ao deletar acervo:", error);
+    res.status(500).json({ error: "Erro ao deletar item no acervo" });
+  }
+});
+
 async function startServer() {
   // Garantir a semeadura automática dos selos no startup
   await GamificationService.ensureBadgesSeeded();

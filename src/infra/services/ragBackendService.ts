@@ -349,6 +349,52 @@ Dicas do Chef: ${recipe.chefTips || ''}
   }
 
   /**
+   * Indexa uma publicação do Acervo (LibraryItem) diretamente no PostgreSQL gerando seu Embedding.
+   */
+  static async indexLibraryItemToRAG(item: any) {
+    try {
+      console.log(`[RAG Library Sync] Indexando item do acervo: "${item.title}"`);
+      const docId = `library-${item.id}`;
+      const ai = await this.getGeminiClient();
+
+      const content = `
+Título: ${item.title}
+Descrição: ${item.description || ''}
+Categoria: ${item.category || ''}
+Tipo: ${item.type || ''}
+Autor: ${item.author || ''}
+Tags: ${Array.isArray(item.tags) ? item.tags.join(', ') : ''}
+      `.trim();
+
+      const embedResponse = await ai.models.embedContent({
+        model: "gemini-embedding-2",
+        contents: `[Acervo Técnico] ${item.title}: ${content}`,
+        config: { outputDimensionality: 768 }
+      } as any);
+
+      const queryVector = embedResponse.embeddings?.[0]?.values;
+      if (!queryVector || queryVector.length !== 768) {
+        console.warn(`[RAG Library Sync] Falha ao gerar embedding para acervo "${item.title}".`);
+        return;
+      }
+
+      const vectorLiteral = `[${queryVector.join(',')}]`;
+      const docType = item.type === 'presentation' ? 'presentation' : 'article';
+
+      await prisma.$executeRawUnsafe(`
+        INSERT INTO "SemanticDocument" (id, title, content, url, type, embedding, "updatedAt")
+        VALUES ($1, $2, $3, $4, $5, $6::vector, NOW())
+        ON CONFLICT (id) DO UPDATE 
+        SET title = EXCLUDED.title, content = EXCLUDED.content, url = EXCLUDED.url, type = EXCLUDED.type, embedding = EXCLUDED.embedding, "updatedAt" = EXCLUDED."updatedAt"
+      `, docId, `Acervo Técnico: ${item.title}`, content, item.url || '', docType, vectorLiteral);
+
+      console.log(`[RAG Library Sync] Item indexado com sucesso: ${item.id}`);
+    } catch (err) {
+      console.error(`[RAG Library Sync] Erro ao indexar acervo "${item.id}":`, err);
+    }
+  }
+
+  /**
    * Generates a proactive response based on a list of recent lounge messages to stimulate conversation.
    */
   static async generateProactiveResponse(recentMessages: { text: string; senderName: string }[]): Promise<string> {

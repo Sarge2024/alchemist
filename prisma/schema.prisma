@@ -139,3 +139,18 @@ model SemanticDocument {
 
   @@index([type])
 }
+
+model LibraryItem {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  type        String
+  category    String
+  tags        String[]
+  url         String
+  thumbnail   String?
+  author      String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+

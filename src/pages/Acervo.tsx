@@ -169,7 +169,7 @@ export default function Acervo() {
         const localItem: LibraryItem = {
           id: newItemId,
           ...newItemData,
-          createdAt: { toDate: () => new Date() }
+          createdAt: new Date().toISOString()
         };
         setItems(prev => [localItem, ...prev]);
 
@@ -410,8 +410,7 @@ export default function Acervo() {
                       <div className="px-3 py-1 rounded-full bg-surface-container text-[10px] font-black uppercase tracking-widest text-on-surface-variant">
                         {item.category}
                       </div>
-                      {/* Badge Novo se criado nos últimos 5 minutos */}
-                      {item.createdAt?.toDate?.() && (Date.now() - item.createdAt.toDate().getTime() < 5 * 60 * 1000) && (
+                      {item.createdAt && (Date.now() - new Date(item.createdAt).getTime() < 5 * 60 * 1000) && (
                         <div className="px-3 py-1 rounded-full bg-primary text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
                           Novo
                         </div>
