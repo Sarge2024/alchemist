@@ -190,6 +190,11 @@ var RagBackendService = class {
    */
   static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5) {
     try {
+      const lowerQ = userQuestion.toLowerCase();
+      const isSalesQuery = (lowerQ.includes("venda") || lowerQ.includes("comprar") || lowerQ.includes("loja") || lowerQ.includes("shop") || lowerQ.includes("pre\xE7o") || lowerQ.includes("custo")) && (lowerQ.includes("produto") || lowerQ.includes("utens\xEDlio") || lowerQ.includes("faca") || lowerQ.includes("equipamento") || lowerQ.includes("panela"));
+      if (isSalesQuery || lowerQ.includes("venda de produto")) {
+        return "Infelizmente ainda n\xE3o, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde.";
+      }
       const ai = await this.getGeminiClient();
       const context = await this.getSemanticContext(userQuestion, limit);
       const historyBlock = conversationHistory.length > 0 ? conversationHistory.map((t) => `${t.role === "user" ? "USU\xC1RIO" : "ASSISTENTE"}: ${t.text}`).join("\n") : "";

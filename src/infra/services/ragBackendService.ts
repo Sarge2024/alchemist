@@ -36,6 +36,27 @@ export class RagBackendService {
    */
   static async askGeminiWithContext(userQuestion: string, conversationHistory: ConversationTurn[] = [], limit = 5): Promise<string> {
     try {
+      const lowerQ = userQuestion.toLowerCase();
+      // Interceptador rígido para perguntas sobre vendas de produtos/utensílios
+      const isSalesQuery = (
+        lowerQ.includes('venda') || 
+        lowerQ.includes('comprar') || 
+        lowerQ.includes('loja') || 
+        lowerQ.includes('shop') || 
+        lowerQ.includes('preço') ||
+        lowerQ.includes('custo')
+      ) && (
+        lowerQ.includes('produto') || 
+        lowerQ.includes('utensílio') || 
+        lowerQ.includes('faca') || 
+        lowerQ.includes('equipamento') ||
+        lowerQ.includes('panela')
+      );
+
+      if (isSalesQuery || lowerQ.includes('venda de produto')) {
+        return "Infelizmente ainda não, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde.";
+      }
+
       const ai = await this.getGeminiClient();
 
       const context = await this.getSemanticContext(userQuestion, limit);
