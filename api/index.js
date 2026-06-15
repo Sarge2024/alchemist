@@ -191,9 +191,9 @@ var RagBackendService = class {
   static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5) {
     try {
       const lowerQ = userQuestion.toLowerCase();
-      const isSalesQuery = (lowerQ.includes("venda") || lowerQ.includes("comprar") || lowerQ.includes("loja") || lowerQ.includes("shop") || lowerQ.includes("pre\xE7o") || lowerQ.includes("custo")) && (lowerQ.includes("produto") || lowerQ.includes("utens\xEDlio") || lowerQ.includes("faca") || lowerQ.includes("equipamento") || lowerQ.includes("panela"));
+      const isSalesQuery = (lowerQ.includes("venda") || lowerQ.includes("comprar") || lowerQ.includes("loja") || lowerQ.includes("shop") || lowerQ.includes("pre\xE7o") || lowerQ.includes("custo") || lowerQ.includes("comercializa\xE7\xE3o")) && (lowerQ.includes("produto") || lowerQ.includes("utens\xEDlio") || lowerQ.includes("faca") || lowerQ.includes("equipamento") || lowerQ.includes("panela") || lowerQ.includes("colher") || lowerQ.includes("prato") || lowerQ.includes("mesa"));
       if (isSalesQuery || lowerQ.includes("venda de produto")) {
-        return "Infelizmente ainda n\xE3o, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde.";
+        return "Ainda n\xE3o, mas muito em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde.";
       }
       const ai = await this.getGeminiClient();
       const context = await this.getSemanticContext(userQuestion, limit);
@@ -241,8 +241,8 @@ ${context || "Nenhum resultado encontrado no acervo para esta consulta."}
 ---
 
 ## REGRAS ABSOLUTAS DE RESPOSTA (SOBRESCREVEM QUALQUER CONTEXTO)
-1. Se a pergunta do usu\xE1rio for sobre VENDA DE PRODUTOS, LOJA, COMPRAR UTENS\xCDLIOS, FACAS, EQUIPAMENTOS ou qualquer tipo de com\xE9rcio:
-   Voc\xEA DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Infelizmente ainda n\xE3o, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (N\xC3O ADICIONE MAIS NADA)
+1. Se a pergunta do usu\xE1rio for explicitamente sobre a COMERCIALIZA\xC7\xC3O, COMPRA ou VENDA de (produtos, loja, ferramentas de cozinha, facas, equipamentos, panelas, etc):
+   Voc\xEA DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Ainda n\xE3o, mas muito em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (N\xC3O ADICIONE MAIS NADA). NOTA: Se a pergunta for apenas sobre o USO culin\xE1rio de facas/panelas (ex: "como amolar uma faca"), N\xC3O aplique esta regra, e responda normalmente ajudando o usu\xE1rio.
 
 2. Se a pergunta N\xC3O tiver rela\xE7\xE3o com culin\xE1ria, gastronomia, ingredientes ou t\xE9cnicas (ou seja, fora do tema do site):
    Voc\xEA DEVE responder EXATAMENTE E APENAS: "O tema n\xE3o faz aparte de nosso acervo"

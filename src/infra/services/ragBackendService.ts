@@ -39,22 +39,26 @@ export class RagBackendService {
       const lowerQ = userQuestion.toLowerCase();
       // Interceptador rígido para perguntas sobre vendas de produtos/utensílios
       const isSalesQuery = (
-        lowerQ.includes('venda') || 
-        lowerQ.includes('comprar') || 
-        lowerQ.includes('loja') || 
-        lowerQ.includes('shop') || 
+        lowerQ.includes('venda') ||
+        lowerQ.includes('comprar') ||
+        lowerQ.includes('loja') ||
+        lowerQ.includes('shop') ||
         lowerQ.includes('preço') ||
-        lowerQ.includes('custo')
+        lowerQ.includes('custo') ||
+        lowerQ.includes('comercialização')
       ) && (
-        lowerQ.includes('produto') || 
-        lowerQ.includes('utensílio') || 
-        lowerQ.includes('faca') || 
-        lowerQ.includes('equipamento') ||
-        lowerQ.includes('panela')
-      );
+          lowerQ.includes('produto') ||
+          lowerQ.includes('utensílio') ||
+          lowerQ.includes('faca') ||
+          lowerQ.includes('equipamento') ||
+          lowerQ.includes('panela') ||
+          lowerQ.includes('colher') ||
+          lowerQ.includes('prato') ||
+          lowerQ.includes('mesa')
+        );
 
       if (isSalesQuery || lowerQ.includes('venda de produto')) {
-        return "Infelizmente ainda não, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde.";
+        return "Ainda não, mas muito em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde.";
       }
 
       const ai = await this.getGeminiClient();
@@ -109,8 +113,8 @@ ${context || "Nenhum resultado encontrado no acervo para esta consulta."}
 ---
 
 ## REGRAS ABSOLUTAS DE RESPOSTA (SOBRESCREVEM QUALQUER CONTEXTO)
-1. Se a pergunta do usuário for sobre VENDA DE PRODUTOS, LOJA, COMPRAR UTENSÍLIOS, FACAS, EQUIPAMENTOS ou qualquer tipo de comércio:
-   Você DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Infelizmente ainda não, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (NÃO ADICIONE MAIS NADA)
+1. Se a pergunta do usuário for explicitamente sobre a COMERCIALIZAÇÃO, COMPRA ou VENDA de (produtos, loja, ferramentas de cozinha, facas, equipamentos, panelas, etc):
+   Você DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Ainda não, mas muito em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (NÃO ADICIONE MAIS NADA). NOTA: Se a pergunta for apenas sobre o USO culinário de facas/panelas (ex: "como amolar uma faca"), NÃO aplique esta regra, e responda normalmente ajudando o usuário.
 
 2. Se a pergunta NÃO tiver relação com culinária, gastronomia, ingredientes ou técnicas (ou seja, fora do tema do site):
    Você DEVE responder EXATAMENTE E APENAS: "O tema não faz aparte de nosso acervo"
@@ -151,7 +155,7 @@ ${userQuestion}
     } as any);
 
     const queryVector = embeddingResponse.embeddings?.[0]?.values;
-    
+
     if (!queryVector || queryVector.length !== 768) {
       return "";
     }
@@ -203,7 +207,7 @@ ${userQuestion}
 
     // 2. Chamar o serviço do Google de forma vetorizada (em lote)
     const ai = await this.getGeminiClient();
-    
+
     console.log(`[RAG Sync] Gerando embeddings para ${messages.length} mensagens...`);
     const embeddingResponse = await ai.models.embedContent({
       model: "gemini-embedding-2",
@@ -221,15 +225,15 @@ ${userQuestion}
 
     // 3. Inserção em massa (Bulk Insert) no PostgreSQL usando SQL bruto e transações
     console.log("[RAG Sync] Salvando vetores no PostgreSQL...");
-    
+
     // We run queries sequentially or via transaction
     for (let i = 0; i < messages.length; i++) {
       const m = messages[i];
       const queryVector = embeddings[i].values;
       if (!queryVector || queryVector.length !== 768) continue;
-      
+
       const vectorLiteral = `[${queryVector.join(',')}]`;
-      
+
       await prisma.$executeRawUnsafe(`
         INSERT INTO "SemanticDocument" (id, title, content, type, embedding, "updatedAt")
         VALUES ($1, $2, $3, 'chat_summary', $4::vector, NOW())
@@ -247,7 +251,7 @@ ${userQuestion}
   static async syncRecipesToPostgreSQL() {
     console.log("[RAG Recipe Sync] Iniciando sincronização de receitas para o PostgreSQL...");
     const db = getFirestore();
-    
+
     // 1. Ler todas as receitas do Firestore
     const snapshot = await db.collection("recipes").get();
     if (snapshot.empty) {
@@ -264,12 +268,12 @@ ${userQuestion}
     for (const recipe of recipes) {
       try {
         const docId = `recipe-${recipe.id}`;
-        
+
         // Obter updatedAt do Firestore de forma segura
-        const firestoreUpdatedAt = recipe.updatedAt?.toDate 
-          ? recipe.updatedAt.toDate() 
-          : (recipe.updatedAt?._seconds 
-            ? new Date(recipe.updatedAt._seconds * 1000) 
+        const firestoreUpdatedAt = recipe.updatedAt?.toDate
+          ? recipe.updatedAt.toDate()
+          : (recipe.updatedAt?._seconds
+            ? new Date(recipe.updatedAt._seconds * 1000)
             : (recipe.updatedAt ? new Date(recipe.updatedAt) : new Date()));
 
         // Verificar se já existe e está atualizado
@@ -418,8 +422,8 @@ Dicas do Chef: ${recipe.chefTips || ''}
       }
 
       // 2. Count approved user messages in the last 15 minutes
-      const recentUserMessages = docs.filter(d => 
-        d.timestampDate.getTime() >= fifteenMinutesAgo.getTime() && 
+      const recentUserMessages = docs.filter(d =>
+        d.timestampDate.getTime() >= fifteenMinutesAgo.getTime() &&
         d.status === 'approved' &&
         d.senderId !== 'copilot-agent'
       );
@@ -428,7 +432,7 @@ Dicas do Chef: ${recipe.chefTips || ''}
 
       if (recentUserMessages.length >= 5) {
         console.log("[Proactive] High interaction density detected! Triggering proactive response.");
-        
+
         // Sort chronologically for context
         recentUserMessages.sort((a, b) => a.timestampDate.getTime() - b.timestampDate.getTime());
 
@@ -456,7 +460,7 @@ Dicas do Chef: ${recipe.chefTips || ''}
           ...copilotMessage,
           timestamp: FieldValue.serverTimestamp()
         });
-        
+
         console.log("[Proactive] Proactive Alchemist message posted successfully.");
       }
     } catch (error) {
