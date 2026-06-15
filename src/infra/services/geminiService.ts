@@ -101,22 +101,32 @@ export const geminiService = {
         const apiKey = apiKeys[i];
         try {
           const client = new GoogleGenAI({ apiKey });
-          
-          const result = await client.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            ...(isUrlOnly ? { tools: [{ googleSearch: {} }] } : {})
-          } as any);
-          
-          response = result;
-          
-          // Sucesso: sai do loop de tentativas
-          break;
+          // List of models to try in order of preference
+          const models = ["gemini-3-flash-preview", "gemini-1.0-pro"];
+          for (const modelName of models) {
+            try {
+              const result = await client.models.generateContent({
+                model: modelName,
+                contents: [{ role: "user", parts: [{ text: prompt }] }]
+              } as any);
+              response = result;
+              // Success, exit both loops
+              break;
+            } catch (modelErr: any) {
+              // Treat quota exhausted or service unavailable (503) as retryable
+              if (isQuotaExhaustedError(modelErr) || modelErr?.status === 503) {
+                console.warn(`[Alquimia do Prato] Model ${modelName} failed (status ${modelErr?.status}), trying next model...`);
+                continue;
+              }
+              // Other errors are fatal for this key
+              throw modelErr;
+            }
+          }
+          if (response) break; // got a good response, stop trying more keys
         } catch (error: any) {
           lastError = error;
-          
           if (isQuotaExhaustedError(error) && i < apiKeys.length - 1) {
-            console.warn(`[Alquimia do Prato] Transmutando limites: a cota da chave ${i + 1} foi atingida. Ativando reserva ${i + 2} de ${apiKeys.length}...`);
+            console.warn(`[Alquimia do Prato] Transmutando limites: chave ${i + 1} atingida, usando reserva ${i + 2}/${apiKeys.length}`);
             continue;
           }
           throw error;
@@ -264,8 +274,7 @@ export const geminiService = {
               const client = new GoogleGenAI({ apiKey: apiKeys[i] });
               const result = await client.models.generateContent({
                 model: "gemini-3-flash-preview",
-                contents: [{ role: "user", parts: [{ text: searchPrompt }] }],
-                ...(true ? { tools: [{ googleSearch: {} }] } : {})
+                contents: [{ role: "user", parts: [{ text: searchPrompt }] }]
               } as any);
               
               searchResponse = result;
@@ -329,15 +338,37 @@ export const geminiService = {
 
 
       return finalResult;
-    } catch (error: any) {
-      console.error("Gemini extraction error:", error);
-      
-      if (isQuotaExhaustedError(error)) {
-        throw new Error("Falha na Extração: O limite da cota gratuita da Inteligência Artificial (Gemini) foi atingido. Verifique o plano de faturamento no Google AI Studio.");
+      } catch (error: any) {
+        console.error("Gemini extraction error:", error);
+
+        // If quota exhausted, log and continue with fallback
+        if (isQuotaExhaustedError(error)) {
+          console.warn("Quota exhausted for Gemini model, using fallback recipe.");
+        }
+
+        // Build a minimal fallback recipe using available metadata
+        const fallback: Partial<Recipe> = {
+          title: options?.url?.split('/')?.pop()?.replace(/[-_]/g, ' ') || 'Receita sem título',
+          description: options?.metaDescription || '',
+          momento: [],
+          tipo_prato: [],
+          base_alimento: [],
+          origem: '',
+          custo_estimado: '',
+          dietType: '',
+          time: '',
+          prepTime: '',
+          servings: '',
+          difficulty: '',
+          isClassic: false,
+          ingredients: [],
+          instructions: [],
+          chefTips: '',
+          image: options?.ogImage || '',
+          imageOptions: options?.allImagesFound || []
+        };
+        return fallback;
       }
-      
-      throw new Error("Falha ao extrair dados da receita via AI.");
-    }
   },
 
   /**

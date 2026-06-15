@@ -447,12 +447,11 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
   }
 
   try {
-    new URL(url);
-
+    const parsedBaseUrl = new URL(url);
     if (firecrawl) {
       console.log(`Using Firecrawl to scrape: ${url}`);
       const scrapeResult = await firecrawl.scrape(url, {
-        formats: ["html"],
+        formats: ["markdown"],
         onlyMainContent: true,
         waitFor: 3000
       }) as any;
@@ -460,7 +459,7 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
       if (scrapeResult && (scrapeResult.html || scrapeResult.markdown)) {
         return res.json({
           success: true,
-          html: scrapeResult.html || scrapeResult.markdown,
+          html: (scrapeResult.markdown || scrapeResult.html || "").substring(0, 50000),
           metaDescription: scrapeResult.metadata?.description || "",
           ogImage: scrapeResult.metadata?.ogImage || scrapeResult.metadata?.image || "",
           allImagesFound: scrapeResult.metadata?.images || []
@@ -506,11 +505,14 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
 
     const allImagesFound: string[] = [];
     doc.querySelectorAll('img').forEach(img => {
-      const src = img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('srcset')?.split(' ')[0];
-      if (src && src.startsWith('http') && !src.includes('logo') && !src.includes('icon')) {
-        if (src.match(/\.(jpg|jpeg|png|webp|gif)/i)) {
-          allImagesFound.push(src);
-        }
+      let src = img.getAttribute('src') || img.getAttribute('data-src') || img.getAttribute('srcset')?.split(' ')[0];
+      if (src) {
+        try {
+          const absoluteUrl = new URL(src, parsedBaseUrl.origin).toString();
+          if (absoluteUrl.match(/\.(jpg|jpeg|png|webp|gif)/i) && !absoluteUrl.includes('logo') && !absoluteUrl.includes('icon')) {
+            allImagesFound.push(absoluteUrl);
+          }
+        } catch (e) {}
       }
     });
     const uniqueImages = Array.from(new Set(allImagesFound)).slice(0, 15);
@@ -639,6 +641,17 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
           console.log(`[Lounge API] Resposta do Alchemist salva com sucesso!`);
         } catch (err) {
           console.error("[Lounge API] Erro ao gerar resposta do Alchemist:", err);
+          const fallbackMessage = {
+            text: "Desculpe, nossos servidores estão em delay, pergunte novamente por favor",
+            senderId: 'copilot-agent',
+            senderName: 'Alchemist',
+            senderRole: 'agent',
+            timestamp: FieldValue.serverTimestamp(),
+            status: 'approved',
+            reactions: {},
+            metadata: { isBot: true, replyTo: docRef.id }
+          };
+          await db.collection('lounge_messages').add(fallbackMessage).catch(e => console.error("[Lounge API] Falha final ao salvar fallback:", e));
         }
       });
     }
@@ -936,7 +949,7 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
     res.json({ success: true, answer });
   } catch (error: any) {
     console.error("[Chat RAG API] Erro:", error);
-    res.status(500).json({ success: false, error: "Erro ao consultar o assistente." });
+    res.json({ success: true, answer: "Desculpe, nossos servidores estão em delay, pergunte novamente por favor" });
   }
 });
 

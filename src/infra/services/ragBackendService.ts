@@ -35,16 +35,17 @@ export class RagBackendService {
    * Suporta histórico de conversa para manter contexto multi-turno.
    */
   static async askGeminiWithContext(userQuestion: string, conversationHistory: ConversationTurn[] = [], limit = 5): Promise<string> {
-    const ai = await this.getGeminiClient();
+    try {
+      const ai = await this.getGeminiClient();
 
-    const context = await this.getSemanticContext(userQuestion, limit);
+      const context = await this.getSemanticContext(userQuestion, limit);
 
-    // Build conversation history block for multi-turn context
-    const historyBlock = conversationHistory.length > 0
-      ? conversationHistory.map(t => `${t.role === 'user' ? 'USUÁRIO' : 'ASSISTENTE'}: ${t.text}`).join('\n')
-      : '';
+      // Build conversation history block for multi-turn context
+      const historyBlock = conversationHistory.length > 0
+        ? conversationHistory.map(t => `${t.role === 'user' ? 'USUÁRIO' : 'ASSISTENTE'}: ${t.text}`).join('\n')
+        : '';
 
-    const finalPrompt = `
+      const finalPrompt = `
 Você é o **Chef IA Alchemist**, o assistente culinário mestre do portal "Alquimia do Prato".
 Você é apaixonado por culinária, técnicas de cozinha, história dos alimentos e alquimia gastronômica.
 
@@ -67,11 +68,7 @@ Você deve GUIAR o usuário passo a passo com perguntas de acompanhamento ao inv
 - Se houver receitas relevantes no contexto, SEMPRE apresente-as com links clicáveis no formato: [Nome da Receita](/recipe/ID)
 - Destaque que "temos isso no nosso acervo" ou "encontrei receitas no portal" para dar valor ao conteúdo proprietário.
 - Se o contexto inclui artigos ou discussões históricas, mencione: "No nosso Acervo Técnico, há artigos que discutem isso."
-- Se NÃO encontrou nada no contexto, seja honesto: "Ainda não temos essa receita no nosso acervo, mas posso te ajudar com o que sei!"
-
-## RESTRIÇÃO DE ESCOPO
-- Se a pergunta NÃO tem NENHUMA relação com culinária, gastronomia, ingredientes, técnicas ou cultura alimentar:
-  Responda gentilmente: "Sou especializado em culinária e gastronomia. Posso ajudar com receitas, técnicas de cozinha ou qualquer dúvida sobre alimentos! 🧑‍🍳"
+- Se NÃO encontrou nada no contexto ou não conseguir produzir uma informação válida, responda EXATAMENTE: "Ainda não temos uma informação para este termo, mas já está anotado para incluirmos logo que processada a pendência"
 
 ## FORMATAÇÃO
 - Use Markdown: **negrito** para destaques, ### para títulos de seção, listas com * para ingredientes/passos.
@@ -90,16 +87,32 @@ ${context || "Nenhum resultado encontrado no acervo para esta consulta."}
 
 ---
 
+## REGRAS ABSOLUTAS DE RESPOSTA (SOBRESCREVEM QUALQUER CONTEXTO)
+1. Se a pergunta do usuário for sobre VENDA DE PRODUTOS, LOJA, COMPRAR UTENSÍLIOS, FACAS, EQUIPAMENTOS ou qualquer tipo de comércio:
+   Você DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Infelizmente ainda não, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (NÃO ADICIONE MAIS NADA)
+
+2. Se a pergunta NÃO tiver relação com culinária, gastronomia, ingredientes ou técnicas (ou seja, fora do tema do site):
+   Você DEVE responder EXATAMENTE E APENAS: "O tema não faz aparte de nosso acervo"
+
+3. Se a pergunta for de culinária mas NÃO houver nenhuma informação válida no contexto recuperado:
+   Você DEVE responder EXATAMENTE E APENAS: "Ainda não temos uma informação para este termo, mas já está anotado para incluirmos logo que processada a pendência"
+
+---
+
 ## MENSAGEM ATUAL DO USUÁRIO
 ${userQuestion}
 `;
 
-    const generation = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: finalPrompt,
-    });
+      const generation = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: finalPrompt,
+      });
 
-    return generation.text || "Sem resposta.";
+      return generation.text || "Ainda não temos uma informação para este termo, mas já está anotado para incluirmos logo que processada a pendência";
+    } catch (error) {
+      console.error("[RagBackendService] Resource or API Error:", error);
+      return "Desculpe, nossos servidores estão em delay, pergunte novamente por favor";
+    }
   }
 
   /**

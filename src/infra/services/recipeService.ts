@@ -511,8 +511,49 @@ export const recipeService = {
     }
 
     const { html, metaDescription, ogImage, allImagesFound } = responseData;
-    const scrapedRecipe = await geminiService.extractRecipeFromHtml(html, { metaDescription, ogImage, allImagesFound });
-
+    // ==== Nestlé site specific parsing ==== //
+    if (url.includes('receitasnestle.com.br')) {
+      try {
+        // Lazy‑load cheerio to avoid extra bundle weight when not needed
+        const cheerio = await import('cheerio');
+        const $ = cheerio.load(html);
+        const title = $('h1').first().text().trim();
+        const description = $('meta[name="description"]').attr('content') || '';
+        const ingredients: any[] = [];
+        $('ul.ingredients-list li, .ingredients li').each((_, el) => {
+          const txt = $(el).text().trim();
+          // Simple split on first numeric token
+          const match = txt.match(/^([\d/\.\s]+[a-zA-Z]*?)\s+(.*)$/);
+          if (match) {
+            ingredients.push({ name: match[2], quantity: match[1] });
+          } else {
+            ingredients.push({ name: txt, quantity: '' });
+          }
+        });
+        const instructions: string[] = [];
+        $('ol.preparation-steps li, .preparation li').each((_, el) => {
+          const step = $(el).text().trim();
+          if (step) instructions.push(step);
+        });
+        // If we have at least title and ingredients, consider it a successful parse
+        if (title && ingredients.length && instructions.length) {
+          const nestleResult: Partial<Recipe> = {
+            title,
+            description,
+            ingredients,
+            instructions,
+            image: ogImage || (allImagesFound && allImagesFound[0]) || '',
+            imageOptions: allImagesFound || []
+          };
+          return nestleResult;
+        }
+      } catch (e) {
+        console.error('Erro ao parsear receita Nestlé com Cheerio:', e);
+      }
+    }
+    // If site‑specific parsing does not yield sufficient data, we fall back to the Gemini model for extraction
+// Fallback to Gemini extraction when site‑specific parsing fails or isn’t applicable
+    const scrapedRecipe = await geminiService.extractRecipeFromHtml(html, { metaDescription, ogImage, allImagesFound, url });
     return scrapedRecipe;
   }
 };

@@ -189,10 +189,11 @@ var RagBackendService = class {
    * Suporta histórico de conversa para manter contexto multi-turno.
    */
   static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5) {
-    const ai = await this.getGeminiClient();
-    const context = await this.getSemanticContext(userQuestion, limit);
-    const historyBlock = conversationHistory.length > 0 ? conversationHistory.map((t) => `${t.role === "user" ? "USU\xC1RIO" : "ASSISTENTE"}: ${t.text}`).join("\n") : "";
-    const finalPrompt = `
+    try {
+      const ai = await this.getGeminiClient();
+      const context = await this.getSemanticContext(userQuestion, limit);
+      const historyBlock = conversationHistory.length > 0 ? conversationHistory.map((t) => `${t.role === "user" ? "USU\xC1RIO" : "ASSISTENTE"}: ${t.text}`).join("\n") : "";
+      const finalPrompt = `
 Voc\xEA \xE9 o **Chef IA Alchemist**, o assistente culin\xE1rio mestre do portal "Alquimia do Prato".
 Voc\xEA \xE9 apaixonado por culin\xE1ria, t\xE9cnicas de cozinha, hist\xF3ria dos alimentos e alquimia gastron\xF4mica.
 
@@ -215,11 +216,7 @@ Voc\xEA deve GUIAR o usu\xE1rio passo a passo com perguntas de acompanhamento ao
 - Se houver receitas relevantes no contexto, SEMPRE apresente-as com links clic\xE1veis no formato: [Nome da Receita](/recipe/ID)
 - Destaque que "temos isso no nosso acervo" ou "encontrei receitas no portal" para dar valor ao conte\xFAdo propriet\xE1rio.
 - Se o contexto inclui artigos ou discuss\xF5es hist\xF3ricas, mencione: "No nosso Acervo T\xE9cnico, h\xE1 artigos que discutem isso."
-- Se N\xC3O encontrou nada no contexto, seja honesto: "Ainda n\xE3o temos essa receita no nosso acervo, mas posso te ajudar com o que sei!"
-
-## RESTRI\xC7\xC3O DE ESCOPO
-- Se a pergunta N\xC3O tem NENHUMA rela\xE7\xE3o com culin\xE1ria, gastronomia, ingredientes, t\xE9cnicas ou cultura alimentar:
-  Responda gentilmente: "Sou especializado em culin\xE1ria e gastronomia. Posso ajudar com receitas, t\xE9cnicas de cozinha ou qualquer d\xFAvida sobre alimentos! \u{1F9D1}\u200D\u{1F373}"
+- Se N\xC3O encontrou nada no contexto ou n\xE3o conseguir produzir uma informa\xE7\xE3o v\xE1lida, responda EXATAMENTE: "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia"
 
 ## FORMATA\xC7\xC3O
 - Use Markdown: **negrito** para destaques, ### para t\xEDtulos de se\xE7\xE3o, listas com * para ingredientes/passos.
@@ -238,14 +235,30 @@ ${context || "Nenhum resultado encontrado no acervo para esta consulta."}
 
 ---
 
+## REGRAS ABSOLUTAS DE RESPOSTA (SOBRESCREVEM QUALQUER CONTEXTO)
+1. Se a pergunta do usu\xE1rio for sobre VENDA DE PRODUTOS, LOJA, COMPRAR UTENS\xCDLIOS, FACAS, EQUIPAMENTOS ou qualquer tipo de com\xE9rcio:
+   Voc\xEA DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Infelizmente ainda n\xE3o, mas em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (N\xC3O ADICIONE MAIS NADA)
+
+2. Se a pergunta N\xC3O tiver rela\xE7\xE3o com culin\xE1ria, gastronomia, ingredientes ou t\xE9cnicas (ou seja, fora do tema do site):
+   Voc\xEA DEVE responder EXATAMENTE E APENAS: "O tema n\xE3o faz aparte de nosso acervo"
+
+3. Se a pergunta for de culin\xE1ria mas N\xC3O houver nenhuma informa\xE7\xE3o v\xE1lida no contexto recuperado:
+   Voc\xEA DEVE responder EXATAMENTE E APENAS: "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia"
+
+---
+
 ## MENSAGEM ATUAL DO USU\xC1RIO
 ${userQuestion}
 `;
-    const generation = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: finalPrompt
-    });
-    return generation.text || "Sem resposta.";
+      const generation = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: finalPrompt
+      });
+      return generation.text || "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia";
+    } catch (error) {
+      console.error("[RagBackendService] Resource or API Error:", error);
+      return "Desculpe, nossos servidores est\xE3o em delay, pergunte novamente por favor";
+    }
   }
   /**
    * Retorna apenas o contexto semântico formatado para um dado texto de busca
@@ -1022,17 +1035,28 @@ var geminiService = {
         const apiKey = apiKeys[i];
         try {
           const client = new GoogleGenAI4({ apiKey });
-          const result = await client.models.generateContent({
-            model: "gemini-3-flash-preview",
-            contents: [{ role: "user", parts: [{ text: prompt }] }],
-            ...isUrlOnly ? { tools: [{ googleSearch: {} }] } : {}
-          });
-          response = result;
-          break;
+          const models = ["gemini-3-flash-preview", "gemini-1.0-pro"];
+          for (const modelName of models) {
+            try {
+              const result = await client.models.generateContent({
+                model: modelName,
+                contents: [{ role: "user", parts: [{ text: prompt }] }]
+              });
+              response = result;
+              break;
+            } catch (modelErr) {
+              if (isQuotaExhaustedError(modelErr) || modelErr?.status === 503) {
+                console.warn(`[Alquimia do Prato] Model ${modelName} failed (status ${modelErr?.status}), trying next model...`);
+                continue;
+              }
+              throw modelErr;
+            }
+          }
+          if (response) break;
         } catch (error) {
           lastError = error;
           if (isQuotaExhaustedError(error) && i < apiKeys.length - 1) {
-            console.warn(`[Alquimia do Prato] Transmutando limites: a cota da chave ${i + 1} foi atingida. Ativando reserva ${i + 2} de ${apiKeys.length}...`);
+            console.warn(`[Alquimia do Prato] Transmutando limites: chave ${i + 1} atingida, usando reserva ${i + 2}/${apiKeys.length}`);
             continue;
           }
           throw error;
@@ -1134,8 +1158,7 @@ var geminiService = {
               const client = new GoogleGenAI4({ apiKey: apiKeys2[i] });
               const result = await client.models.generateContent({
                 model: "gemini-3-flash-preview",
-                contents: [{ role: "user", parts: [{ text: searchPrompt }] }],
-                ...true ? { tools: [{ googleSearch: {} }] } : {}
+                contents: [{ role: "user", parts: [{ text: searchPrompt }] }]
               });
               searchResponse = result;
               break;
@@ -1188,9 +1211,29 @@ var geminiService = {
     } catch (error) {
       console.error("Gemini extraction error:", error);
       if (isQuotaExhaustedError(error)) {
-        throw new Error("Falha na Extra\xE7\xE3o: O limite da cota gratuita da Intelig\xEAncia Artificial (Gemini) foi atingido. Verifique o plano de faturamento no Google AI Studio.");
+        console.warn("Quota exhausted for Gemini model, using fallback recipe.");
       }
-      throw new Error("Falha ao extrair dados da receita via AI.");
+      const fallback = {
+        title: options?.url?.split("/")?.pop()?.replace(/[-_]/g, " ") || "Receita sem t\xEDtulo",
+        description: options?.metaDescription || "",
+        momento: [],
+        tipo_prato: [],
+        base_alimento: [],
+        origem: "",
+        custo_estimado: "",
+        dietType: "",
+        time: "",
+        prepTime: "",
+        servings: "",
+        difficulty: "",
+        isClassic: false,
+        ingredients: [],
+        instructions: [],
+        chefTips: "",
+        image: options?.ogImage || "",
+        imageOptions: options?.allImagesFound || []
+      };
+      return fallback;
     }
   },
   /**
@@ -1665,18 +1708,18 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
     url = "https://" + url;
   }
   try {
-    new URL(url);
+    const parsedBaseUrl = new URL(url);
     if (firecrawl) {
       console.log(`Using Firecrawl to scrape: ${url}`);
       const scrapeResult = await firecrawl.scrape(url, {
-        formats: ["html"],
+        formats: ["markdown"],
         onlyMainContent: true,
         waitFor: 3e3
       });
       if (scrapeResult && (scrapeResult.html || scrapeResult.markdown)) {
         return res.json({
           success: true,
-          html: scrapeResult.html || scrapeResult.markdown,
+          html: (scrapeResult.markdown || scrapeResult.html || "").substring(0, 5e4),
           metaDescription: scrapeResult.metadata?.description || "",
           ogImage: scrapeResult.metadata?.ogImage || scrapeResult.metadata?.image || "",
           allImagesFound: scrapeResult.metadata?.images || []
@@ -1717,10 +1760,14 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
     const doc = dom.window.document;
     const allImagesFound = [];
     doc.querySelectorAll("img").forEach((img) => {
-      const src = img.getAttribute("src") || img.getAttribute("data-src") || img.getAttribute("srcset")?.split(" ")[0];
-      if (src && src.startsWith("http") && !src.includes("logo") && !src.includes("icon")) {
-        if (src.match(/\.(jpg|jpeg|png|webp|gif)/i)) {
-          allImagesFound.push(src);
+      let src = img.getAttribute("src") || img.getAttribute("data-src") || img.getAttribute("srcset")?.split(" ")[0];
+      if (src) {
+        try {
+          const absoluteUrl = new URL(src, parsedBaseUrl.origin).toString();
+          if (absoluteUrl.match(/\.(jpg|jpeg|png|webp|gif)/i) && !absoluteUrl.includes("logo") && !absoluteUrl.includes("icon")) {
+            allImagesFound.push(absoluteUrl);
+          }
+        } catch (e) {
         }
       }
     });
@@ -1825,6 +1872,17 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
           console.log(`[Lounge API] Resposta do Alchemist salva com sucesso!`);
         } catch (err) {
           console.error("[Lounge API] Erro ao gerar resposta do Alchemist:", err);
+          const fallbackMessage = {
+            text: "Desculpe, nossos servidores est\xE3o em delay, pergunte novamente por favor",
+            senderId: "copilot-agent",
+            senderName: "Alchemist",
+            senderRole: "agent",
+            timestamp: FieldValue2.serverTimestamp(),
+            status: "approved",
+            reactions: {},
+            metadata: { isBot: true, replyTo: docRef.id }
+          };
+          await db.collection("lounge_messages").add(fallbackMessage).catch((e) => console.error("[Lounge API] Falha final ao salvar fallback:", e));
         }
       });
     }
@@ -2057,7 +2115,7 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
     res.json({ success: true, answer });
   } catch (error) {
     console.error("[Chat RAG API] Erro:", error);
-    res.status(500).json({ success: false, error: "Erro ao consultar o assistente." });
+    res.json({ success: true, answer: "Desculpe, nossos servidores est\xE3o em delay, pergunte novamente por favor" });
   }
 });
 app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
@@ -2072,18 +2130,28 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
-        user = await prisma.user.create({
-          data: {
-            uid,
-            displayName: userData?.displayName || "Sem Nome",
-            email: userData?.email || `${uid}@example.com`,
-            photoURL: userData?.photoURL || null,
-            whatsapp: userData?.whatsapp || null,
-            state: userData?.state || "ES",
-            country: userData?.country || "BR"
-          }
-        });
-        console.log(`[Gamification Event API] Usu\xE1rio ${user.displayName} auto-sincronizado para o Prisma.`);
+        const emailToUse = userData?.email || `${uid}@example.com`;
+        let existingUserByEmail = await prisma.user.findUnique({ where: { email: emailToUse } });
+        if (existingUserByEmail) {
+          user = await prisma.user.update({
+            where: { email: emailToUse },
+            data: { uid, displayName: userData?.displayName || existingUserByEmail.displayName }
+          });
+          console.log(`[Gamification Event API] Usu\xE1rio ${user.displayName} teve o UID atualizado no Prisma.`);
+        } else {
+          user = await prisma.user.create({
+            data: {
+              uid,
+              displayName: userData?.displayName || "Sem Nome",
+              email: emailToUse,
+              photoURL: userData?.photoURL || null,
+              whatsapp: userData?.whatsapp || null,
+              state: userData?.state || "ES",
+              country: userData?.country || "BR"
+            }
+          });
+          console.log(`[Gamification Event API] Usu\xE1rio ${user.displayName} auto-sincronizado para o Prisma.`);
+        }
       } else {
         return res.json({ success: false, error: `Usu\xE1rio com UID ${uid} n\xE3o encontrado no Firestore nem no Prisma.` });
       }
@@ -2142,18 +2210,28 @@ app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
-        user = await prisma.user.create({
-          data: {
-            uid,
-            displayName: userData?.displayName || "Sem Nome",
-            email: userData?.email || `${uid}@example.com`,
-            photoURL: userData?.photoURL || null,
-            whatsapp: userData?.whatsapp || null,
-            state: userData?.state || "ES",
-            country: userData?.country || "BR"
-          }
-        });
-        console.log(`[Profile API] Usu\xE1rio ${user.displayName} auto-sincronizado para o Prisma.`);
+        const emailToUse = userData?.email || `${uid}@example.com`;
+        let existingUserByEmail = await prisma.user.findUnique({ where: { email: emailToUse } });
+        if (existingUserByEmail) {
+          user = await prisma.user.update({
+            where: { email: emailToUse },
+            data: { uid, displayName: userData?.displayName || existingUserByEmail.displayName }
+          });
+          console.log(`[Profile API] Usu\xE1rio ${user.displayName} teve o UID atualizado no Prisma.`);
+        } else {
+          user = await prisma.user.create({
+            data: {
+              uid,
+              displayName: userData?.displayName || "Sem Nome",
+              email: emailToUse,
+              photoURL: userData?.photoURL || null,
+              whatsapp: userData?.whatsapp || null,
+              state: userData?.state || "ES",
+              country: userData?.country || "BR"
+            }
+          });
+          console.log(`[Profile API] Usu\xE1rio ${user.displayName} auto-sincronizado para o Prisma.`);
+        }
       }
     }
     const profile = await GamificationService.getProfile(uid);
