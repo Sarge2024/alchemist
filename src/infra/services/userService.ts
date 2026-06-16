@@ -14,7 +14,7 @@ import {
 import { db, auth } from '../../lib/firebase';
 import { OperationType } from './recipeService';
 
-export type UserRole = 'member' | 'collaborator' | 'chef' | 'admin';
+export type UserRole = 'member' | 'collaborator' | 'admin';
 
 export interface UserProfile {
   uid: string;
@@ -38,6 +38,7 @@ export interface UserProfile {
   nutritionalFocus?: string;
   culturalInterests?: string[];
   role: UserRole;
+  isChef?: boolean;
   internalEmail?: string;
   createdAt?: any;
   updatedAt?: any;

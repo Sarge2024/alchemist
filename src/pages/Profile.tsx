@@ -317,7 +317,8 @@ export default function Profile() {
     dietaryRestrictions: [] as string[],
     nutritionalFocus: '' as string,
     culturalInterests: [] as string[],
-    role: 'member' as UserProfile['role']
+    role: 'member' as UserProfile['role'],
+    isChef: false
   });
 
   const canEdit = user?.uid === targetUid || isAdmin;
@@ -430,7 +431,8 @@ export default function Profile() {
           photoURL: user.photoURL || '',
           state: '',
           country: '',
-          role: 'member'
+          role: 'member',
+          isChef: false
         };
       }
 
@@ -455,7 +457,8 @@ export default function Profile() {
           dietaryRestrictions: data.dietaryRestrictions || [],
           nutritionalFocus: data.nutritionalFocus || '',
           culturalInterests: data.culturalInterests || [],
-          role: data.role || 'member'
+          role: data.role || 'member',
+          isChef: data.isChef || false
         });
       }
 
@@ -751,14 +754,17 @@ export default function Profile() {
                   {profile.displayName}
                 </h1>
                 <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  {profile.isChef && (
+                    <span className="px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-sm bg-amber-100 text-amber-800 border border-amber-200">
+                      Chef Culinário
+                    </span>
+                  )}
                   <span className={`
                     px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-widest shadow-sm
                     ${profile.role === 'admin' ? 'bg-on-surface text-background' : 
-                      profile.role === 'chef' ? 'bg-amber-100 text-amber-800 border border-amber-200' :
                       profile.role === 'collaborator' ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-surface-container-high text-on-surface-variant'}
                   `}>
                     {profile.role === 'admin' ? 'Admin' : 
-                     profile.role === 'chef' ? 'Chef Culinário' : 
                      profile.role === 'collaborator' ? 'Colaborador' : 'Membro'}
                   </span>
                   

@@ -72,6 +72,23 @@ export const MemberService = {
   },
 
   /**
+   * Altera apenas a flag de Chef de um usuário no Firestore.
+   */
+  async updateMemberChefStatus(uid: string, isChef: boolean): Promise<void> {
+    try {
+      const userRef = doc(db, 'users', uid);
+      await updateDoc(userRef, {
+        isChef,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`[MemberService] Status isChef de ${uid} atualizado para ${isChef}`);
+    } catch (error) {
+      console.error('[MemberService] Erro ao atualizar status de Chef:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Sincroniza a role do Firestore com os Custom Claims do Firebase Auth
    * através de uma chamada ao nosso backend seguro.
    */

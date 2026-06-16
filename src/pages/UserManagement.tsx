@@ -26,6 +26,7 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [showOnlyChefs, setShowOnlyChefs] = useState(false);
   const [updatingUid, setUpdatingUid] = useState<string | null>(null);
   const { isAdmin } = useAuth();
 
@@ -58,13 +59,26 @@ export default function UserManagement() {
     }
   };
 
+  const handleToggleChef = async (uid: string, currentStatus: boolean) => {
+    setUpdatingUid(uid);
+    try {
+      await MemberService.updateMemberChefStatus(uid, !currentStatus);
+      setMembers(prev => prev.map(m => m.uid === uid ? { ...m, isChef: !currentStatus } : m));
+    } catch (error) {
+      alert('Falha ao atualizar status de Chef.');
+    } finally {
+      setUpdatingUid(null);
+    }
+  };
+
   const filteredMembers = members.filter(m => {
     const search = searchTerm.toLowerCase();
     const matchesSearch = !search || 
       (m.displayName?.toLowerCase().includes(search)) ||
       (m.email?.toLowerCase().includes(search));
     const matchesRole = roleFilter === 'all' || m.role === roleFilter;
-    return Boolean(matchesSearch && matchesRole);
+    const matchesChef = showOnlyChefs ? m.isChef === true : true;
+    return Boolean(matchesSearch && matchesRole && matchesChef);
   });
 
   if (!isAdmin) {
@@ -110,9 +124,17 @@ export default function UserManagement() {
             <option value="all">Todos os Níveis</option>
             <option value="member">Membros</option>
             <option value="collaborator">Colaboradores</option>
-            <option value="chef">Chefs</option>
             <option value="admin">Admins</option>
           </select>
+          <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-stone-600 bg-white px-4 py-4 rounded-2xl border-2 border-stone-100 shadow-sm">
+            <input 
+              type="checkbox" 
+              checked={showOnlyChefs} 
+              onChange={(e) => setShowOnlyChefs(e.target.checked)}
+              className="accent-amber-500 w-4 h-4 cursor-pointer"
+            />
+            Chefs
+          </label>
         </div>
       </header>
 
@@ -158,6 +180,11 @@ export default function UserManagement() {
                             <div className="text-stone-400 text-xs font-medium flex items-center gap-1.5 mt-0.5">
                               <Mail className="w-3 h-3" /> {member.email}
                             </div>
+                            {member.isChef && (
+                              <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-widest rounded-md">
+                                Chef
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -166,19 +193,17 @@ export default function UserManagement() {
                           <span className={`
                             px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2
                             ${member.role === 'admin' ? 'bg-primary/10 text-primary border border-primary/20' : 
-                              member.role === 'chef' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 
                               member.role === 'collaborator' ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 
                               'bg-stone-100 text-stone-500 border border-stone-200'}
                           `}>
                             {member.role === 'admin' ? 'Admin' : 
-                             member.role === 'chef' ? 'Chef' :
                              member.role === 'collaborator' ? 'Colaborador' : 'Membro'}
                             <ChevronDown className="w-3 h-3 opacity-50" />
                           </span>
                           
                           {/* Role Select Dropdown on Hover */}
                           <div className="absolute top-full left-0 mt-2 bg-white rounded-2xl shadow-2xl border border-stone-100 opacity-0 invisible group-hover/role:opacity-100 group-hover/role:visible transition-all z-20 py-2 min-w-[160px]">
-                            {['member', 'collaborator', 'chef', 'admin'].map(r => (
+                            {['member', 'collaborator', 'admin'].map(r => (
                               <button
                                 key={r}
                                 disabled={updatingUid === member.uid}
@@ -188,7 +213,7 @@ export default function UserManagement() {
                                   ${member.role === r ? 'text-primary' : 'text-stone-500'}
                                 `}
                               >
-                                {r === 'member' ? 'Membro' : r === 'collaborator' ? 'Colaborador' : r === 'chef' ? 'Chef' : 'Admin'}
+                                {r === 'member' ? 'Membro' : r === 'collaborator' ? 'Colaborador' : 'Admin'}
                                 {member.role === r && <UserCheck className="w-3.5 h-3.5" />}
                               </button>
                             ))}
@@ -207,6 +232,13 @@ export default function UserManagement() {
                       </td>
                       <td className="px-8 py-6 text-right">
                         <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => handleToggleChef(member.uid, !!member.isChef)}
+                            className={`px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all ${member.isChef ? 'bg-amber-500 text-white shadow-md' : 'bg-stone-100 text-stone-400 hover:bg-amber-100 hover:text-amber-600'}`}
+                            title={member.isChef ? "Remover Chef" : "Tornar Chef"}
+                          >
+                            {member.isChef ? "É Chef" : "+ Chef"}
+                          </button>
                           <Link 
                             to={`/profile/${member.uid}`}
                             className="p-2.5 text-stone-400 hover:text-primary hover:bg-primary/5 rounded-xl transition-all"

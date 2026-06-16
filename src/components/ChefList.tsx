@@ -11,10 +11,10 @@ export const ChefList: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Busca apenas usuários com role 'chef'
+    // Busca apenas usuários com flag 'isChef' == true
     const q = query(
       collection(db, 'users'),
-      where('role', '==', 'chef')
+      where('isChef', '==', true)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

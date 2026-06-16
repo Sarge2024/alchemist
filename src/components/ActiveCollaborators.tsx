@@ -27,7 +27,7 @@ export const ActiveCollaborators: React.FC = () => {
       const users = snapshot.docs
         .map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile & { isOnline?: boolean, lastSeen?: any }))
         .filter(user => {
-          if (user.role === 'chef') return false;
+          if (user.isChef) return false;
           if (!user.isOnline) return false;
 
           // Usuários sem lastSeen são zumbis de versões anteriores (ficaram presos antes do patch)
