@@ -113,26 +113,89 @@ export class FastRoutingService {
     await this.buildAndSaveIndex();
   }
 
+  private static routingCache: Map<string, string> = new Map();
+
+  /**
+   * Helper function to execute prompt with retry over multiple keys
+   */
+  private static async generateWithRetry(prompt: string): Promise<string> {
+    const apiKeys = getAvailableGeminiKeys();
+    if (apiKeys.length === 0) {
+      throw new Error("Nenhuma GEMINI_API_KEY configurada no backend.");
+    }
+
+    let lastError: any = null;
+
+    for (let i = 0; i < apiKeys.length; i++) {
+      try {
+        const ai = new GoogleGenAI({ apiKey: apiKeys[i] });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: prompt
+        });
+        return response.text || "";
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[FastRouting] Falha com a chave ${i + 1} (Erro: ${err.status || err.message}). Tentando próxima...`);
+        if (err.status !== 429 && err.status !== 503 && !err.message?.includes('quota') && !err.message?.includes('demand')) {
+          break; 
+        }
+      }
+    }
+    throw lastError;
+  }
+
+  /**
+   * Fallback heurístico ultrarrápido (0ms) usado quando a API do Gemini falha (Rate Limit/503)
+   */
+  private static generateFallbackRouting(topic: string, index: CompiledIndex): string {
+    const lowerTopic = topic.toLowerCase();
+    
+    const matchedRecipe = index.recipes.find(r => 
+      r.title.toLowerCase().includes(lowerTopic) || 
+      r.category.toLowerCase().includes(lowerTopic) ||
+      (r.tags && r.tags.some(t => t.toLowerCase().includes(lowerTopic)))
+    );
+
+    let links = "";
+    if (matchedRecipe) {
+      links = `- [Ver receita: ${matchedRecipe.title}](/receita/${matchedRecipe.id})\n`;
+    } else {
+      links = `- [Buscar ${topic} no Acervo](/acervo?search=${encodeURIComponent(topic)})\n`;
+    }
+
+    links += `- [Explorar mais categorias](/explore?q=${encodeURIComponent(topic)})\n`;
+    links += `- [Conversar com o Chef sobre ${topic}?](#)\n`;
+    links += `- [Qual o segredo para um bom ${topic}?](#)`;
+
+    return `Tivemos uma pequena fila no nosso chef robótico, mas aqui estão opções rápidas sobre **${topic}** do nosso índice:\n\n${links}`;
+  }
+
   /**
    * Rota rápida para roteamento e ganchos (sem RAG vetorial pesado)
    */
   public static async getQuickRoutingOptions(userSubject: string): Promise<string> {
+    const topic = userSubject.trim();
+    const lowerTopic = topic.toLowerCase();
+
+    if (this.routingCache.has(lowerTopic)) {
+      return this.routingCache.get(lowerTopic)!;
+    }
+
+    const index = await this.getIndex();
+
     try {
-      const index = await this.getIndex();
-      
       // Criar uma representação ultra-enxuta apenas com títulos e categorias
       const indexStr = JSON.stringify({
         r: index.recipes.map(r => ({ i: r.id, t: r.title, c: r.category })),
         a: index.acervo.map(a => ({ t: a.title }))
       });
 
-      const ai = await this.getGeminiClient();
-      
       const prompt = `Você é o roteador rápido do Alquimia do Prato.
 DADO O ÍNDICE ABAIXO (Formato JSON minimizado: r=receitas (i=id, t=titulo, c=categoria), a=acervo):
 ${indexStr}
 
-O usuário está no Lounge e expressou interesse sobre o tema: '${userSubject}'.
+O usuário está no Lounge e expressou interesse sobre o tema: '${topic}'.
 Seja extretamente direto. Sua função não é responder a pergunta, mas DIRECIONAR o usuário usando o índice.
 Retorne UMA frase amigável curta e exata e uma lista em Markdown contendo EXATAMENTE:
 - 1 a 2 links para receitas exatas ou conteúdo relacionado presente no índice. Use o formato: [Nome da Receita](/receita/ID_DA_RECEITA) ou [Explorar Categoria](/explore?q=CATEGORIA). Se não houver correspondência exata, sugira a busca geral: [Buscar no Acervo](/acervo?search=TERMO).
@@ -140,15 +203,17 @@ Retorne UMA frase amigável curta e exata e uma lista em Markdown contendo EXATA
 
 Importante: Não invente receitas que não existem no índice (r). Use apenas IDs reais (i) para compor a URL /receita/ID.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: prompt
-      });
-
-      return response.text || "Pode me perguntar qualquer coisa no chat abaixo!";
+      const result = await this.generateWithRetry(prompt);
+      if (result) {
+        this.routingCache.set(lowerTopic, result);
+        return result;
+      }
+      return this.generateFallbackRouting(topic, index);
     } catch (error) {
-      console.error("[FastRouting] Erro ao gerar opções rápidas:", error);
-      return "Não consegui carregar as sugestões, mas me pergunte no chat abaixo!";
+      console.error("[FastRouting] Erro ao gerar opções rápidas, acionando fallback local.");
+      const fallback = this.generateFallbackRouting(topic, index);
+      // Não armazenamos o fallback no cache para que a IA possa tentar gerar o texto rico na próxima vez
+      return fallback;
     }
   }
 }
