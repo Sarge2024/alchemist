@@ -30,6 +30,7 @@ export default function AdminDashboard() {
   const [heroImages, setHeroImages] = useState<any[]>([]);
   const [uploadingHero, setUploadingHero] = useState(false);
   const [newHeroLabel, setNewHeroLabel] = useState('');
+  const [newHeroFile, setNewHeroFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { user, isAdmin: authIsAdmin } = useAuth();
