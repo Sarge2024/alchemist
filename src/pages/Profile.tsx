@@ -216,7 +216,7 @@ export default function Profile() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [friendPhone, setFriendPhone] = useState('');
   const [copied, setCopied] = useState(false);
-  const [heroOptions, setHeroOptions] = useState(DEFAULT_HERO_OPTIONS);
+  const [heroOptions, setHeroOptions] = useState<any[]>([]);
   const baseUrl = (import.meta.env.VITE_APP_URL as string) || window.location.origin;
 
   useEffect(() => {
@@ -237,8 +237,12 @@ export default function Profile() {
           catImages = catSnap.data() as Record<string, string>;
         }
 
-        // Apply overrides to default options
-        const updatedDefaults = DEFAULT_HERO_OPTIONS.map(opt => {
+        // Restore default options but only for categories and main home
+        const CATEGORY_DEFAULTS = DEFAULT_HERO_OPTIONS.filter(opt => 
+          ['Padrão (Cozinha Alchemist)', 'Café da Manhã', 'Almoço', 'Jantar', 'Bebidas', 'Sobremesas'].includes(opt.label)
+        );
+
+        const updatedDefaults = CATEGORY_DEFAULTS.map(opt => {
           let mapKey = opt.label;
           if (opt.label === 'Padrão (Cozinha Alchemist)') mapKey = 'Home Padrão';
           
@@ -1206,7 +1210,21 @@ export default function Profile() {
                     <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Escolha a imagem que deseja ver ao entrar</label>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
                       {heroOptions.map(opt => (
-                        <div key={opt.id} className="relative group cursor-pointer" onClick={() => isEditing && setFormData(prev => ({ ...prev, preferredHeroImage: opt.id }))}>
+                        <div 
+                          key={opt.id} 
+                          className="relative group cursor-pointer" 
+                          onClick={async () => {
+                            setFormData(prev => ({ ...prev, preferredHeroImage: opt.id }));
+                            if (targetUid) {
+                              try {
+                                await userService.updateUserProfile(targetUid, { preferredHeroImage: opt.id });
+                                setProfile(prev => prev ? { ...prev, preferredHeroImage: opt.id } : prev);
+                              } catch (e) {
+                                console.error('Erro ao salvar imagem da home:', e);
+                              }
+                            }
+                          }}
+                        >
                           <img 
                             src={getAssetUrl(opt.url)} 
                             alt={opt.label} 
@@ -1220,7 +1238,6 @@ export default function Profile() {
                               <CheckCircle2 className="w-4 h-4" />
                             </div>
                           )}
-                          {!isEditing && <div className="absolute inset-0 bg-black/5 rounded-xl cursor-not-allowed"></div>}
                         </div>
                       ))}
                     </div>

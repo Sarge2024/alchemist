@@ -16,7 +16,7 @@ import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'recipes' | 'lounge' | 'analytics' | 'heroImages'>('recipes');
+  const [activeTab, setActiveTab] = useState<string>('recipes');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [messages, setMessages] = useState<LoungeMessage[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -849,7 +849,6 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
-              </div>
             </div>
           </div>
         </div>
