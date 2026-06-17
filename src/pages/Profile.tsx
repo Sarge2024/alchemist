@@ -42,6 +42,20 @@ import { Avatar } from '../components/Avatar';
 import { supabase } from '../lib/supabase';
 import { AvatarSelector, AvatarOptionData } from '../components/AvatarSelector';
 import { LevelUpPopup } from '../components/LevelUpPopup';
+import { ASSETS, getAssetUrl } from '../lib/assets';
+import { db } from '../lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
+
+const DEFAULT_HERO_OPTIONS = [
+  { id: '', url: ASSETS.HOME.HERO, label: 'Padrão (Cozinha Alchemist)' },
+  { id: ASSETS.CATEGORIES.BREAKFAST, url: ASSETS.CATEGORIES.BREAKFAST, label: 'Café da Manhã' },
+  { id: ASSETS.CATEGORIES.LUNCH, url: ASSETS.CATEGORIES.LUNCH, label: 'Almoço' },
+  { id: ASSETS.CATEGORIES.DINNER, url: ASSETS.CATEGORIES.DINNER, label: 'Jantar' },
+  { id: ASSETS.CATEGORIES.DRINKS, url: ASSETS.CATEGORIES.DRINKS, label: 'Bebidas' },
+  { id: ASSETS.CATEGORIES.DESSERTS, url: ASSETS.CATEGORIES.DESSERTS, label: 'Sobremesas' },
+  { id: ASSETS.HOME.COMMUNITY, url: ASSETS.HOME.COMMUNITY, label: 'Comunidade' },
+  { id: ASSETS.MANIFESTO.VISION_HERO, url: ASSETS.MANIFESTO.VISION_HERO, label: 'Visão' }
+];
 
 const BRAZILIAN_STATES = [
   { value: 'AC', label: 'Acre' },
@@ -202,7 +216,23 @@ export default function Profile() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [friendPhone, setFriendPhone] = useState('');
   const [copied, setCopied] = useState(false);
+  const [heroOptions, setHeroOptions] = useState(DEFAULT_HERO_OPTIONS);
   const baseUrl = (import.meta.env.VITE_APP_URL as string) || window.location.origin;
+
+  useEffect(() => {
+    const fetchCustomHeroImages = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'heroImages'));
+        if (snap.exists()) {
+          const customImages = snap.data().images || [];
+          setHeroOptions([...DEFAULT_HERO_OPTIONS, ...customImages]);
+        }
+      } catch (e) {
+        console.error('Failed to fetch custom hero images', e);
+      }
+    };
+    fetchCustomHeroImages();
+  }, []);
 
   const INTERACTION_MATRIX = [
     { id: 'COLLABORATION_MESSAGE', label: 'Mensagens no Lounge', required: 50 },
@@ -318,7 +348,8 @@ export default function Profile() {
     nutritionalFocus: '' as string,
     culturalInterests: [] as string[],
     role: 'member' as UserProfile['role'],
-    isChef: false
+    isChef: false,
+    preferredHeroImage: ''
   });
 
   const canEdit = user?.uid === targetUid || isAdmin;
@@ -458,7 +489,8 @@ export default function Profile() {
           nutritionalFocus: data.nutritionalFocus || '',
           culturalInterests: data.culturalInterests || [],
           role: data.role || 'member',
-          isChef: data.isChef || false
+          isChef: data.isChef || false,
+          preferredHeroImage: data.preferredHeroImage || ''
         });
       }
 
@@ -1140,6 +1172,34 @@ export default function Profile() {
                           />
                           <span className="text-sm text-on-surface group-hover:text-primary transition-colors">{opt}</span>
                         </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <Camera className="w-6 h-6 text-primary" /> Imagem da Tela Inicial (Home)
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    <label className="block text-xs font-black text-on-surface-variant uppercase tracking-widest mb-3 ml-1">Escolha a imagem que deseja ver ao entrar</label>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-surface-container-lowest border border-surface-container-high rounded-2xl">
+                      {heroOptions.map(opt => (
+                        <div key={opt.id} className="relative group cursor-pointer" onClick={() => isEditing && setFormData(prev => ({ ...prev, preferredHeroImage: opt.id }))}>
+                          <img 
+                            src={getAssetUrl(opt.url)} 
+                            alt={opt.label} 
+                            className={`w-full h-24 object-cover rounded-xl border-2 transition-all duration-300 ${formData.preferredHeroImage === opt.id ? 'border-primary shadow-lg shadow-primary/20 scale-105' : 'border-transparent opacity-70 hover:opacity-100 group-hover:scale-105'}`}
+                          />
+                          <div className={`absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-sm p-1 text-[10px] text-white text-center rounded-b-xl font-bold ${formData.preferredHeroImage === opt.id ? 'text-primary' : ''}`}>
+                            {opt.label}
+                          </div>
+                          {formData.preferredHeroImage === opt.id && (
+                            <div className="absolute -top-2 -right-2 bg-primary text-white rounded-full p-1 shadow-lg">
+                              <CheckCircle2 className="w-4 h-4" />
+                            </div>
+                          )}
+                          {!isEditing && <div className="absolute inset-0 bg-black/5 rounded-xl cursor-not-allowed"></div>}
+                        </div>
                       ))}
                     </div>
                   </div>

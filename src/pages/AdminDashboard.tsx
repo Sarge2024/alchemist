@@ -5,16 +5,18 @@
  * e exclusão de conteúdos que violem as regras da comunidade.
  */
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, Shield, Loader2, Search, Filter, AlertTriangle, User, Calendar, ExternalLink, Edit3, BarChart2, Users, BookOpen, MessageSquare, Award, Heart, Sparkles, Activity, ChefHat, TrendingUp, Cpu, Clock, HardDrive, HelpCircle } from 'lucide-react';
-import React, { useState, useEffect } from 'react';
+import { Trash2, Shield, Loader2, Search, Filter, AlertTriangle, User, Calendar, ExternalLink, Edit3, BarChart2, Users, BookOpen, MessageSquare, Award, Heart, Sparkles, Activity, ChefHat, TrendingUp, Cpu, Clock, HardDrive, HelpCircle, Image as ImageIcon, Upload } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { recipeService, Recipe } from '../infra/services/recipeService';
 import { loungeService, LoungeMessage } from '../infra/services/loungeService';
 import { useAuth } from '../context/AuthContext';
 import { getAssetUrl } from '../lib/assets';
+import { db } from '../lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'recipes' | 'lounge' | 'analytics'>('recipes');
+  const [activeTab, setActiveTab] = useState<'recipes' | 'lounge' | 'analytics' | 'heroImages'>('recipes');
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [messages, setMessages] = useState<LoungeMessage[]>([]);
   const [analytics, setAnalytics] = useState<any>(null);
@@ -23,7 +25,13 @@ export default function AdminDashboard() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deletingType, setDeletingType] = useState<'recipe' | 'message' | null>(null);
+  const [deletingType, setDeletingType] = useState<'recipe' | 'message' | 'heroImage' | null>(null);
+  
+  const [heroImages, setHeroImages] = useState<any[]>([]);
+  const [uploadingHero, setUploadingHero] = useState(false);
+  const [newHeroLabel, setNewHeroLabel] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const { user, isAdmin: authIsAdmin } = useAuth();
   const isAdmin = authIsAdmin || !!import.meta.env.DEV;
 
@@ -32,8 +40,20 @@ export default function AdminDashboard() {
       if (activeTab === 'recipes') fetchAllRecipes();
       else if (activeTab === 'lounge') fetchAllMessages();
       else if (activeTab === 'analytics') fetchAnalytics();
+      else if (activeTab === 'heroImages') fetchHeroImages();
     }
   }, [isAdmin, activeTab]);
+
+  const fetchHeroImages = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'heroImages'));
+      if (snap.exists()) {
+        setHeroImages(snap.data().images || []);
+      }
+    } catch (error) {
+      console.error('Error fetching hero images:', error);
+    }
+  };
 
   const fetchAnalytics = async () => {
     setAnalyticsLoading(true);
@@ -98,6 +118,64 @@ export default function AdminDashboard() {
     } catch (error) {
       console.error('Error deleting message:', error);
       alert('Erro ao excluir a mensagem.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleUploadHeroImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newHeroFile || !newHeroLabel.trim()) return;
+
+    setUploadingHero(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', newHeroFile);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'x-api-key': import.meta.env.VITE_APP_API_KEY || 'dev_key',
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      
+      const newImage = {
+        id: data.url,
+        url: data.url,
+        label: newHeroLabel.trim()
+      };
+
+      const updatedImages = [...heroImages, newImage];
+      await setDoc(doc(db, 'settings', 'heroImages'), { images: updatedImages });
+      setHeroImages(updatedImages);
+      
+      setNewHeroFile(null);
+      setNewHeroLabel('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      alert('Imagem enviada com sucesso!');
+    } catch (error) {
+      console.error('Error uploading hero image:', error);
+      alert('Erro ao fazer upload da imagem.');
+    } finally {
+      setUploadingHero(false);
+    }
+  };
+
+  const handleDeleteHeroImage = async (id: string) => {
+    setIsDeleting(true);
+    try {
+      const updatedImages = heroImages.filter(img => img.id !== id);
+      await setDoc(doc(db, 'settings', 'heroImages'), { images: updatedImages });
+      setHeroImages(updatedImages);
+      setDeletingId(null);
+      setDeletingType(null);
+    } catch (error) {
+      console.error('Error deleting hero image:', error);
+      alert('Erro ao excluir a imagem.');
     } finally {
       setIsDeleting(false);
     }
@@ -174,6 +252,12 @@ export default function AdminDashboard() {
           className={`px-8 py-3 rounded-2xl font-bold text-sm transition-all ${activeTab === 'analytics' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
         >
           Indicadores e Analytics
+        </button>
+        <button
+          onClick={() => { setActiveTab('heroImages'); setSearchTerm(''); }}
+          className={`px-8 py-3 rounded-2xl font-bold text-sm transition-all ${activeTab === 'heroImages' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          Imagens da Home
         </button>
       </div>
 
@@ -567,6 +651,71 @@ export default function AdminDashboard() {
             <p className="text-on-surface-variant font-medium">Não foi possível carregar as estatísticas no momento.</p>
           </div>
         )
+      ) : activeTab === 'heroImages' ? (
+        <div className="bg-surface-container-lowest rounded-[2.5rem] p-8 shadow-sm border border-surface-container-high">
+          <div className="flex flex-col md:flex-row gap-8">
+            <div className="flex-1 min-w-[300px]">
+              <h3 className="text-xl font-bold text-on-surface mb-4">Upload de Imagem da Home</h3>
+              <form onSubmit={handleUploadHeroImage} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-on-surface mb-1">Nome/Rótulo (ex: Banner 1)</label>
+                  <input
+                    type="text"
+                    required
+                    value={newHeroLabel}
+                    onChange={(e) => setNewHeroLabel(e.target.value)}
+                    className="w-full px-4 py-3 rounded-2xl bg-surface-container border border-surface-container-high text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-on-surface mb-1">Arquivo da Imagem</label>
+                  <input
+                    type="file"
+                    required
+                    accept="image/*"
+                    ref={fileInputRef}
+                    onChange={(e) => setNewHeroFile(e.target.files?.[0] || null)}
+                    className="w-full px-4 py-3 rounded-2xl bg-surface-container border border-surface-container-high text-on-surface focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={uploadingHero}
+                  className="w-full py-4 rounded-2xl font-bold bg-primary text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {uploadingHero ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                  {uploadingHero ? 'Enviando...' : 'Fazer Upload'}
+                </button>
+              </form>
+            </div>
+            
+            <div className="flex-[2] md:border-l border-surface-container-high md:pl-8">
+              <h3 className="text-xl font-bold text-on-surface mb-4">Galeria de Imagens Customizadas</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {heroImages.map((img) => (
+                  <div key={img.id} className="relative group rounded-2xl overflow-hidden border border-surface-container-high aspect-video bg-surface-container">
+                    <img src={img.url} alt={img.label} className="w-full h-full object-cover" />
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4">
+                      <span className="text-white text-xs font-bold text-center mb-2">{img.label}</span>
+                      <button
+                        onClick={() => handleDeleteHeroImage(img.id)}
+                        className="p-2 bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
+                        title="Excluir Imagem"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                {heroImages.length === 0 && (
+                  <div className="col-span-full py-8 text-center text-on-surface-variant text-sm">
+                    Nenhuma imagem personalizada adicionada.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : (
         <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high overflow-hidden">
           <div className="overflow-x-auto">

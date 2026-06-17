@@ -1374,10 +1374,12 @@ app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async 
 
 // Listar Acervo
 app.get("/api/library", authenticateAPI, async (req, res) => {
+  console.log("[API Library] GET request received");
   try {
     const items = await prisma.libraryItem.findMany({
       orderBy: { createdAt: 'desc' }
     });
+    console.log(`[API Library] Returning ${items.length} items`);
     res.json(items);
   } catch (error) {
     console.error("Erro ao listar acervo:", error);

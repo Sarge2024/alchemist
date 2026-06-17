@@ -12,6 +12,8 @@ import { RecipeCard } from '../components/RecipeCard';
 import { ASSETS, getAssetUrl } from '../lib/assets';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { useAuth } from '../context/AuthContext';
+import { userService } from '../infra/services/userService';
 
 const CATEGORIES = [
   { 
@@ -54,11 +56,25 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
   const [loadingImages, setLoadingImages] = useState(true);
+  const { user } = useAuth();
+  const [heroImage, setHeroImage] = useState(ASSETS.HOME.HERO);
 
   useEffect(() => {
     loadRecentRecipes();
     loadCustomImages();
   }, []);
+
+  useEffect(() => {
+    if (user?.uid) {
+      userService.getUserProfile(user.uid).then(profile => {
+        if (profile?.preferredHeroImage) {
+          setHeroImage(profile.preferredHeroImage);
+        }
+      });
+    } else {
+      setHeroImage(ASSETS.HOME.HERO);
+    }
+  }, [user]);
 
   const loadCustomImages = async () => {
     try {
@@ -136,7 +152,7 @@ export default function Home() {
         >
           <div className="absolute inset-0 z-0">
             <img 
-              src={getAssetUrl(ASSETS.HOME.HERO)} 
+              src={getAssetUrl(heroImage)} 
               alt="Featured Recipe" 
               className="w-full h-full object-contain transition-transform duration-700 group-hover:scale-105 opacity-40 md:opacity-60"
               referrerPolicy="no-referrer"

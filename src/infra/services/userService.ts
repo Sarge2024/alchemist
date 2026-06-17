@@ -40,6 +40,7 @@ export interface UserProfile {
   role: UserRole;
   isChef?: boolean;
   internalEmail?: string;
+  preferredHeroImage?: string;
   createdAt?: any;
   updatedAt?: any;
 }
