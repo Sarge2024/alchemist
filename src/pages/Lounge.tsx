@@ -79,9 +79,9 @@ const Lounge: React.FC = () => {
       
       try {
         const prompt = `Gere uma lista de links e opções de navegação baseadas no termo: '${welcomeSubject.trim()}'. 
-Pense em elementos semânticos e periféricos. Por exemplo, se for 'churrasco', sugira receitas de carnes, técnicas, e especificamente ferramentas como a [Calculadora de Churrasco](/calculadora-churrasco).
-Seja extremamente sucinto. Retorne apenas uma frase de introdução e uma lista com links em Markdown. Use o formato [Nome do Recurso](/caminho).
-Lembre-se das rotas principais: /explore?q=... e /acervo?search=...`;
+Inclua 1 ou 2 links de navegação para as rotas do sistema (/explore?q=... ou /acervo?search=...).
+E MUITO IMPORTANTE: Inclua 2 "Gatilhos de Conversa" (hooks) interativos para o usuário aprofundar o assunto aqui no chat com o Chef IA, usando o formato de link com a hashtag sustenido (ex: [Como fazer o blend perfeito?](#) ou [Quais os melhores cortes para hamburguer?](#)).
+Seja extremamente sucinto. Retorne apenas uma frase simpática de introdução e a lista com essas opções em Markdown.`;
 
         const response = await fetch('/api/chat/ask', {
           method: 'POST',
@@ -148,8 +148,19 @@ Lembre-se das rotas principais: /explore?q=... e /acervo?search=...`;
                     </div>
                   ) : (
                     <div className="prose prose-sm dark:prose-invert text-left" onClick={(e) => {
-                      if ((e.target as HTMLElement).tagName === 'A') {
-                        closeWelcome(); // Close the modal if a link is clicked
+                      const target = e.target as HTMLElement;
+                      if (target.tagName === 'A') {
+                        e.preventDefault();
+                        const href = target.getAttribute('href') || '';
+                        const textContent = target.innerText;
+                        closeWelcome(); // Close the modal
+                        
+                        if (href.startsWith('/')) {
+                          navigate(href);
+                        } else {
+                          // Hook de conversação, joga pro chat!
+                          window.dispatchEvent(new CustomEvent('insert-lounge-message', { detail: textContent }));
+                        }
                       }
                     }}>
                       <MarkdownText text={semanticResult} />

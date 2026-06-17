@@ -66,7 +66,7 @@ export const LoungeChat: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Escuta eventos de mensagem direcionada (do Sidebar)
+  // Escuta eventos de mensagem direcionada (do Sidebar) e ganchos de conversa
   useEffect(() => {
     const handleDirected = (e: any) => {
       const chef = e.detail;
@@ -76,8 +76,19 @@ export const LoungeChat: React.FC = () => {
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     };
 
+    const handleInsertMessage = (e: any) => {
+      const text = e.detail;
+      setInputText(text.includes('@Alchemist') ? text : `${text} @Alchemist `);
+      setTimeout(() => inputRef.current?.focus(), 10);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+    };
+
     window.addEventListener('directed-message', handleDirected);
-    return () => window.removeEventListener('directed-message', handleDirected);
+    window.addEventListener('insert-lounge-message', handleInsertMessage);
+    return () => {
+      window.removeEventListener('directed-message', handleDirected);
+      window.removeEventListener('insert-lounge-message', handleInsertMessage);
+    };
   }, []);
 
   const handleSendMessage = async (e: React.FormEvent) => {

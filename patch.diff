@@ -1,0 +1,24 @@
+--- src/pages/Lounge.tsx
++++ src/pages/Lounge.tsx
+@@ -149,9 +149,15 @@
+                       <p>Buscando no acervo...</p>
+                     </div>
+                   ) : (
+                     <div className="prose prose-sm dark:prose-invert text-left" onClick={(e) => {
+                       if ((e.target as HTMLElement).tagName === 'A') {
+-                        closeWelcome(); // Close the modal if a link is clicked
++                        e.preventDefault();
++                        const target = e.target as HTMLAnchorElement;
++                        const href = target.getAttribute('href') || '';
++                        const text = target.innerText || '';
++                        closeWelcome();
++                        
++                        if (href.startsWith('/')) {
++                          navigate(href);
++                        } else {
++                          // Treat as a chat hook
++                          window.dispatchEvent(new CustomEvent('insert-lounge-message', { detail: text }));
++                        }
+                       }
+                     }}>
+                       <MarkdownText text={semanticResult} />
