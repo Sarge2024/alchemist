@@ -69,12 +69,20 @@ export default function Home() {
       userService.getUserProfile(user.uid).then(profile => {
         if (profile?.preferredHeroImage) {
           setHeroImage(profile.preferredHeroImage);
+        } else if (customImages['Home Padrão']) {
+          setHeroImage(customImages['Home Padrão']);
+        } else {
+          setHeroImage(ASSETS.HOME.HERO);
         }
       });
     } else {
-      setHeroImage(ASSETS.HOME.HERO);
+      if (customImages['Home Padrão']) {
+        setHeroImage(customImages['Home Padrão']);
+      } else {
+        setHeroImage(ASSETS.HOME.HERO);
+      }
     }
-  }, [user]);
+  }, [user, customImages]);
 
   const loadCustomImages = async () => {
     try {

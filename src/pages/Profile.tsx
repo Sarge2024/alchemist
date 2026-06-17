@@ -222,11 +222,33 @@ export default function Profile() {
   useEffect(() => {
     const fetchCustomHeroImages = async () => {
       try {
-        const snap = await getDoc(doc(db, 'settings', 'heroImages'));
-        if (snap.exists()) {
-          const customImages = snap.data().images || [];
-          setHeroOptions([...DEFAULT_HERO_OPTIONS, ...customImages]);
+        const [heroSnap, catSnap] = await Promise.all([
+          getDoc(doc(db, 'settings', 'heroImages')),
+          getDoc(doc(db, 'settings', 'categoryImages'))
+        ]);
+        
+        let customHero: any[] = [];
+        if (heroSnap.exists()) {
+          customHero = heroSnap.data().images || [];
         }
+
+        let catImages: Record<string, string> = {};
+        if (catSnap.exists()) {
+          catImages = catSnap.data() as Record<string, string>;
+        }
+
+        // Apply overrides to default options
+        const updatedDefaults = DEFAULT_HERO_OPTIONS.map(opt => {
+          let mapKey = opt.label;
+          if (opt.label === 'Padrão (Cozinha Alchemist)') mapKey = 'Home Padrão';
+          
+          if (catImages[mapKey]) {
+            return { ...opt, url: catImages[mapKey] };
+          }
+          return opt;
+        });
+
+        setHeroOptions([...updatedDefaults, ...customHero]);
       } catch (e) {
         console.error('Failed to fetch custom hero images', e);
       }

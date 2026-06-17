@@ -33,6 +33,13 @@ export default function AdminDashboard() {
   const [newHeroFile, setNewHeroFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [defaultImagesTargets] = useState(['Home Padrão', 'Café da Manhã', 'Almoço', 'Jantar', 'Bebidas', 'Sobremesas']);
+  const [selectedDefaultTarget, setSelectedDefaultTarget] = useState('Home Padrão');
+  const [newDefaultFile, setNewDefaultFile] = useState<File | null>(null);
+  const [uploadingDefault, setUploadingDefault] = useState(false);
+  const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
+  const defaultFileInputRef = useRef<HTMLInputElement>(null);
+
   const { user, isAdmin: authIsAdmin } = useAuth();
   const isAdmin = authIsAdmin || !!import.meta.env.DEV;
 
@@ -41,7 +48,10 @@ export default function AdminDashboard() {
       if (activeTab === 'recipes') fetchAllRecipes();
       else if (activeTab === 'lounge') fetchAllMessages();
       else if (activeTab === 'analytics') fetchAnalytics();
-      else if (activeTab === 'heroImages') fetchHeroImages();
+      else if (activeTab === 'heroImages') {
+        fetchHeroImages();
+        fetchCategoryImages();
+      }
     }
   }, [isAdmin, activeTab]);
 
@@ -53,6 +63,17 @@ export default function AdminDashboard() {
       }
     } catch (error) {
       console.error('Error fetching hero images:', error);
+    }
+  };
+
+  const fetchCategoryImages = async () => {
+    try {
+      const snap = await getDoc(doc(db, 'settings', 'categoryImages'));
+      if (snap.exists()) {
+        setCategoryImages(snap.data() as Record<string, string>);
+      }
+    } catch (error) {
+      console.error('Error fetching category images:', error);
     }
   };
 
@@ -179,6 +200,41 @@ export default function AdminDashboard() {
       alert('Erro ao excluir a imagem.');
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleUploadDefaultImage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDefaultFile || !selectedDefaultTarget) return;
+
+    setUploadingDefault(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', newDefaultFile);
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'x-api-key': import.meta.env.VITE_APP_API_KEY || 'dev_key',
+        },
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error('Upload failed');
+      const data = await res.json();
+      
+      const newImagesMap = { ...categoryImages, [selectedDefaultTarget]: data.imageUrl };
+      await setDoc(doc(db, 'settings', 'categoryImages'), newImagesMap, { merge: true });
+      setCategoryImages(newImagesMap);
+      
+      setNewDefaultFile(null);
+      if (defaultFileInputRef.current) defaultFileInputRef.current.value = '';
+      alert('Imagem padrão substituída com sucesso!');
+    } catch (error) {
+      console.error('Error uploading default image:', error);
+      alert('Erro ao substituir a imagem padrão.');
+    } finally {
+      setUploadingDefault(false);
     }
   };
 
@@ -653,11 +709,89 @@ export default function AdminDashboard() {
           </div>
         )
       ) : activeTab === 'heroImages' ? (
-        <div className="bg-surface-container-lowest rounded-[2.5rem] p-8 shadow-sm border border-surface-container-high">
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="flex-1 min-w-[300px]">
-              <h3 className="text-xl font-bold text-on-surface mb-4">Upload de Imagem da Home</h3>
-              <form onSubmit={handleUploadHeroImage} className="space-y-4">
+        <div className="bg-surface-container-lowest rounded-[2.5rem] p-8 shadow-sm border border-surface-container-high space-y-12">
+          
+          {/* Substituir Imagens Padrão */}
+          <div>
+            <h2 className="text-2xl font-bold text-on-surface mb-6">Substituir Imagens Padrão</h2>
+            <div className="flex flex-col md:flex-row gap-8">
+              <div className="flex-1 min-w-[300px]">
+                <form onSubmit={handleUploadDefaultImage} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-on-surface mb-1">Escolha qual imagem substituir</label>
+                    <select
+                      value={selectedDefaultTarget}
+                      onChange={(e) => setSelectedDefaultTarget(e.target.value)}
+                      className="w-full px-4 py-3 rounded-2xl bg-surface-container border border-surface-container-high text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    >
+                      {defaultImagesTargets.map(target => (
+                        <option key={target} value={target}>{target}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-on-surface mb-1">Arquivo da Nova Imagem</label>
+                    <input
+                      type="file"
+                      required
+                      accept="image/*"
+                      ref={defaultFileInputRef}
+                      onChange={(e) => setNewDefaultFile(e.target.files?.[0] || null)}
+                      className="w-full px-4 py-3 rounded-2xl bg-surface-container border border-surface-container-high text-on-surface focus:outline-none file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-white hover:file:bg-primary/90"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={uploadingDefault}
+                    className="w-full py-4 rounded-2xl font-bold bg-primary text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {uploadingDefault ? <Loader2 className="w-5 h-5 animate-spin" /> : <Upload className="w-5 h-5" />}
+                    {uploadingDefault ? 'Substituindo...' : 'Substituir Imagem Padrão'}
+                  </button>
+                </form>
+              </div>
+              
+              <div className="flex-[2] md:border-l border-surface-container-high md:pl-8">
+                <h3 className="text-xl font-bold text-on-surface mb-4">Imagens Padrão Atuais (Substituídas)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {Object.entries(categoryImages).map(([key, url]) => (
+                    <div key={key} className="relative group rounded-2xl overflow-hidden border border-surface-container-high aspect-video bg-surface-container">
+                      <img src={url} alt={key} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center p-4">
+                        <span className="text-white text-xs font-bold text-center mb-2">{key}</span>
+                        <button
+                          onClick={async () => {
+                            if (confirm(`Remover substituição de ${key}? A imagem original voltará a aparecer.`)) {
+                              const newMap = { ...categoryImages };
+                              delete newMap[key];
+                              await setDoc(doc(db, 'settings', 'categoryImages'), newMap);
+                              setCategoryImages(newMap);
+                            }
+                          }}
+                          className="p-2 bg-red-500/20 text-red-100 hover:bg-red-500 hover:text-white rounded-lg transition-colors"
+                          title="Remover Substituição"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                  {Object.keys(categoryImages).length === 0 && (
+                    <div className="col-span-full py-8 text-center text-on-surface-variant text-sm">
+                      Nenhuma imagem padrão foi substituída ainda.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Adicionar Novas Imagens na Galeria */}
+          <div className="border-t border-surface-container-high pt-12">
+            <h2 className="text-2xl font-bold text-on-surface mb-6">Adicionar Novas Imagens na Galeria</h2>
+            <div className="flex flex-col md:flex-row gap-8">
+              <div className="flex-1 min-w-[300px]">
+                <form onSubmit={handleUploadHeroImage} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-on-surface mb-1">Nome/Rótulo (ex: Banner 1)</label>
                   <input
@@ -713,6 +847,8 @@ export default function AdminDashboard() {
                     Nenhuma imagem personalizada adicionada.
                   </div>
                 )}
+              </div>
+            </div>
               </div>
             </div>
           </div>
