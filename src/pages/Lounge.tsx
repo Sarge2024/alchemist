@@ -78,18 +78,13 @@ const Lounge: React.FC = () => {
       setIsLoadingSemantic(true);
       
       try {
-        const prompt = `Gere uma lista de links e opções de navegação baseadas no termo: '${welcomeSubject.trim()}'. 
-Inclua 1 ou 2 links de navegação para as rotas do sistema (/explore?q=... ou /acervo?search=...).
-E MUITO IMPORTANTE: Inclua 2 "Gatilhos de Conversa" (hooks) interativos para o usuário aprofundar o assunto aqui no chat com o Chef IA, usando o formato de link com a hashtag sustenido (ex: [Como fazer o blend perfeito?](#) ou [Quais os melhores cortes para hamburguer?](#)).
-Seja extremamente sucinto. Retorne apenas uma frase simpática de introdução e a lista com essas opções em Markdown.`;
-
-        const response = await fetch('/api/chat/ask', {
+        const response = await fetch('/api/chat/quick-route', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'X-API-KEY': import.meta.env.VITE_APP_API_KEY || 'alchemist-app-secret-2024'
           },
-          body: JSON.stringify({ question: prompt, history: [] })
+          body: JSON.stringify({ topic: welcomeSubject.trim() })
         });
         const data = await response.json();
         if (data.success) {

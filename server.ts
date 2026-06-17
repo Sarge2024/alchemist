@@ -17,6 +17,7 @@ import { AtaGeneratorService } from "./src/infra/services/AtaGeneratorService";
 import { GamificationService } from "./src/infra/services/GamificationService";
 import { geminiService } from "./src/infra/services/geminiService";
 import { getAvailableGeminiKeys } from "./src/infra/services/geminiKeyManager";
+import { FastRoutingService } from "./src/infra/services/fastRoutingService";
 import { put } from "@vercel/blob";
 import cron from "node-cron";
 import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
@@ -950,6 +951,32 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   } catch (error: any) {
     console.error("[Chat RAG API] Erro:", error);
     res.json({ success: true, answer: "Desculpe, nossos servidores estão em delay, pergunte novamente por favor" });
+  }
+});
+
+// Endpoint Fast Routing (Sem RAG)
+app.post("/api/chat/quick-route", authenticateAPI, async (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) {
+      return res.status(400).json({ error: "topic is required" });
+    }
+    const answer = await FastRoutingService.getQuickRoutingOptions(topic);
+    res.json({ success: true, answer });
+  } catch (error: any) {
+    console.error("[Quick Route API] Erro:", error);
+    res.json({ success: true, answer: "Não foi possível carregar as opções agora, mas pode mandar no chat." });
+  }
+});
+
+// Endpoint Admin para reconstruir Índice
+app.post("/api/admin/rebuild-index", authenticateAPI, async (req, res) => {
+  try {
+    await FastRoutingService.refreshIndex();
+    res.json({ success: true, message: "Índice atualizado com sucesso." });
+  } catch (error: any) {
+    console.error("[Admin API] Erro ao atualizar índice:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 
