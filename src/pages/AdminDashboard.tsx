@@ -145,8 +145,8 @@ export default function AdminDashboard() {
       const data = await res.json();
       
       const newImage = {
-        id: data.url,
-        url: data.url,
+        id: data.imageUrl,
+        url: data.imageUrl,
         label: newHeroLabel.trim()
       };
 
