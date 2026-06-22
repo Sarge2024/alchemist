@@ -95,6 +95,22 @@ export const LoungeChat: React.FC = () => {
     e.preventDefault();
     if (!inputText.trim() || !user || isSending) return;
 
+    // Interceptar se o destinatário for um Chef para enviar para o WhatsApp
+    if (directedTo && directedTo.isChef) {
+      const whatsappNumber = directedTo.whatsapp?.replace(/\D/g, '');
+      if (!whatsappNumber) {
+        alert('Este Chef não possui um número de WhatsApp cadastrado no perfil.');
+        return;
+      }
+      const text = encodeURIComponent(inputText.trim());
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${text}`;
+      window.open(whatsappUrl, '_blank');
+      
+      setInputText('');
+      setDirectedTo(null);
+      return;
+    }
+
     const textToSend = inputText.trim();
     const tempId = `temp-${Date.now()}`;
     const newMsg: LoungeMessage = {
@@ -478,20 +494,34 @@ export const LoungeChat: React.FC = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className="absolute bottom-full left-6 right-6 mb-2 p-3 bg-amber-50 dark:bg-amber-900/30 rounded-t-xl border-x border-t border-amber-200 dark:border-amber-800 shadow-lg flex items-center gap-3 overflow-hidden"
+              className={`absolute bottom-full left-6 right-6 mb-2 p-3 rounded-t-xl border-x border-t shadow-lg flex items-center gap-3 overflow-hidden ${
+                directedTo.isChef 
+                  ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800' 
+                  : 'bg-sky-50 dark:bg-sky-900/30 border-sky-200 dark:border-sky-800'
+              }`}
             >
-              <div className="w-1 h-full bg-amber-500 absolute left-0 top-0"></div>
+              <div className={`w-1 h-full absolute left-0 top-0 ${directedTo.isChef ? 'bg-emerald-500' : 'bg-sky-500'}`}></div>
               <div className="flex-1 min-w-0 flex items-center gap-2">
-                <ChefHat className="w-4 h-4 text-amber-600" />
+                {directedTo.isChef ? (
+                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                ) : (
+                  <MessageCircle className="w-4 h-4 text-sky-600" />
+                )}
                 <div>
-                  <p className="text-[10px] font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">
-                    PARA: CHEF {directedTo.displayName}
+                  <p className={`text-[10px] font-black uppercase tracking-widest ${
+                    directedTo.isChef ? 'text-emerald-700 dark:text-emerald-400' : 'text-sky-700 dark:text-sky-400'
+                  }`}>
+                    {directedTo.isChef ? `WHATSAPP: CHEF ${directedTo.displayName}` : `MENSAGEM PARA: ${directedTo.displayName}`}
                   </p>
                 </div>
               </div>
               <button 
                 onClick={() => setDirectedTo(null)}
-                className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-800 rounded-full text-amber-400"
+                className={`p-1.5 rounded-full ${
+                  directedTo.isChef 
+                    ? 'hover:bg-emerald-100 dark:hover:bg-emerald-800 text-emerald-500' 
+                    : 'hover:bg-sky-100 dark:hover:bg-sky-800 text-sky-500'
+                }`}
               >
                 <CloseIcon className="w-4 h-4" />
               </button>

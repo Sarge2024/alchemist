@@ -25,6 +25,9 @@ model User {
   gamificationProfile  UserGamificationProfile?
   badges               UserBadge[]
   interactions         UserInteraction[]
+  sessions             UserSession[]
+  pageAccesses         PageAccess[]
+  unansweredQueries    UnansweredQuery[]
 }
 
 enum Role {
@@ -154,3 +157,34 @@ model LibraryItem {
   updatedAt   DateTime @updatedAt
 }
 
+model UserSession {
+  id              String   @id @default(uuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startTime       DateTime @default(now())
+  lastPing        DateTime @default(now())
+  durationSeconds Int      @default(0)
+  
+  @@index([userId])
+}
+
+model PageAccess {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  path      String
+  timestamp DateTime @default(now())
+
+  @@index([userId])
+}
+
+model UnansweredQuery {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  queryText String
+  context   String?
+  status    String   @default("PENDING") // PENDING, RESOLVED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

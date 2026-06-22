@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+        "meu-agente-local": {
+            "command": "/mnt/46F84CA3F84C935B/SAGACITAS_SaaS/Alchemist/.venv/bin/python",
+            "args": [
+                "/mnt/46F84CA3F84C935B/SAGACITAS_SaaS/Alchemist/agente_mcp.py"
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        }
+    }
+}

@@ -41,6 +41,8 @@ export interface UserProfile {
   isChef?: boolean;
   internalEmail?: string;
   preferredHeroImage?: string;
+  moedas?: number;
+  inventory?: string[];
   createdAt?: any;
   updatedAt?: any;
 }

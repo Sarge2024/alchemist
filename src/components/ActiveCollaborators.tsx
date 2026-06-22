@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Users, ChefHat, Shield, Circle } from 'lucide-react';
+import { Users, ChefHat, Shield, Circle, MessageSquare } from 'lucide-react';
 import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { UserProfile } from '../infra/services/userService';
@@ -187,6 +187,18 @@ export const ActiveCollaborators: React.FC = () => {
                     {getRoleBadge(collab.role)}
                   </div>
                 </div>
+
+                {/* Ação: Enviar Mensagem */}
+                <button
+                  onClick={() => {
+                    const event = new CustomEvent('directed-message', { detail: collab });
+                    window.dispatchEvent(event);
+                  }}
+                  className="p-1.5 md:p-2 rounded-xl bg-stone-100 dark:bg-stone-800 text-stone-500 hover:bg-primary hover:text-white transition-all opacity-0 group-hover:opacity-100 focus:opacity-100"
+                  title={`Enviar mensagem para ${collab.displayName}`}
+                >
+                  <MessageSquare className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </button>
               </motion.div>
             ))}
           </AnimatePresence>

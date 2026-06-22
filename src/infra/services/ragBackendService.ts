@@ -34,7 +34,7 @@ export class RagBackendService {
    * Realiza busca semântica via RAG combinando Embeddings e busca vetorial no Postgres.
    * Suporta histórico de conversa para manter contexto multi-turno.
    */
-  static async askGeminiWithContext(userQuestion: string, conversationHistory: ConversationTurn[] = [], limit = 5): Promise<string> {
+  static async askGeminiWithContext(userQuestion: string, conversationHistory: ConversationTurn[] = [], limit = 5, userId?: string): Promise<string> {
     try {
       const lowerQ = userQuestion.toLowerCase();
       // Interceptador rígido para perguntas sobre vendas de produtos/utensílios
@@ -65,6 +65,38 @@ export class RagBackendService {
 
       const context = await this.getSemanticContext(userQuestion, limit);
 
+      let complementaryContext = "";
+      if (context && context.includes("[Documento:")) {
+        // Fase 2: Tenta extrair bases de alimentos e momentos do contexto primário
+        const basesMatch = [...context.matchAll(/Base do Alimento:\s*(.+)/g)].map(m => m[1]);
+        const momentosMatch = [...context.matchAll(/Categoria\/Momento:\s*(.+)/g)].map(m => m[1]);
+        
+        const bases = basesMatch.join(' ');
+        const momentos = momentosMatch.join(' ');
+        
+        let queryParts = [];
+        // Se tem proteína forte, busca acompanhamento/guarnição
+        if (/Carne|Frango|Peixe|Frutos do Mar/i.test(bases)) {
+           queryParts.push("acompanhamento guarnição salada farofa vegetais molho");
+        } 
+        // Se tem refeição principal, busca sobremesa ou bebida
+        if (/Almoço|Jantar|Ceia/i.test(momentos)) {
+           queryParts.push("sobremesa doce pudim bolo bebida refresco drink");
+        }
+        // Se for café da manhã ou lanche, busca complementos
+        if (/Café da Manhã|Lanche/i.test(momentos)) {
+           queryParts.push("pão bolo biscoito geleia café bebida quente");
+        }
+
+        if (queryParts.length > 0) {
+           const queryExtra = queryParts.join(" ");
+           const extraDocs = await this.getSemanticContext(queryExtra, 2);
+           if (extraDocs) {
+             complementaryContext = `\n\n## CONTEXTO COMPLEMENTAR (Opções de Acompanhamento / Combinação)\n${extraDocs}`;
+           }
+        }
+      }
+
       // Build conversation history block for multi-turn context
       const historyBlock = conversationHistory.length > 0
         ? conversationHistory.map(t => `${t.role === 'user' ? 'USUÁRIO' : 'ASSISTENTE'}: ${t.text}`).join('\n')
@@ -88,6 +120,18 @@ Você deve GUIAR o usuário passo a passo com perguntas de acompanhamento ao inv
 2. A cada resposta do usuário, refine sua sugestão e faça novas perguntas até chegar a uma receita ou solução específica.
 3. Quando chegar a algo concreto, apresente a resposta final completa.
 
+## COMPOSIÇÃO DE RECEITAS (NOVO E OBRIGATÓRIO)
+Ao receber receitas no contexto, SEMPRE analise se duas ou mais podem ser combinadas para formar um menu ou prato composto. Considere:
+1. Compatibilidade de "momento" (ex: Prato principal + Sobremesa).
+2. Complementaridade de ingredientes (ex: Carne + Farofa/Salada).
+3. Sinergia de sabores e texturas.
+
+Quando identificar uma combinação viável e que responda à necessidade do usuário:
+- Proponha a COMBINAÇÃO com um nome criativo (ex: "Combo Alquimia do Fogo").
+- Apresente CADA receita individual com link no formato: [Nome da Receita](/recipe/ID)
+- Mostre um breve resumo de como elas se complementam.
+- Pergunte se o usuário deseja ver os detalhes de preparo de cada uma.
+
 ## REGRAS DE CONTEXTO DO ACERVO
 - O CONTEXTO RECUPERADO abaixo contém receitas e artigos do nosso Acervo Técnico (banco de dados vetorial).
 - Se houver receitas relevantes no contexto, SEMPRE apresente-as com links clicáveis no formato: [Nome da Receita](/recipe/ID)
@@ -108,7 +152,7 @@ ${historyBlock}
 ---
 
 ` : ''}## CONTEXTO RECUPERADO DO ACERVO TÉCNICO
-${context || "Nenhum resultado encontrado no acervo para esta consulta."}
+${context || "Nenhum resultado encontrado no acervo para esta consulta."}${complementaryContext}
 
 ---
 
@@ -133,9 +177,51 @@ ${userQuestion}
         contents: finalPrompt,
       });
 
-      return generation.text || "Ainda não temos uma informação para este termo, mas já está anotado para incluirmos logo que processada a pendência";
+      const responseText = generation.text || "Ainda não temos uma informação para este termo, mas já está anotado para incluirmos logo que processada a pendência";
+
+      // Log unanswered queries to the Postgres Knowledge Wallet
+      if (
+        responseText.includes("Ainda não temos uma informação para este termo") || 
+        responseText.includes("O tema não faz aparte de nosso acervo")
+      ) {
+        try {
+          let prismaUserId = null;
+          if (userId) {
+            const user = await prisma.user.findFirst({ where: { OR: [{ id: userId }, { uid: userId }] } });
+            if (user) prismaUserId = user.id;
+          }
+          await prisma.unansweredQuery.create({
+            data: {
+              userId: prismaUserId,
+              queryText: userQuestion,
+              context: context,
+            }
+          });
+          console.log("[RAG] Termo não respondido registrado na Carteira de Conhecimento.");
+        } catch (e) {
+          console.error("[RAG] Erro ao registrar termo não respondido", e);
+        }
+      }
+
+      return responseText;
     } catch (error) {
       console.error("[RagBackendService] Resource or API Error:", error);
+      
+      try {
+        let prismaUserId = null;
+        if (userId) {
+          const user = await prisma.user.findFirst({ where: { OR: [{ id: userId }, { uid: userId }] } });
+          if (user) prismaUserId = user.id;
+        }
+        await prisma.unansweredQuery.create({
+          data: {
+            userId: prismaUserId,
+            queryText: userQuestion,
+            context: "SYSTEM_ERROR",
+          }
+        });
+      } catch (e) {}
+
       return "Desculpe, nossos servidores estão em delay, pergunte novamente por favor";
     }
   }

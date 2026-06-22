@@ -107,7 +107,8 @@ export const geminiService = {
             try {
               const result = await client.models.generateContent({
                 model: modelName,
-                contents: [{ role: "user", parts: [{ text: prompt }] }]
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                ...(isUrlOnly ? { tools: [{ googleSearch: {} }] } : {})
               } as any);
               response = result;
               // Success, exit both loops
@@ -274,7 +275,8 @@ export const geminiService = {
               const client = new GoogleGenAI({ apiKey: apiKeys[i] });
               const result = await client.models.generateContent({
                 model: "gemini-3-flash-preview",
-                contents: [{ role: "user", parts: [{ text: searchPrompt }] }]
+                contents: [{ role: "user", parts: [{ text: searchPrompt }] }],
+                tools: [{ googleSearch: {} }]
               } as any);
               
               searchResponse = result;

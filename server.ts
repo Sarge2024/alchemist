@@ -627,7 +627,7 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
       // Run asynchronously so it doesn't block the request response
       Promise.resolve().then(async () => {
         try {
-          const answer = await RagBackendService.askGeminiWithContext(text);
+          const answer = await RagBackendService.askGeminiWithContext(text, [], 5, senderId);
           const copilotMessage = {
             text: answer,
             senderId: 'copilot-agent',
@@ -931,7 +931,7 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
 // Endpoint to ask the RAG Assistant (AI Chat)
 app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   try {
-    const { question, history } = req.body;
+    const { question, history, userId } = req.body;
     if (!question) {
       return res.status(400).json({ error: "question is required" });
     }
@@ -945,7 +945,7 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
       : [];
     
     // Calls the RAG Backend Service with conversation history for multi-turn context
-    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory);
+    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory, 5, userId);
     
     res.json({ success: true, answer });
   } catch (error: any) {
@@ -1025,6 +1025,22 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
     }
 
     const result = await GamificationService.processEvent(uid, eventType);
+    
+    // Mercador de Permuta: 1 Moeda a cada 10 XP
+    if (result.xpGained > 0) {
+      try {
+        const db = getFirestore();
+        const FieldValue = (await import('firebase-admin/firestore')).FieldValue;
+        const moedasGanhas = result.xpGained / 10;
+        await db.collection("users").doc(uid).update({
+          moedas: FieldValue.increment(moedasGanhas)
+        });
+        console.log(`[Gamification Event API] +${moedasGanhas} Moedas dadas ao usuário ${uid}`);
+      } catch (err) {
+        console.error(`[Gamification Event API] Erro ao creditar moedas para ${uid}:`, err);
+      }
+    }
+
     res.json({ success: true, ...result });
   } catch (error: any) {
     console.error(`[Gamification Event API] Erro ao processar evento ${req.body?.eventType}:`, error.message);
@@ -1485,6 +1501,146 @@ app.delete("/api/library/:id", authenticateAPI, async (req, res) => {
   } catch (error) {
     console.error("Erro ao deletar acervo:", error);
     res.status(500).json({ error: "Erro ao deletar item no acervo" });
+  }
+});
+// ==========================================
+// MÓDULO: TELEMETRIA & RANKING DE USO
+// ==========================================
+
+app.post("/api/telemetry/heartbeat", authenticateAPI, async (req, res) => {
+  try {
+    const { uid, durationSeconds } = req.body;
+    if (!uid) return res.status(400).json({ error: "uid required" });
+
+    const user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) return res.status(404).json({ error: "user not found" });
+
+    // Encontra ou cria uma sessão ativa (últimos 5 minutos)
+    const activeSession = await prisma.userSession.findFirst({
+      where: {
+        userId: user.id,
+        lastPing: { gte: new Date(Date.now() - 5 * 60 * 1000) }
+      },
+      orderBy: { lastPing: 'desc' }
+    });
+
+    if (activeSession) {
+      await prisma.userSession.update({
+        where: { id: activeSession.id },
+        data: {
+          lastPing: new Date(),
+          durationSeconds: { increment: durationSeconds || 60 }
+        }
+      });
+    } else {
+      await prisma.userSession.create({
+        data: {
+          userId: user.id,
+          lastPing: new Date(),
+          durationSeconds: durationSeconds || 60
+        }
+      });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[Telemetry] Heartbeat error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+app.post("/api/telemetry/pageview", authenticateAPI, async (req, res) => {
+  try {
+    const { uid, path } = req.body;
+    if (!uid || !path) return res.status(400).json({ error: "uid and path required" });
+
+    const user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) return res.status(404).json({ error: "user not found" });
+
+    await prisma.pageAccess.create({
+      data: {
+        userId: user.id,
+        path: path
+      }
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[Telemetry] Pageview error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+app.get("/api/admin/usage-ranking", authenticateAPI, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        photoURL: true,
+        sessions: { select: { durationSeconds: true } },
+        pageAccesses: { select: { id: true } },
+        interactions: { select: { count: true } }
+      }
+    });
+
+    const ranking = users.map(u => {
+      const totalSessionTime = u.sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+      const totalPageViews = u.pageAccesses.length;
+      const totalScoredActions = u.interactions.reduce((acc, i) => acc + i.count, 0);
+
+      return {
+        id: u.id,
+        name: u.displayName,
+        email: u.email,
+        photoURL: u.photoURL,
+        totalSessionTime,
+        totalPageViews,
+        totalScoredActions
+      };
+    });
+
+    // Ordenar por um rank score simples: 1 minuto = 1 ponto, 1 pageview = 1 ponto, 1 interaction = 5 pontos
+    ranking.sort((a, b) => {
+      const scoreA = (a.totalSessionTime / 60) + a.totalPageViews + (a.totalScoredActions * 5);
+      const scoreB = (b.totalSessionTime / 60) + b.totalPageViews + (b.totalScoredActions * 5);
+      return scoreB - scoreA;
+    });
+
+    res.json({ success: true, ranking });
+  } catch (error) {
+    console.error("[Admin API] Usage ranking error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+app.get("/api/admin/unanswered-queries", authenticateAPI, async (req, res) => {
+  try {
+    const queries = await prisma.unansweredQuery.findMany({
+      include: {
+        user: { select: { displayName: true, email: true } }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+    res.json({ success: true, queries });
+  } catch (error) {
+    console.error("[Admin API] Unanswered queries error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+
+app.put("/api/admin/unanswered-queries/:id", authenticateAPI, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const query = await prisma.unansweredQuery.update({
+      where: { id: req.params.id },
+      data: { status }
+    });
+    res.json({ success: true, query });
+  } catch (error) {
+    console.error("[Admin API] Update unanswered query error:", error);
+    res.status(500).json({ error: "Internal error" });
   }
 });
 

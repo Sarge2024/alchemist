@@ -23,13 +23,21 @@ import {
   Wind,
   Gem,
   Upload,
-  Save
+  Save,
+  Trophy,
+  BookOpen
 } from 'lucide-react';
 import AdminAvataresSelos from './AdminAvataresSelos';
+import AdminMercado from './AdminMercado';
+
+import { AdminUsageRanking } from './AdminUsageRanking';
+import { AdminKnowledgeWallet } from './AdminKnowledgeWallet';
 
 // Dados baseados no JSON fornecido
 const menuItems = [
   { id: 'dashboard', label: 'Dashboard do Alquimista', icon: LayoutDashboard },
+  { id: 'ranking', label: 'Ranking de Uso', icon: Trophy },
+  { id: 'carteira', label: 'Carteira de Conhecimento', icon: BookOpen },
   { id: 'mercado', label: 'Mercado de Permuta (Loja)', icon: ShoppingBag },
   { id: 'avatares', label: 'Avatares & Selos', icon: Shield },
   { id: 'matriz', label: 'Matriz de Valoração', icon: Star },
@@ -203,62 +211,17 @@ export default function AlchemistPanel() {
       <main className="flex-1 overflow-y-auto p-4 md:p-8 md:pt-24 no-scrollbar">
         <div className={`mx-auto space-y-12 ${activeTab === 'avatares' ? 'w-full max-w-[1600px]' : 'max-w-6xl'}`}>
           
+          {activeTab === 'ranking' && (
+            <AdminUsageRanking />
+          )}
+
+          {activeTab === 'carteira' && (
+            <AdminKnowledgeWallet />
+          )}
+
           {activeTab === 'mercado' && (
             <>
-              {/* Seção 1: Mercado de Permuta */}
-              <section className="bg-surface-container-low p-8 rounded-[2rem] border border-surface-container-high shadow-xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
-              <div>
-                <h3 className="text-2xl font-bold text-on-surface">Mercado de Permuta & Loja de Ingredientes</h3>
-                <p className="text-sm text-on-surface-variant mt-1">Gerencie os itens disponíveis para troca e compra.</p>
-              </div>
-              
-              <div className="flex items-center gap-4">
-                <div className="relative">
-                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-                  <input 
-                    type="text" 
-                    placeholder="Busca..." 
-                    className="pl-9 pr-4 py-2 bg-background border border-surface-container rounded-xl text-sm focus:ring-2 focus:ring-primary outline-none w-48"
-                  />
-                </div>
-                <button className="flex items-center gap-2 bg-stone-900 dark:bg-stone-100 text-white dark:text-stone-900 px-4 py-2 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity">
-                  <Plus className="w-4 h-4" /> Adicionar
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {marketItems.map(item => (
-                <div key={item.id} className="bg-background rounded-2xl border border-surface-container p-5 hover:shadow-lg transition-shadow group">
-                  <div className="flex items-start gap-4 mb-4">
-                    <div className={`w-12 h-12 rounded-xl ${item.bg} ${item.color} flex items-center justify-center shrink-0`}>
-                      <item.icon className="w-6 h-6" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-on-surface-variant mb-1">Tipo: {item.tipo}</div>
-                      <h4 className="text-sm font-bold text-on-surface leading-tight">{item.nome}</h4>
-                    </div>
-                  </div>
-                  <div className="text-xs text-on-surface-variant mb-4 line-clamp-2 min-h-[2rem]">
-                    {item.desc}
-                  </div>
-                  <div className="flex items-center gap-2 mb-4 text-xs font-bold">
-                    <span className="bg-primary/10 text-primary px-2 py-1 rounded-md">{item.xp} XP</span>
-                    <span className="bg-amber-500/10 text-amber-600 px-2 py-1 rounded-md">{item.moedas} Moedas</span>
-                  </div>
-                  <div className="flex items-center gap-2 pt-4 border-t border-surface-container opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button className="flex-1 flex items-center justify-center gap-1 text-xs font-bold text-on-surface-variant hover:text-primary transition-colors py-1">
-                      <Edit2 className="w-3 h-3" /> Editar
-                    </button>
-                    <button className="flex-1 flex items-center justify-center gap-1 text-xs font-bold text-on-surface-variant hover:text-red-500 transition-colors py-1">
-                      <Trash2 className="w-3 h-3" /> Excluir
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+              <AdminMercado />
 
           {/* Seção 2: Jornada da Transmutação */}
           <section className="bg-surface-container-low p-8 rounded-[2rem] border border-surface-container-high shadow-xl">
