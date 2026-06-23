@@ -7,7 +7,7 @@ import multer from "multer";
 import fs from "fs";
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { initializeApp as initializeAdminApp, cert } from "firebase-admin/app";
-import { getFirestore as getFirestore3, FieldValue as FieldValue2 } from "firebase-admin/firestore";
+import { getFirestore as getFirestore4, FieldValue as FieldValue2 } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
 // src/infra/auth/IdentityAccessService.ts
@@ -188,7 +188,7 @@ var RagBackendService = class {
    * Realiza busca semântica via RAG combinando Embeddings e busca vetorial no Postgres.
    * Suporta histórico de conversa para manter contexto multi-turno.
    */
-  static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5) {
+  static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5, userId) {
     try {
       const lowerQ = userQuestion.toLowerCase();
       const isSalesQuery = (lowerQ.includes("venda") || lowerQ.includes("comprar") || lowerQ.includes("loja") || lowerQ.includes("shop") || lowerQ.includes("pre\xE7o") || lowerQ.includes("custo") || lowerQ.includes("comercializa\xE7\xE3o")) && (lowerQ.includes("produto") || lowerQ.includes("utens\xEDlio") || lowerQ.includes("faca") || lowerQ.includes("equipamento") || lowerQ.includes("panela") || lowerQ.includes("colher") || lowerQ.includes("prato") || lowerQ.includes("mesa"));
@@ -197,6 +197,33 @@ var RagBackendService = class {
       }
       const ai = await this.getGeminiClient();
       const context = await this.getSemanticContext(userQuestion, limit);
+      let complementaryContext = "";
+      if (context && context.includes("[Documento:")) {
+        const basesMatch = [...context.matchAll(/Base do Alimento:\s*(.+)/g)].map((m) => m[1]);
+        const momentosMatch = [...context.matchAll(/Categoria\/Momento:\s*(.+)/g)].map((m) => m[1]);
+        const bases = basesMatch.join(" ");
+        const momentos = momentosMatch.join(" ");
+        let queryParts = [];
+        if (/Carne|Frango|Peixe|Frutos do Mar/i.test(bases)) {
+          queryParts.push("acompanhamento guarni\xE7\xE3o salada farofa vegetais molho");
+        }
+        if (/Almoço|Jantar|Ceia/i.test(momentos)) {
+          queryParts.push("sobremesa doce pudim bolo bebida refresco drink");
+        }
+        if (/Café da Manhã|Lanche/i.test(momentos)) {
+          queryParts.push("p\xE3o bolo biscoito geleia caf\xE9 bebida quente");
+        }
+        if (queryParts.length > 0) {
+          const queryExtra = queryParts.join(" ");
+          const extraDocs = await this.getSemanticContext(queryExtra, 2);
+          if (extraDocs) {
+            complementaryContext = `
+
+## CONTEXTO COMPLEMENTAR (Op\xE7\xF5es de Acompanhamento / Combina\xE7\xE3o)
+${extraDocs}`;
+          }
+        }
+      }
       const historyBlock = conversationHistory.length > 0 ? conversationHistory.map((t) => `${t.role === "user" ? "USU\xC1RIO" : "ASSISTENTE"}: ${t.text}`).join("\n") : "";
       const finalPrompt = `
 Voc\xEA \xE9 o **Chef IA Alchemist**, o assistente culin\xE1rio mestre do portal "Alquimia do Prato".
@@ -215,6 +242,18 @@ Voc\xEA deve GUIAR o usu\xE1rio passo a passo com perguntas de acompanhamento ao
    - Tem algum ingrediente em m\xE3os ou restri\xE7\xE3o alimentar?
 2. A cada resposta do usu\xE1rio, refine sua sugest\xE3o e fa\xE7a novas perguntas at\xE9 chegar a uma receita ou solu\xE7\xE3o espec\xEDfica.
 3. Quando chegar a algo concreto, apresente a resposta final completa.
+
+## COMPOSI\xC7\xC3O DE RECEITAS (NOVO E OBRIGAT\xD3RIO)
+Ao receber receitas no contexto, SEMPRE analise se duas ou mais podem ser combinadas para formar um menu ou prato composto. Considere:
+1. Compatibilidade de "momento" (ex: Prato principal + Sobremesa).
+2. Complementaridade de ingredientes (ex: Carne + Farofa/Salada).
+3. Sinergia de sabores e texturas.
+
+Quando identificar uma combina\xE7\xE3o vi\xE1vel e que responda \xE0 necessidade do usu\xE1rio:
+- Proponha a COMBINA\xC7\xC3O com um nome criativo (ex: "Combo Alquimia do Fogo").
+- Apresente CADA receita individual com link no formato: [Nome da Receita](/recipe/ID)
+- Mostre um breve resumo de como elas se complementam.
+- Pergunte se o usu\xE1rio deseja ver os detalhes de preparo de cada uma.
 
 ## REGRAS DE CONTEXTO DO ACERVO
 - O CONTEXTO RECUPERADO abaixo cont\xE9m receitas e artigos do nosso Acervo T\xE9cnico (banco de dados vetorial).
@@ -236,7 +275,7 @@ ${historyBlock}
 ---
 
 ` : ""}## CONTEXTO RECUPERADO DO ACERVO T\xC9CNICO
-${context || "Nenhum resultado encontrado no acervo para esta consulta."}
+${context || "Nenhum resultado encontrado no acervo para esta consulta."}${complementaryContext}
 
 ---
 
@@ -259,9 +298,44 @@ ${userQuestion}
         model: "gemini-3-flash-preview",
         contents: finalPrompt
       });
-      return generation.text || "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia";
+      const responseText = generation.text || "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia";
+      if (responseText.includes("Ainda n\xE3o temos uma informa\xE7\xE3o para este termo") || responseText.includes("O tema n\xE3o faz aparte de nosso acervo")) {
+        try {
+          let prismaUserId = null;
+          if (userId) {
+            const user = await prisma.user.findFirst({ where: { OR: [{ id: userId }, { uid: userId }] } });
+            if (user) prismaUserId = user.id;
+          }
+          await prisma.unansweredQuery.create({
+            data: {
+              userId: prismaUserId,
+              queryText: userQuestion,
+              context
+            }
+          });
+          console.log("[RAG] Termo n\xE3o respondido registrado na Carteira de Conhecimento.");
+        } catch (e) {
+          console.error("[RAG] Erro ao registrar termo n\xE3o respondido", e);
+        }
+      }
+      return responseText;
     } catch (error) {
       console.error("[RagBackendService] Resource or API Error:", error);
+      try {
+        let prismaUserId = null;
+        if (userId) {
+          const user = await prisma.user.findFirst({ where: { OR: [{ id: userId }, { uid: userId }] } });
+          if (user) prismaUserId = user.id;
+        }
+        await prisma.unansweredQuery.create({
+          data: {
+            userId: prismaUserId,
+            queryText: userQuestion,
+            context: "SYSTEM_ERROR"
+          }
+        });
+      } catch (e) {
+      }
       return "Desculpe, nossos servidores est\xE3o em delay, pergunte novamente por favor";
     }
   }
@@ -412,6 +486,45 @@ Dicas do Chef: ${recipe.chefTips || ""}
       }
     }
     console.log(`[RAG Recipe Sync] Sincroniza\xE7\xE3o conclu\xEDda. Sincronizadas: ${syncedCount}, Ignoradas (j\xE1 atualizadas): ${skippedCount}`);
+  }
+  /**
+   * Indexa uma publicação do Acervo (LibraryItem) diretamente no PostgreSQL gerando seu Embedding.
+   */
+  static async indexLibraryItemToRAG(item) {
+    try {
+      console.log(`[RAG Library Sync] Indexando item do acervo: "${item.title}"`);
+      const docId = `library-${item.id}`;
+      const ai = await this.getGeminiClient();
+      const content = `
+T\xEDtulo: ${item.title}
+Descri\xE7\xE3o: ${item.description || ""}
+Categoria: ${item.category || ""}
+Tipo: ${item.type || ""}
+Autor: ${item.author || ""}
+Tags: ${Array.isArray(item.tags) ? item.tags.join(", ") : ""}
+      `.trim();
+      const embedResponse = await ai.models.embedContent({
+        model: "gemini-embedding-2",
+        contents: `[Acervo T\xE9cnico] ${item.title}: ${content}`,
+        config: { outputDimensionality: 768 }
+      });
+      const queryVector = embedResponse.embeddings?.[0]?.values;
+      if (!queryVector || queryVector.length !== 768) {
+        console.warn(`[RAG Library Sync] Falha ao gerar embedding para acervo "${item.title}".`);
+        return;
+      }
+      const vectorLiteral = `[${queryVector.join(",")}]`;
+      const docType = item.type === "presentation" ? "presentation" : "article";
+      await prisma.$executeRawUnsafe(`
+        INSERT INTO "SemanticDocument" (id, title, content, url, type, embedding, "updatedAt")
+        VALUES ($1, $2, $3, $4, $5, $6::vector, NOW())
+        ON CONFLICT (id) DO UPDATE 
+        SET title = EXCLUDED.title, content = EXCLUDED.content, url = EXCLUDED.url, type = EXCLUDED.type, embedding = EXCLUDED.embedding, "updatedAt" = EXCLUDED."updatedAt"
+      `, docId, `Acervo T\xE9cnico: ${item.title}`, content, item.url || "", docType, vectorLiteral);
+      console.log(`[RAG Library Sync] Item indexado com sucesso: ${item.id}`);
+    } catch (err) {
+      console.error(`[RAG Library Sync] Erro ao indexar acervo "${item.id}":`, err);
+    }
   }
   /**
    * Generates a proactive response based on a list of recent lounge messages to stimulate conversation.
@@ -1045,7 +1158,8 @@ var geminiService = {
             try {
               const result = await client.models.generateContent({
                 model: modelName,
-                contents: [{ role: "user", parts: [{ text: prompt }] }]
+                contents: [{ role: "user", parts: [{ text: prompt }] }],
+                ...isUrlOnly ? { tools: [{ googleSearch: {} }] } : {}
               });
               response = result;
               break;
@@ -1163,7 +1277,8 @@ var geminiService = {
               const client = new GoogleGenAI4({ apiKey: apiKeys2[i] });
               const result = await client.models.generateContent({
                 model: "gemini-3-flash-preview",
-                contents: [{ role: "user", parts: [{ text: searchPrompt }] }]
+                contents: [{ role: "user", parts: [{ text: searchPrompt }] }],
+                tools: [{ googleSearch: {} }]
               });
               searchResponse = result;
               break;
@@ -1263,6 +1378,184 @@ var geminiService = {
         return { status: "invalid", message: "Chave Inv\xE1lida" };
       }
       return { status: "error", message: error.message || "Erro desconhecido" };
+    }
+  }
+};
+
+// src/infra/services/fastRoutingService.ts
+import { getFirestore as getFirestore3 } from "firebase-admin/firestore";
+import { GoogleGenAI as GoogleGenAI5 } from "@google/genai";
+var FastRoutingService = class {
+  static {
+    this.memoryCache = null;
+  }
+  static {
+    this.lastCacheTime = 0;
+  }
+  static {
+    this.CACHE_TTL_MS = 1e3 * 60 * 60;
+  }
+  // 1 hora
+  static async getGeminiClient() {
+    const apiKeys = getAvailableGeminiKeys();
+    if (apiKeys.length === 0) {
+      throw new Error("Nenhuma GEMINI_API_KEY configurada no backend.");
+    }
+    return new GoogleGenAI5({ apiKey: apiKeys[0] });
+  }
+  /**
+   * Obtém o índice do cache em memória ou busca do Firestore se não existir/estiver expirado.
+   */
+  static async getIndex() {
+    const now = Date.now();
+    if (this.memoryCache && now - this.lastCacheTime < this.CACHE_TTL_MS) {
+      return this.memoryCache;
+    }
+    const db = getFirestore3();
+    const docRef = db.collection("system").doc("acervo_index");
+    const docSnap = await docRef.get();
+    if (docSnap.exists) {
+      this.memoryCache = docSnap.data();
+      this.lastCacheTime = now;
+      return this.memoryCache;
+    }
+    return await this.buildAndSaveIndex();
+  }
+  /**
+   * Constrói o índice compactado lendo o banco e salva no Firestore.
+   */
+  static async buildAndSaveIndex() {
+    console.log("[FastRouting] Construindo \xCDndice Compilado...");
+    const db = getFirestore3();
+    const recipesSnap = await db.collection("recipes").get();
+    const recipes = recipesSnap.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        title: data.title || "",
+        category: data.category || "",
+        tags: data.tags || []
+      };
+    });
+    let acervo = [];
+    try {
+      const docs = await prisma.$queryRaw`
+        SELECT id, title, type FROM "SemanticDocument"
+        WHERE type != 'chat_summary'
+        LIMIT 500;
+      `;
+      acervo = docs;
+    } catch (err) {
+      console.warn("[FastRouting] Aviso: n\xE3o foi poss\xEDvel ler o Acervo do Postgres neste momento.");
+    }
+    const newIndex = {
+      updatedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      recipes,
+      acervo
+    };
+    await db.collection("system").doc("acervo_index").set(newIndex);
+    this.memoryCache = newIndex;
+    this.lastCacheTime = Date.now();
+    console.log(`[FastRouting] \xCDndice gerado com ${recipes.length} receitas e ${acervo.length} documentos do acervo.`);
+    return newIndex;
+  }
+  /**
+   * Força a atualização do cache (para ser chamado sempre que um novo doc é inserido)
+   */
+  static async refreshIndex() {
+    await this.buildAndSaveIndex();
+  }
+  static {
+    this.routingCache = /* @__PURE__ */ new Map();
+  }
+  /**
+   * Helper function to execute prompt with retry over multiple keys
+   */
+  static async generateWithRetry(prompt) {
+    const apiKeys = getAvailableGeminiKeys();
+    if (apiKeys.length === 0) {
+      throw new Error("Nenhuma GEMINI_API_KEY configurada no backend.");
+    }
+    let lastError = null;
+    for (let i = 0; i < apiKeys.length; i++) {
+      try {
+        const ai = new GoogleGenAI5({ apiKey: apiKeys[i] });
+        const response = await ai.models.generateContent({
+          model: "gemini-3-flash-preview",
+          contents: prompt
+        });
+        return response.text || "";
+      } catch (err) {
+        lastError = err;
+        console.warn(`[FastRouting] Falha com a chave ${i + 1} (Erro: ${err.status || err.message}). Tentando pr\xF3xima...`);
+        if (err.status !== 429 && err.status !== 503 && !err.message?.includes("quota") && !err.message?.includes("demand")) {
+          break;
+        }
+      }
+    }
+    throw lastError;
+  }
+  /**
+   * Fallback heurístico ultrarrápido (0ms) usado quando a API do Gemini falha (Rate Limit/503)
+   */
+  static generateFallbackRouting(topic, index) {
+    const lowerTopic = topic.toLowerCase();
+    const matchedRecipe = index.recipes.find(
+      (r) => r.title.toLowerCase().includes(lowerTopic) || r.category.toLowerCase().includes(lowerTopic) || r.tags && r.tags.some((t) => t.toLowerCase().includes(lowerTopic))
+    );
+    let links = "";
+    if (matchedRecipe) {
+      links = `- [Ver receita: ${matchedRecipe.title}](/receita/${matchedRecipe.id})
+`;
+    } else {
+      links = `- [Buscar ${topic} no Acervo](/acervo?search=${encodeURIComponent(topic)})
+`;
+    }
+    links += `- [Explorar mais categorias](/explore?q=${encodeURIComponent(topic)})
+`;
+    links += `- [Conversar com o Chef sobre ${topic}?](#)
+`;
+    links += `- [Qual o segredo para um bom ${topic}?](#)`;
+    return `Tivemos uma pequena fila no nosso chef rob\xF3tico, mas aqui est\xE3o op\xE7\xF5es r\xE1pidas sobre **${topic}** do nosso \xEDndice:
+
+${links}`;
+  }
+  /**
+   * Rota rápida para roteamento e ganchos (sem RAG vetorial pesado)
+   */
+  static async getQuickRoutingOptions(userSubject) {
+    const topic = userSubject.trim();
+    const lowerTopic = topic.toLowerCase();
+    if (this.routingCache.has(lowerTopic)) {
+      return this.routingCache.get(lowerTopic);
+    }
+    const index = await this.getIndex();
+    try {
+      const indexStr = JSON.stringify({
+        r: index.recipes.map((r) => ({ i: r.id, t: r.title, c: r.category })),
+        a: index.acervo.map((a) => ({ t: a.title }))
+      });
+      const prompt = `Voc\xEA \xE9 o roteador r\xE1pido do Alquimia do Prato.
+DADO O \xCDNDICE ABAIXO (Formato JSON minimizado: r=receitas (i=id, t=titulo, c=categoria), a=acervo):
+${indexStr}
+
+O usu\xE1rio est\xE1 no Lounge e expressou interesse sobre o tema: '${topic}'.
+Seja extretamente direto. Sua fun\xE7\xE3o n\xE3o \xE9 responder a pergunta, mas DIRECIONAR o usu\xE1rio usando o \xEDndice.
+Retorne UMA frase amig\xE1vel curta e exata e uma lista em Markdown contendo EXATAMENTE:
+- 1 a 2 links para receitas exatas ou conte\xFAdo relacionado presente no \xEDndice. Use o formato: [Nome da Receita](/receita/ID_DA_RECEITA) ou [Explorar Categoria](/explore?q=CATEGORIA). Se n\xE3o houver correspond\xEAncia exata, sugira a busca geral: [Buscar no Acervo](/acervo?search=TERMO).
+- 2 "Gatilhos de Conversa" interessantes para ele clicar e conversar com o Chef IA no chat. O link deve SEMPRE ser um sustenido (ex: [Como defumar sem churrasqueira?](#) ou [Quais os cortes ideais?](#)).
+
+Importante: N\xE3o invente receitas que n\xE3o existem no \xEDndice (r). Use apenas IDs reais (i) para compor a URL /receita/ID.`;
+      const result = await this.generateWithRetry(prompt);
+      if (result) {
+        this.routingCache.set(lowerTopic, result);
+        return result;
+      }
+      return this.generateFallbackRouting(topic, index);
+    } catch (error) {
+      console.error("[FastRouting] Erro ao gerar op\xE7\xF5es r\xE1pidas, acionando fallback local.");
+      const fallback = this.generateFallbackRouting(topic, index);
+      return fallback;
     }
   }
 };
@@ -1534,7 +1827,7 @@ app.post("/api/presence", async (req, res) => {
     if (!uid) {
       return res.status(400).json({ error: "uid is required" });
     }
-    const db = getFirestore3();
+    const db = getFirestore4();
     await db.collection("users").doc(uid).set({
       isOnline,
       lastSeen: FieldValue2.serverTimestamp(),
@@ -1616,7 +1909,7 @@ app.post("/api/admin/check-keys", authenticateAPI, async (req, res) => {
 });
 app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) => {
   try {
-    const db = getFirestore3();
+    const db = getFirestore4();
     const recipesRef = db.collection("recipes");
     const snapshot = await recipesRef.get();
     console.log(`[Migration] Iniciando migra\xE7\xE3o e sincroniza\xE7\xE3o em nuvem para ${snapshot.size} receitas...`);
@@ -1808,7 +2101,7 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
     return res.status(400).json({ error: "Texto e SenderId s\xE3o obrigat\xF3rios." });
   }
   try {
-    const db = getFirestore3();
+    const db = getFirestore4();
     console.log(`[Lounge API] Iniciando modera\xE7\xE3o para: "${text.substring(0, 30)}..."`);
     let status = await ModerationService.validateCulinaryRelevance(text);
     console.log(`[Lounge API] Resultado da modera\xE7\xE3o: ${status}`);
@@ -1862,7 +2155,7 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
       console.log(`[Lounge API] Bot acionado! Iniciando processamento do Alchemist RAG...`);
       Promise.resolve().then(async () => {
         try {
-          const answer = await RagBackendService.askGeminiWithContext(text);
+          const answer = await RagBackendService.askGeminiWithContext(text, [], 5, senderId);
           const copilotMessage = {
             text: answer,
             senderId: "copilot-agent",
@@ -1921,7 +2214,7 @@ app.post("/api/lounge/generate-ata", authenticateAPI, async (req, res) => {
 });
 app.get("/api/admin/analytics", authenticateAPI, async (req, res) => {
   try {
-    const db = getFirestore3();
+    const db = getFirestore4();
     const now = /* @__PURE__ */ new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1e3);
@@ -2108,7 +2401,7 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
 });
 app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   try {
-    const { question, history } = req.body;
+    const { question, history, userId } = req.body;
     if (!question) {
       return res.status(400).json({ error: "question is required" });
     }
@@ -2116,11 +2409,33 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
       role: t.role === "user" ? "user" : "assistant",
       text: typeof t.text === "string" ? t.text.substring(0, 1e3) : ""
     })) : [];
-    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory);
+    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory, 5, userId);
     res.json({ success: true, answer });
   } catch (error) {
     console.error("[Chat RAG API] Erro:", error);
     res.json({ success: true, answer: "Desculpe, nossos servidores est\xE3o em delay, pergunte novamente por favor" });
+  }
+});
+app.post("/api/chat/quick-route", authenticateAPI, async (req, res) => {
+  try {
+    const { topic } = req.body;
+    if (!topic) {
+      return res.status(400).json({ error: "topic is required" });
+    }
+    const answer = await FastRoutingService.getQuickRoutingOptions(topic);
+    res.json({ success: true, answer });
+  } catch (error) {
+    console.error("[Quick Route API] Erro:", error);
+    res.json({ success: true, answer: "N\xE3o foi poss\xEDvel carregar as op\xE7\xF5es agora, mas pode mandar no chat." });
+  }
+});
+app.post("/api/admin/rebuild-index", authenticateAPI, async (req, res) => {
+  try {
+    await FastRoutingService.refreshIndex();
+    res.json({ success: true, message: "\xCDndice atualizado com sucesso." });
+  } catch (error) {
+    console.error("[Admin API] Erro ao atualizar \xEDndice:", error);
+    res.status(500).json({ error: error.message });
   }
 });
 app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
@@ -2131,7 +2446,7 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
     }
     let user = await prisma.user.findUnique({ where: { uid } });
     if (!user) {
-      const db = getFirestore3();
+      const db = getFirestore4();
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
@@ -2162,6 +2477,19 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
       }
     }
     const result = await GamificationService.processEvent(uid, eventType);
+    if (result.xpGained > 0) {
+      try {
+        const db = getFirestore4();
+        const FieldValue3 = (await import("firebase-admin/firestore")).FieldValue;
+        const moedasGanhas = result.xpGained / 10;
+        await db.collection("users").doc(uid).update({
+          moedas: FieldValue3.increment(moedasGanhas)
+        });
+        console.log(`[Gamification Event API] +${moedasGanhas} Moedas dadas ao usu\xE1rio ${uid}`);
+      } catch (err) {
+        console.error(`[Gamification Event API] Erro ao creditar moedas para ${uid}:`, err);
+      }
+    }
     res.json({ success: true, ...result });
   } catch (error) {
     console.error(`[Gamification Event API] Erro ao processar evento ${req.body?.eventType}:`, error.message);
@@ -2211,7 +2539,7 @@ app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
   try {
     let user = await prisma.user.findUnique({ where: { uid } });
     if (!user) {
-      const db = getFirestore3();
+      const db = getFirestore4();
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
@@ -2332,7 +2660,7 @@ app.delete("/api/admin/avatars/:id", authenticateAPI, async (req, res) => {
       return res.status(404).json({ error: "Avatar n\xE3o encontrado." });
     }
     await prisma.avatarOption.delete({ where: { id } });
-    const db = getFirestore3();
+    const db = getFirestore4();
     const snapshot = await db.collection("users").where("photoURL", "==", avatar.urlVercelBlob).get();
     if (!snapshot.empty) {
       const batch = db.batch();
@@ -2469,6 +2797,194 @@ app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async 
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Erro ao atualizar selo" });
+  }
+});
+app.get("/api/library", authenticateAPI, async (req, res) => {
+  console.log("[API Library] GET request received");
+  try {
+    const items = await prisma.libraryItem.findMany({
+      orderBy: { createdAt: "desc" }
+    });
+    console.log(`[API Library] Returning ${items.length} items`);
+    res.json(items);
+  } catch (error) {
+    console.error("Erro ao listar acervo:", error);
+    res.status(500).json({ error: "Erro ao listar acervo" });
+  }
+});
+app.post("/api/library", authenticateAPI, async (req, res) => {
+  try {
+    const { title, description, type, category, tags, url, thumbnail, author } = req.body;
+    if (!title || !description || !type || !url) {
+      return res.status(400).json({ error: "Dados incompletos para criar item no acervo." });
+    }
+    const newItem = await prisma.libraryItem.create({
+      data: {
+        title,
+        description,
+        type,
+        category: category || "",
+        tags: tags || [],
+        url,
+        thumbnail,
+        author: author || "Autor Desconhecido"
+      }
+    });
+    RagBackendService.indexLibraryItemToRAG(newItem).catch((err) => {
+      console.error("[RAG] Falha ao indexar novo item do acervo:", err);
+    });
+    res.json({ success: true, item: newItem, id: newItem.id });
+  } catch (error) {
+    console.error("Erro ao criar item no acervo:", error);
+    res.status(500).json({ error: "Erro ao criar item no acervo" });
+  }
+});
+app.put("/api/library/:id", authenticateAPI, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, type, category, tags, url, thumbnail, author } = req.body;
+    const updated = await prisma.libraryItem.update({
+      where: { id },
+      data: { title, description, type, category, tags, url, thumbnail, author }
+    });
+    RagBackendService.indexLibraryItemToRAG(updated).catch((err) => {
+      console.error("[RAG] Falha ao re-indexar item do acervo:", err);
+    });
+    res.json({ success: true, item: updated });
+  } catch (error) {
+    console.error("Erro ao atualizar acervo:", error);
+    res.status(500).json({ error: "Erro ao atualizar item no acervo" });
+  }
+});
+app.delete("/api/library/:id", authenticateAPI, async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.libraryItem.delete({ where: { id } });
+    const docId = `library-${id}`;
+    await prisma.semanticDocument.deleteMany({ where: { id: docId } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Erro ao deletar acervo:", error);
+    res.status(500).json({ error: "Erro ao deletar item no acervo" });
+  }
+});
+app.post("/api/telemetry/heartbeat", authenticateAPI, async (req, res) => {
+  try {
+    const { uid, durationSeconds } = req.body;
+    if (!uid) return res.status(400).json({ error: "uid required" });
+    const user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) return res.status(404).json({ error: "user not found" });
+    const activeSession = await prisma.userSession.findFirst({
+      where: {
+        userId: user.id,
+        lastPing: { gte: new Date(Date.now() - 5 * 60 * 1e3) }
+      },
+      orderBy: { lastPing: "desc" }
+    });
+    if (activeSession) {
+      await prisma.userSession.update({
+        where: { id: activeSession.id },
+        data: {
+          lastPing: /* @__PURE__ */ new Date(),
+          durationSeconds: { increment: durationSeconds || 60 }
+        }
+      });
+    } else {
+      await prisma.userSession.create({
+        data: {
+          userId: user.id,
+          lastPing: /* @__PURE__ */ new Date(),
+          durationSeconds: durationSeconds || 60
+        }
+      });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[Telemetry] Heartbeat error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+app.post("/api/telemetry/pageview", authenticateAPI, async (req, res) => {
+  try {
+    const { uid, path: path2 } = req.body;
+    if (!uid || !path2) return res.status(400).json({ error: "uid and path required" });
+    const user = await prisma.user.findUnique({ where: { uid } });
+    if (!user) return res.status(404).json({ error: "user not found" });
+    await prisma.pageAccess.create({
+      data: {
+        userId: user.id,
+        path: path2
+      }
+    });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("[Telemetry] Pageview error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+app.get("/api/admin/usage-ranking", authenticateAPI, async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        displayName: true,
+        email: true,
+        photoURL: true,
+        sessions: { select: { durationSeconds: true } },
+        pageAccesses: { select: { id: true } },
+        interactions: { select: { count: true } }
+      }
+    });
+    const ranking = users.map((u) => {
+      const totalSessionTime = u.sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
+      const totalPageViews = u.pageAccesses.length;
+      const totalScoredActions = u.interactions.reduce((acc, i) => acc + i.count, 0);
+      return {
+        id: u.id,
+        name: u.displayName,
+        email: u.email,
+        photoURL: u.photoURL,
+        totalSessionTime,
+        totalPageViews,
+        totalScoredActions
+      };
+    });
+    ranking.sort((a, b) => {
+      const scoreA = a.totalSessionTime / 60 + a.totalPageViews + a.totalScoredActions * 5;
+      const scoreB = b.totalSessionTime / 60 + b.totalPageViews + b.totalScoredActions * 5;
+      return scoreB - scoreA;
+    });
+    res.json({ success: true, ranking });
+  } catch (error) {
+    console.error("[Admin API] Usage ranking error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+app.get("/api/admin/unanswered-queries", authenticateAPI, async (req, res) => {
+  try {
+    const queries = await prisma.unansweredQuery.findMany({
+      include: {
+        user: { select: { displayName: true, email: true } }
+      },
+      orderBy: { createdAt: "desc" }
+    });
+    res.json({ success: true, queries });
+  } catch (error) {
+    console.error("[Admin API] Unanswered queries error:", error);
+    res.status(500).json({ error: "Internal error" });
+  }
+});
+app.put("/api/admin/unanswered-queries/:id", authenticateAPI, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const query = await prisma.unansweredQuery.update({
+      where: { id: req.params.id },
+      data: { status }
+    });
+    res.json({ success: true, query });
+  } catch (error) {
+    console.error("[Admin API] Update unanswered query error:", error);
+    res.status(500).json({ error: "Internal error" });
   }
 });
 async function startServer() {

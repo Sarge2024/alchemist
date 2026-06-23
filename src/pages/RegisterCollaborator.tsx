@@ -83,7 +83,22 @@ export default function RegisterCollaborator() {
       if (res.ok) {
         const data = await res.json();
         if (data.success && Array.isArray(data.avatars)) {
-          setAvatarsList(data.avatars);
+          const lockedOrOtherAvatars = data.avatars.filter((a: any) => 
+            a.tierMinimo !== '1' && a.tierMinimo !== 'ini' && a.tierMinimo !== 'apr' && a.tierMinimo !== 'APRENDIZ'
+          );
+
+          const novatosAvatars = [
+            { id: 'novato-1', codigo: 'NOVATO_1', url: '/avatares/novatos/1.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-2', codigo: 'NOVATO_2', url: '/avatares/novatos/2.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-3', codigo: 'NOVATO_3', url: '/avatares/novatos/3.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-4', codigo: 'NOVATO_4', url: '/avatares/novatos/4.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-5', codigo: 'NOVATO_5', url: '/avatares/novatos/5.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-6', codigo: 'NOVATO_6', url: '/avatares/novatos/6.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-7', codigo: 'NOVATO_7', url: '/avatares/novatos/7.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-8', codigo: 'NOVATO_8', url: '/avatares/novatos/8.webp', bloqueado: false, tierMinimo: '1' },
+          ];
+
+          setAvatarsList([...novatosAvatars, ...lockedOrOtherAvatars]);
         }
       }
     } catch (err) {

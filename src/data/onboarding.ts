@@ -32,10 +32,14 @@ export const CULINARY_PATHS = [
 ];
 
 export const AVATARS = [
-  "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=120&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=120&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&fit=crop&q=80",
-  "https://images.unsplash.com/photo-1517841905240-472988babdf9?w=120&fit=crop&q=80",
+  "/avatares/novatos/1.webp",
+  "/avatares/novatos/2.webp",
+  "/avatares/novatos/3.webp",
+  "/avatares/novatos/4.webp",
+  "/avatares/novatos/5.webp",
+  "/avatares/novatos/6.webp",
+  "/avatares/novatos/7.webp",
+  "/avatares/novatos/8.webp",
 ];
 
 export const TRIVIA_QUESTIONS: TriviaQuestion[] = [

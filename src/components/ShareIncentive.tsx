@@ -92,7 +92,7 @@ export const ShareIncentive: React.FC<ShareIncentiveProps> = ({ recipeTitle }) =
                 className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-lg border transition-all cursor-pointer ${
                   activeTab === key
                     ? 'bg-primary text-white border-primary shadow-sm'
-                    : 'bg-white dark:bg-stone-850 hover:bg-stone-100 dark:hover:bg-stone-800 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700'
+                    : 'bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-600 dark:text-stone-300 border-stone-200 dark:border-stone-700'
                 }`}
               >
                 {options[key].subtitle}
@@ -122,7 +122,7 @@ export const ShareIncentive: React.FC<ShareIncentiveProps> = ({ recipeTitle }) =
 
         {/* Right Side: Actions Stack */}
         <div className="w-full md:w-80 shrink-0 space-y-4 pt-4 md:pt-0">
-          <div className="bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-850 p-6 rounded-2xl space-y-4">
+          <div className="bg-white dark:bg-stone-950 border border-stone-200 dark:border-stone-800 p-6 rounded-2xl space-y-4">
             <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 block">
               Seu Link de Convite
             </span>

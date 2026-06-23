@@ -33,7 +33,8 @@ import {
   PlusCircle,
   MinusCircle,
   Copy,
-  Check
+  Check,
+  Settings
 } from 'lucide-react';
 import { userService, UserProfile } from '../infra/services/userService';
 import { MemberService } from '../infra/services/MemberService';
@@ -216,6 +217,9 @@ export default function Profile() {
   const [showCelebrationModal, setShowCelebrationModal] = useState(false);
   const [friendPhone, setFriendPhone] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showWelcomeOnStartup, setShowWelcomeOnStartup] = useState(() => {
+    return localStorage.getItem("hide_welcome_startup") !== "true";
+  });
   const [heroOptions, setHeroOptions] = useState<any[]>([]);
   const baseUrl = (import.meta.env.VITE_APP_URL as string) || window.location.origin;
 
@@ -406,8 +410,23 @@ export default function Profile() {
       const res = await fetch(`/api/avatars/${targetUid}`, { headers });
       if (res.ok) {
         const data = await res.json();
-        if (data.success) {
-          setAvatarsList(data.avatars);
+        if (data.success && Array.isArray(data.avatars)) {
+          const lockedOrOtherAvatars = data.avatars.filter((a: any) => 
+            a.tierMinimo !== '1' && a.tierMinimo !== 'ini' && a.tierMinimo !== 'apr' && a.tierMinimo !== 'APRENDIZ'
+          );
+
+          const novatosAvatars = [
+            { id: 'novato-1', codigo: 'NOVATO_1', url: '/avatares/novatos/1.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-2', codigo: 'NOVATO_2', url: '/avatares/novatos/2.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-3', codigo: 'NOVATO_3', url: '/avatares/novatos/3.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-4', codigo: 'NOVATO_4', url: '/avatares/novatos/4.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-5', codigo: 'NOVATO_5', url: '/avatares/novatos/5.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-6', codigo: 'NOVATO_6', url: '/avatares/novatos/6.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-7', codigo: 'NOVATO_7', url: '/avatares/novatos/7.webp', bloqueado: false, tierMinimo: '1' },
+            { id: 'novato-8', codigo: 'NOVATO_8', url: '/avatares/novatos/8.webp', bloqueado: false, tierMinimo: '1' },
+          ];
+
+          setAvatarsList([...novatosAvatars, ...lockedOrOtherAvatars]);
         }
       }
     } catch (err) {
@@ -569,6 +588,7 @@ export default function Profile() {
   };
 
   const handleChooseNewAvatar = () => {
+    handleCloseLevelUpPopup();
     setActiveAvatarSelector('profile');
   };
 
@@ -1321,7 +1341,7 @@ export default function Profile() {
                             placeholder="Ex: 5511999999999"
                             value={friendPhone}
                             onChange={(e) => setFriendPhone(e.target.value.replace(/\D/g, ''))}
-                            className="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:ring-4 focus:ring-primary/10 outline-none text-stone-850"
+                            className="w-full pl-11 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:ring-4 focus:ring-primary/10 outline-none text-stone-900"
                           />
                         </div>
                         <span className="text-[10px] text-stone-400 mt-1 block leading-tight ml-1">
@@ -1372,6 +1392,41 @@ export default function Profile() {
                         Enviar no WhatsApp
                       </button>
                     </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {user?.uid === targetUid && (
+              <div className="mt-12 pt-12 border-t border-surface-container-high">
+                <div className="mb-8">
+                  <h3 className="text-xl font-bold text-on-surface mb-6 flex items-center gap-2">
+                    <Settings className="w-6 h-6 text-primary" /> Preferências do Sistema
+                  </h3>
+                  <div className="p-6 bg-surface-container-low border border-surface-container-high rounded-[2rem]">
+                    <label className="flex items-center justify-between cursor-pointer group">
+                      <div>
+                        <div className="font-bold text-on-surface">Exibir Introdução (Welcome) ao Iniciar</div>
+                        <p className="text-sm text-on-surface-variant">Mostrar o popup de boas-vindas sempre que entrar no sistema.</p>
+                      </div>
+                      <div className="relative inline-flex items-center">
+                        <input
+                          type="checkbox"
+                          className="sr-only peer"
+                          checked={showWelcomeOnStartup}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setShowWelcomeOnStartup(checked);
+                            if (checked) {
+                              localStorage.removeItem("hide_welcome_startup");
+                            } else {
+                              localStorage.setItem("hide_welcome_startup", "true");
+                            }
+                          }}
+                        />
+                        <div className="w-11 h-6 bg-surface-container-high peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                      </div>
+                    </label>
                   </div>
                 </div>
               </div>

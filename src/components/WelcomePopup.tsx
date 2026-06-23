@@ -81,32 +81,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
   // Dynamic user status inside walkthrough
   const [xp, setXp] = useState(0);
 
-  // Fetch dynamic avatars
-  useEffect(() => {
-    const fetchAvatars = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        const headers: any = {
-          'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || ''
-        };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch(`/api/avatars/${user?.uid || 'new'}`, { headers });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.success && Array.isArray(data.avatars)) {
-            const urls = data.avatars.map((a: any) => a.url);
-            setAvatarsList(urls);
-            if (urls.length > 0) setSelectedAvatar(urls[0]);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching avatars:', err);
-      }
-    };
-    fetchAvatars();
-  }, [user]);
+  // A lista de avatares agora é baseada apenas nos AVATARS (os 8 novatos).
 
   // Recalculate simple BBQ parameters instantly for step-drive
   useEffect(() => {
@@ -139,6 +114,13 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
       aguaL: agua
     });
   }, [bbqGuests]);
+
+  useEffect(() => {
+    // If the user came back from Google OAuth, they're logged in. Skip to step 2 if on step 1.
+    if (user && step === 1) {
+      setStep(2);
+    }
+  }, [user, step]);
 
   if (!isOpen) return null;
 
@@ -198,13 +180,6 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
     }
   };
 
-  useEffect(() => {
-    // If the user came back from Google OAuth, they're logged in. Skip to step 2 if on step 1.
-    if (user && step === 1) {
-      setStep(2);
-    }
-  }, [user, step]);
-
   const handleNextStep = () => {
     if (step === 2 && !username.trim()) {
       alert("Por favor, diga-nos o seu nome de Chef para continuarmos!");
@@ -239,16 +214,48 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
     setChefError("");
     setChefResponse("");
 
+    // Respostas rápidas e hardcoded para os presets para não atrasar o onboarding
+    if (qText === "Qual o maior segredo para o Risoto ficar italiano clássico beeeem cremoso e brilhante?") {
+      setTimeout(() => {
+        setChefResponse("O segredo do risoto 'all'onda' está na mantecatura: a emulsão mágica entre o amido liberado pelo arroz arbóreo/carnaroli, manteiga gelada e queijo parmesão. Isso deve ser feito SEMPRE fora do fogo! Agite a panela vigorosamente para frente e para trás, criando uma onda cremosa, aveludada e brilhante.");
+        if (!chefXpEarned) { setXp((prev) => prev + 100); setChefXpEarned(true); }
+        setChefLoading(false);
+      }, 600);
+      return;
+    }
+
+    if (qText === "Qual o ponto ideal do salmão na frigideira para manter a textura aveludada?") {
+      setTimeout(() => {
+        setChefResponse("O ponto ideal para o salmão é o 'mi-cuit' (bem selado por fora e morno/rosado no centro). Grelhe com a pele para baixo em fogo médio-alto até dourar e pururucar bem (cerca de 4 minutos). Depois, vire e dê apenas um 'susto' de 30 segundos do outro lado. A textura ficará desmanchando e incrivelmente macia na boca.");
+        if (!chefXpEarned) { setXp((prev) => prev + 100); setChefXpEarned(true); }
+        setChefLoading(false);
+      }, 600);
+      return;
+    }
+
+    if (qText === "Dicas de harmonização de vinho para um bife ancho pesado na mostarda dijon.") {
+      setTimeout(() => {
+        setChefResponse("O bife Ancho é uma carne rica em marmoreio (gordura), e a mostarda Dijon adiciona acidez e picância ao perfil. Para equilibrar, busque um vinho tinto com boa acidez e taninos estruturados, como um Syrah ou um Malbec argentino. A acidez limpa o paladar e os taninos interagem perfeitamente com a proteína.");
+        if (!chefXpEarned) { setXp((prev) => prev + 100); setChefXpEarned(true); }
+        setChefLoading(false);
+      }, 600);
+      return;
+    }
+
+    // Fallback para perguntas customizadas digitadas pelo usuário (Chama API Real)
     try {
-      const res = await fetch("/api/chef", {
+      const res = await fetch("/api/chat/ask", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: qText })
+        headers: { 
+          "Content-Type": "application/json",
+          "x-api-key": import.meta.env.VITE_APP_API_KEY || ""
+        },
+        body: JSON.stringify({ question: qText, history: [] })
       });
       const data = await res.json();
       
-      if (res.ok) {
-        setChefResponse(data.reply);
+      if (res.ok && data.success) {
+        setChefResponse(data.answer);
         if (!chefXpEarned) {
           setXp((prev) => prev + 100);
           setChefXpEarned(true);
@@ -431,7 +438,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                         <div className="space-y-0.5">
                           <h4 className="text-xs font-semibold text-neutral-800 dark:text-zinc-200 flex items-center gap-1.5">
                             Calculadora Avançada de Churrasco
-                            <span className="text-[9px] bg-red-150 text-red-650 px-1.5 py-0.2 rounded-full dark:bg-red-950/50 dark:text-red-400 uppercase font-mono font-bold tracking-wide">Exclusivo</span>
+                            <span className="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.2 rounded-full dark:bg-red-950/50 dark:text-red-400 uppercase font-mono font-bold tracking-wide">Exclusivo</span>
                           </h4>
                           <p className="text-[11px] text-neutral-500 dark:text-neutral-400 leading-snug">Sabe aquele churrasco em família? Nossa inteligência dimensiona carnes, carvão e bebidas perfeitamente para evitar de vez qualquer escassez ou excesso.</p>
                         </div>
@@ -461,7 +468,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                           <button 
                             onClick={handleEmailLogin}
                             disabled={authLoading}
-                            className="flex-1 py-3 bg-amber-850 hover:bg-amber-900 disabled:opacity-50 text-white rounded-xl font-medium shadow-md transition-all text-sm justify-center flex items-center gap-2"
+                            className="flex-1 py-3 bg-amber-800 hover:bg-amber-900 disabled:opacity-50 text-white rounded-xl font-medium shadow-md transition-all text-sm justify-center flex items-center gap-2"
                           >
                             Entrar com E-mail
                             <ChevronRight className="w-4 h-4" />
@@ -504,7 +511,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
               >
                 <div className="space-y-6">
                   <div>
-                    <h2 className="text-2xl font-serif text-neutral-850 dark:text-neutral-100">Sua Identidade Culinária</h2>
+                    <h2 className="text-2xl font-serif text-neutral-800 dark:text-neutral-100">Sua Identidade Culinária</h2>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">Defina seu codinome no portal para darmos o primeiro passo gamificado.</p>
                   </div>
 
@@ -560,7 +567,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                               </div>
                             </div>
                             <div className="space-y-0.5">
-                              <h4 className="text-xs font-bold text-neutral-850 dark:text-neutral-200">{pathObj.name}</h4>
+                              <h4 className="text-xs font-bold text-neutral-800 dark:text-neutral-200">{pathObj.name}</h4>
                               <p className="text-[10px] text-neutral-500 dark:text-neutral-400 leading-tight line-clamp-2">{pathObj.description}</p>
                             </div>
                           </div>
@@ -571,10 +578,10 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-between gap-4">
-                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 font-medium">
+                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
                     Voltar
                   </button>
-                  <button onClick={handleNextStep} className="px-8 py-2.5 bg-amber-850 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md">
+                  <button onClick={handleNextStep} className="px-8 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md">
                     Prosseguir
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -594,10 +601,10 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                 <div className="space-y-6">
                   <div className="flex items-start justify-between flex-wrap gap-2">
                     <div>
-                      <span className="text-[10px] font-mono tracking-widest bg-emerald-150 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold uppercase block h-fit w-fit mb-1.5">
+                      <span className="text-[10px] font-mono tracking-widest bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-400 px-2 py-0.5 rounded-md font-bold uppercase block h-fit w-fit mb-1.5">
                         Fase 1: O Acervo Científico
                       </span>
-                      <h2 className="text-2xl font-serif text-neutral-850 dark:text-neutral-100">Desafio de Alquimia de Alimentos</h2>
+                      <h2 className="text-2xl font-serif text-neutral-800 dark:text-neutral-100">Desafio de Alquimia de Alimentos</h2>
                       <p className="text-sm text-neutral-500 dark:text-neutral-400">
                         Nossos acervos mergulham na química alimentar. Resolva este mini-desafio para começar a ganhar pontos!
                       </p>
@@ -612,7 +619,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                   <div className="p-5 sm:p-6 bg-white dark:bg-zinc-800 rounded-2xl border border-neutral-200 dark:border-zinc-800 space-y-4">
                     <div className="flex items-center gap-2">
                       <HelpCircle className="w-5 h-5 text-amber-600 shrink-0" />
-                      <h3 className="font-semibold text-[15px] text-neutral-800 dark:text-neutral-250 leading-relaxed">
+                      <h3 className="font-semibold text-[15px] text-neutral-800 dark:text-neutral-200 leading-relaxed">
                         {currentQuiz.question}
                       </h3>
                     </div>
@@ -622,11 +629,11 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                         const isCorrect = idx === currentQuiz.correctAnswer;
                         const isSelected = idx === selectedAnswer;
                         
-                        let optionStyle = "border-neutral-200 dark:border-zinc-700 hover:bg-neutral-50 dark:hover:bg-zinc-700/50";
+                        let optionStyle = "border-neutral-200 dark:border-zinc-700 hover:bg-neutral-50 dark:hover:bg-zinc-700/50 text-neutral-700 dark:text-neutral-200";
                         if (quizSubmitted) {
                           if (isCorrect) optionStyle = "bg-emerald-500/15 border-emerald-500 text-emerald-900 dark:text-emerald-300 font-medium";
                           else if (isSelected) optionStyle = "bg-red-500/10 border-red-400 text-red-800 dark:text-red-400";
-                          else optionStyle = "opacity-55 border-neutral-150 dark:border-zinc-800";
+                          else optionStyle = "opacity-55 border-neutral-200 dark:border-zinc-800 text-neutral-700 dark:text-neutral-400";
                         }
 
                         return (
@@ -649,7 +656,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                         <motion.div 
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className={`p-4 rounded-xl border flex gap-3 text-xs leading-relaxed ${selectedAnswer === currentQuiz.correctAnswer ? "bg-emerald-50 dark:bg-emerald-950/10 border-emerald-250 text-emerald-800 dark:text-emerald-400" : "bg-amber-50 dark:bg-amber-950/10 border-amber-250 text-amber-800 dark:text-amber-400"}`}
+                          className={`p-4 rounded-xl border flex gap-3 text-xs leading-relaxed ${selectedAnswer === currentQuiz.correctAnswer ? "bg-emerald-50 dark:bg-emerald-950/10 border-emerald-300 text-emerald-800 dark:text-emerald-400" : "bg-amber-50 dark:bg-amber-950/10 border-amber-300 text-amber-800 dark:text-amber-400"}`}
                         >
                           <AlertCircle className="w-4.5 h-4.5 shrink-0" />
                           <div>
@@ -665,13 +672,13 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-between gap-4">
-                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 font-medium">
+                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
                     Voltar
                   </button>
                   <button 
                     disabled={!quizSubmitted}
                     onClick={handleNextStep} 
-                    className={`px-8 py-2.5 rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md transition-all ${quizSubmitted ? "bg-amber-850 hover:bg-amber-900 text-white cursor-pointer" : "bg-neutral-200 text-neutral-400 cursor-not-allowed"}`}
+                    className={`px-8 py-2.5 rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md transition-all ${quizSubmitted ? "bg-amber-800 hover:bg-amber-900 text-white cursor-pointer" : "bg-neutral-200 text-neutral-400 dark:bg-zinc-800 dark:text-zinc-500 cursor-not-allowed"}`}
                   >
                     Prosseguir
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -691,10 +698,10 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
               >
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-mono tracking-widest bg-rose-150 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 px-2 py-0.5 rounded-md font-bold uppercase block h-fit w-fit mb-1.5">
+                    <span className="text-[10px] font-mono tracking-widest bg-rose-100 text-rose-800 dark:bg-rose-950/40 dark:text-rose-400 px-2 py-0.5 rounded-md font-bold uppercase block h-fit w-fit mb-1.5">
                       Fase 2: Automações do Portal
                     </span>
-                    <h2 className="text-2xl font-serif text-neutral-850 dark:text-neutral-100">Test-Drive: Calculadora de Churrasco</h2>
+                    <h2 className="text-2xl font-serif text-neutral-800 dark:text-neutral-100">Test-Drive: Calculadora de Churrasco</h2>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       Chega de incertezas no fim de semana. Ajuste os controles abaixo e veja a mágica da proporção exata acontecer:
                     </p>
@@ -708,7 +715,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
 
                       {/* Control 1: Meat Adults */}
                       <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-350">
+                        <div className="flex justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                           <span>Adultos Comedores de Carne</span>
                           <span className="text-orange-500 font-mono text-sm">{bbqGuests.meatEaters}</span>
                         </div>
@@ -718,13 +725,13 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                           max="20" 
                           value={bbqGuests.meatEaters}
                           onChange={(e) => setBbqGuests({ ...bbqGuests, meatEaters: parseInt(e.target.value) })}
-                          className="w-full h-1.5 bg-neutral-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-orange-650"
+                          className="w-full h-1.5 bg-neutral-200 dark:bg-zinc-700 rounded-lg appearance-none cursor-pointer accent-orange-600"
                         />
                       </div>
 
                       {/* Control 2: Vegetarian Adults */}
                       <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-350">
+                        <div className="flex justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                           <span>Adultos Vegetarianos</span>
                           <span className="text-emerald-500 font-mono text-sm">{bbqGuests.vegetarians}</span>
                         </div>
@@ -740,7 +747,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
 
                       {/* Control 3: Children */}
                       <div className="space-y-1.5">
-                        <div className="flex justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-350">
+                        <div className="flex justify-between text-xs font-semibold text-neutral-700 dark:text-neutral-300">
                           <span>Crianças (até 10 anos)</span>
                           <span className="text-amber-600 font-mono text-sm">{bbqGuests.children}</span>
                         </div>
@@ -756,7 +763,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
 
                       <div className="pt-2">
                         <div className="flex items-center gap-2 bg-amber-500/10 rounded-xl p-3 border border-amber-500/15 text-[11px] text-amber-700 dark:text-amber-400">
-                          <TrendingUp className="w-4 h-4 text-amber-650 shrink-0" />
+                          <TrendingUp className="w-4 h-4 text-amber-600 shrink-0" />
                           <span>O algoritmo inteligente ajusta o consumo de pão de alho, queijos e carvão proporcionalmente à festa!</span>
                         </div>
                       </div>
@@ -825,7 +832,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-between gap-4">
-                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 font-medium">
+                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
                     Voltar
                   </button>
                   <button 
@@ -834,7 +841,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                       setXp((prev) => prev + 100);
                       handleNextStep();
                     }}
-                    className="px-8 py-2.5 bg-amber-850 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="px-8 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     Ir para Próximo
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -854,10 +861,10 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
               >
                 <div className="space-y-6">
                   <div>
-                    <span className="text-[10px] font-mono tracking-widest bg-indigo-150 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400 px-2 py-0.5 rounded-md font-bold uppercase block h-fit w-fit mb-1.5">
+                    <span className="text-[10px] font-mono tracking-widest bg-indigo-100 text-indigo-800 dark:bg-indigo-950/40 dark:text-indigo-400 px-2 py-0.5 rounded-md font-bold uppercase block h-fit w-fit mb-1.5">
                       Fase 3: Inteligência Artificial
                     </span>
-                    <h2 className="text-2xl font-serif text-neutral-850 dark:text-neutral-100">Teste o Chef IA Personalizado</h2>
+                    <h2 className="text-2xl font-serif text-neutral-800 dark:text-neutral-100">Teste o Chef IA Personalizado</h2>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       Conectado diretamente ao Gemini local. Envie uma dúvida gastronômica ou toque em nossas sugestões clássicas para ver receitas e ciência molecular em segundos:
                     </p>
@@ -873,7 +880,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                           setChefQuery("Qual o maior segredo para o Risoto ficar italiano clássico beeeem cremoso e brilhante?");
                           askChefIa("Qual o maior segredo para o Risoto ficar italiano clássico beeeem cremoso e brilhante?");
                         }}
-                        className="w-full p-3 bg-white dark:bg-zinc-800 rounded-xl border border-neutral-200 dark:border-zinc-700 text-left text-xs font-medium text-neutral-700 dark:text-neutral-350 hover:border-amber-400 hover:bg-amber-50/20 transition-all flex gap-2"
+                        className="w-full p-3 bg-white dark:bg-zinc-800 rounded-xl border border-neutral-200 dark:border-zinc-700 text-left text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:border-amber-400 hover:bg-amber-50/20 dark:hover:bg-zinc-700/50 transition-all flex gap-2"
                       >
                         <MessageSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <span>Como obter o risoto super cremoso (All'Onda)?</span>
@@ -884,7 +891,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                           setChefQuery("Qual o ponto ideal do salmão na frigideira para manter a textura aveludada?");
                           askChefIa("Qual o ponto ideal do salmão na frigideira para manter a textura aveludada?");
                         }}
-                        className="w-full p-3 bg-white dark:bg-zinc-800 rounded-xl border border-neutral-200 dark:border-zinc-700 text-left text-xs font-medium text-neutral-700 dark:text-neutral-350 hover:border-amber-400 hover:bg-amber-50/20 transition-all flex gap-2"
+                        className="w-full p-3 bg-white dark:bg-zinc-800 rounded-xl border border-neutral-200 dark:border-zinc-700 text-left text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:border-amber-400 hover:bg-amber-50/20 dark:hover:bg-zinc-700/50 transition-all flex gap-2"
                       >
                         <MessageSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <span>Qual o ponto perfeito do salmão selado?</span>
@@ -895,7 +902,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                           setChefQuery("Dicas de harmonização de vinho para um bife ancho pesado na mostarda dijon.");
                           askChefIa("Dicas de harmonização de vinho para um bife ancho pesado na mostarda dijon.");
                         }}
-                        className="w-full p-3 bg-white dark:bg-zinc-800 rounded-xl border border-neutral-200 dark:border-zinc-700 text-left text-xs font-medium text-neutral-700 dark:text-neutral-350 hover:border-amber-400 hover:bg-amber-50/20 transition-all flex gap-2"
+                        className="w-full p-3 bg-white dark:bg-zinc-800 rounded-xl border border-neutral-200 dark:border-zinc-700 text-left text-xs font-medium text-neutral-700 dark:text-neutral-300 hover:border-amber-400 hover:bg-amber-50/20 dark:hover:bg-zinc-700/50 transition-all flex gap-2"
                       >
                         <MessageSquare className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                         <span>Harmonização ideal para Ancho com Mostarda</span>
@@ -909,11 +916,11 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                       <div className="overflow-y-auto flex-1 text-xs space-y-3 pr-2 scrollbar-thin scrollbar-thumb-amber-700">
                         {chefResponse ? (
                           <div className="space-y-2.5">
-                            <div className="flex items-center gap-2 text-[10px] text-amber-700 dark:text-amber-405 font-mono uppercase font-bold">
+                            <div className="flex items-center gap-2 text-[10px] text-amber-700 dark:text-amber-400 font-mono uppercase font-bold">
                               <Bot className="w-4 h-4 text-amber-600 animate-bounce" />
                               <span>Chef Alquimista</span>
                             </div>
-                            <div className="bg-amber-50/55 dark:bg-zinc-900/60 p-3 rounded-xl border border-amber-100/40 dark:border-zinc-800 leading-relaxed text-neutral-800 dark:text-neutral-250 font-sans tracking-wide">
+                            <div className="bg-amber-50/55 dark:bg-zinc-900/60 p-3 rounded-xl border border-amber-100/40 dark:border-zinc-800 leading-relaxed text-neutral-800 dark:text-neutral-200 font-sans tracking-wide">
                               {chefResponse}
                             </div>
                           </div>
@@ -947,7 +954,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                         <button 
                           onClick={() => askChefIa()}
                           disabled={chefLoading || !chefQuery.trim()}
-                          className={`px-4 bg-amber-850 hover:bg-amber-900 text-white rounded-xl text-xs font-bold transition-all ${chefLoading || !chefQuery.trim() ? "opacity-50 cursor-not-allowed" : ""}`}
+                          className={`px-4 bg-amber-800 hover:bg-amber-900 text-white rounded-xl text-xs font-bold transition-all ${chefLoading || !chefQuery.trim() ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           Enviar
                         </button>
@@ -958,7 +965,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                 </div>
 
                 <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-between gap-4">
-                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 font-medium">
+                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
                     Voltar
                   </button>
                   <button 
@@ -968,7 +975,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                       }
                       handleNextStep();
                     }} 
-                    className="px-8 py-2.5 bg-amber-850 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md cursor-pointer"
+                    className="px-8 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md cursor-pointer"
                   >
                     {chefXpEarned ? "Prosseguir (+100 XP Obtidos)" : "Prosseguir e Ganhar +100 XP"}
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -995,7 +1002,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                   </div>
 
                   <div className="space-y-2">
-                    <h2 className="text-3xl font-serif font-bold text-neutral-850 dark:text-neutral-150">Jornada Iniciada, Chef {username || "Aprendiz"}!</h2>
+                    <h2 className="text-3xl font-serif font-bold text-neutral-800 dark:text-neutral-200">Jornada Iniciada, Chef {username || "Aprendiz"}!</h2>
                     <p className="text-sm text-neutral-500 dark:text-neutral-400">
                       Você concluiu o onboarding gamificado e se provou digno da brasa e dos livros!
                     </p>
@@ -1019,7 +1026,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
 
                     <div className="space-y-1.5">
                       <span className="text-neutral-400 block uppercase tracking-wider font-mono text-[9px]">Foco Gastronômico</span>
-                      <span className="font-bold text-sm text-neutral-850 dark:text-neutral-200 flex items-center gap-1">
+                      <span className="font-bold text-sm text-neutral-800 dark:text-neutral-200 flex items-center gap-1">
                         📌 {CULINARY_PATHS.find(p => p.id === selectedPath)?.name || "Geral"}
                       </span>
                     </div>
@@ -1040,7 +1047,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                 <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-center">
                   <button 
                     onClick={handleFinishOnboarding}
-                    className="px-12 py-4 bg-gradient-to-r from-amber-700 via-amber-850 to-amber-900 text-white rounded-full font-bold text-sm shadow-xl hover:shadow-orange-950/20 hover:scale-103 transition-all uppercase tracking-wider"
+                    className="px-12 py-4 bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white rounded-full font-bold text-sm shadow-xl hover:shadow-orange-950/20 hover:scale-103 transition-all uppercase tracking-wider"
                   >
                     Entrar no Portal Alquimia do Prato
                   </button>
