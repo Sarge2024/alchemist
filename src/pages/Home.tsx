@@ -18,34 +18,44 @@ import { userService } from '../infra/services/userService';
 const CATEGORIES = [
   { 
     name: 'Café da Manhã', 
-    icon: Coffee, 
     img: ASSETS.CATEGORIES.BREAKFAST,
     filter: { key: 'momento', value: 'Café da Manhã' }
   },
   { 
     name: 'Almoço', 
-    icon: Soup, 
     img: ASSETS.CATEGORIES.LUNCH,
     filter: { key: 'momento', value: 'Almoço' }
   },
   { 
     name: 'Jantar', 
-    icon: Pizza, 
     img: ASSETS.CATEGORIES.DINNER,
     filter: { key: 'momento', value: 'Jantar' }
   },
   { 
     name: 'Bebidas', 
-    icon: GlassWater, 
     img: ASSETS.CATEGORIES.DRINKS,
     filter: { key: 'momento', value: 'Bebidas' }
   },
   { 
     name: 'Sobremesas', 
-    icon: Cake, 
     img: ASSETS.CATEGORIES.DESSERTS,
     filter: { key: 'technique', value: 'Doces e Sobremesas' }
   },
+  { 
+    name: 'Entradas', 
+    img: ASSETS.CATEGORIES.ENTRADAS,
+    filter: { key: 'momento', value: 'Entradas' }
+  },
+  { 
+    name: 'Básicas', 
+    img: ASSETS.CATEGORIES.BASICAS,
+    filter: { key: 'momento', value: 'Básicas' }
+  },
+  { 
+    name: 'Petiscos&Food Tricks', 
+    img: ASSETS.CATEGORIES.SNACKS,
+    filter: { key: 'momento', value: 'Petiscos&Food Tricks' }
+  }
 ];
 
 const MOCK_RECIPES: Recipe[] = [];
@@ -229,27 +239,27 @@ export default function Home() {
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:justify-center gap-3 sm:gap-8 md:gap-16 w-full">
+          <div className="grid grid-cols-4 md:flex md:flex-nowrap md:justify-center gap-3 md:gap-4 lg:gap-6 xl:gap-8 w-full">
             {CATEGORIES.map((cat, i) => {
               const displayName = cat.name === 'Café da Manhã' ? 'Café' : cat.name;
               return (
               <Link 
                 key={i} 
                 to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}
-                className="group flex flex-col items-center gap-2 md:gap-4 cursor-pointer transition-all min-w-0"
+                className="group flex flex-col items-center gap-2 md:gap-4 cursor-pointer transition-all min-w-0 flex-1 md:flex-none"
               >
                 <motion.div 
                   whileHover={{ y: -5 }}
-                  className="w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 md:border-4 border-transparent group-hover:border-primary/50 transition-all duration-300 p-0.5 md:p-1 bg-surface-container shadow-inner flex-shrink-0"
+                  className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 rounded-full overflow-hidden border-2 md:border-4 border-transparent group-hover:border-primary/50 transition-all duration-300 p-0.5 md:p-1 bg-surface-container shadow-inner flex-shrink-0"
                 >
                   <img src={getAssetUrl(customImages[cat.name] || cat.img)} alt={cat.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
                 </motion.div>
 
                 <div className="flex flex-col items-center text-center w-full min-w-0 px-1">
-                  <span className="font-semibold text-on-surface group-hover:text-primary transition-colors text-xs sm:text-sm md:text-xl truncate w-full">
+                  <span className="font-semibold text-on-surface group-hover:text-primary transition-colors text-xs sm:text-sm lg:text-base xl:text-xl truncate w-full">
                     {displayName}
                   </span>
-                  <span className="hidden md:block text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mt-0.5">
+                  <span className="hidden lg:block text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mt-0.5">
                     {categoryCounts[cat.name] !== undefined ? `${categoryCounts[cat.name]} ${categoryCounts[cat.name] === 1 ? 'receita' : 'receitas'}` : 'Explorar'}
                   </span>
                 </div>

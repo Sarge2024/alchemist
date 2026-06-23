@@ -502,14 +502,14 @@ export default function Acervo() {
       <motion.div 
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
-        className="mt-32 p-12 rounded-[3rem] bg-on-surface text-surface text-center overflow-hidden relative"
+        className="mt-32 p-12 rounded-[3rem] bg-neutral-900 dark:bg-neutral-800 text-neutral-50 text-center overflow-hidden relative"
       >
         <div className="absolute top-0 right-0 p-8 opacity-10">
-          <History className="w-64 h-64 rotate-12" />
+          <History className="w-64 h-64 rotate-12 text-neutral-50" />
         </div>
         <div className="relative z-10">
           <h2 className="text-3xl md:text-5xl font-bold mb-6 tracking-tight italic">"A culinária é a única arte que alimenta todos os sentidos."</h2>
-          <p className="text-lg opacity-70 font-medium mb-8 max-w-2xl mx-auto">Colabore com o acervo enviando seus materiais acadêmicos e pesquisas sobre a arte do prato.</p>
+          <p className="text-lg opacity-80 font-medium mb-8 max-w-2xl mx-auto text-neutral-200">Colabore com o acervo enviando seus materiais acadêmicos e pesquisas sobre a arte do prato.</p>
           <button className="px-8 py-4 bg-primary text-white rounded-2xl font-bold hover:scale-105 transition-all shadow-xl shadow-primary/20">
             Contribuir com o Acervo
           </button>
