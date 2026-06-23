@@ -229,38 +229,32 @@ export default function Home() {
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-2 md:flex md:flex-wrap md:justify-center gap-3 md:gap-16">
-            {CATEGORIES.map((cat, i) => (
-            <Link 
-              key={i} 
-              to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}
-              className="group flex items-center md:flex-col gap-4 cursor-pointer p-3 md:p-0 rounded-2xl bg-surface-container-low md:bg-transparent border border-surface-container-high md:border-0 hover:border-primary/30 transition-all"
-            >
-              <div className="md:hidden w-12 h-12 flex-shrink-0 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:bg-primary group-hover:text-white transition-all">
-                <cat.icon size={24} />
-              </div>
-
-              <motion.div 
-                whileHover={{ y: -5 }}
-                className="hidden md:block w-32 h-32 rounded-full overflow-hidden border-4 border-transparent group-hover:border-primary transition-all duration-300 p-1 bg-surface-container shadow-inner"
+          <div className="grid grid-cols-4 sm:flex sm:flex-wrap sm:justify-center gap-3 sm:gap-8 md:gap-16 w-full">
+            {CATEGORIES.map((cat, i) => {
+              const displayName = cat.name === 'Café da Manhã' ? 'Café' : cat.name;
+              return (
+              <Link 
+                key={i} 
+                to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}
+                className="group flex flex-col items-center gap-2 md:gap-4 cursor-pointer transition-all min-w-0"
               >
-                <img src={getAssetUrl(customImages[cat.name] || cat.img)} alt={cat.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
-              </motion.div>
+                <motion.div 
+                  whileHover={{ y: -5 }}
+                  className="w-16 h-16 sm:w-24 sm:h-24 md:w-32 md:h-32 rounded-full overflow-hidden border-2 md:border-4 border-transparent group-hover:border-primary/50 transition-all duration-300 p-0.5 md:p-1 bg-surface-container shadow-inner flex-shrink-0"
+                >
+                  <img src={getAssetUrl(customImages[cat.name] || cat.img)} alt={cat.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
+                </motion.div>
 
-              <div className="flex flex-col md:items-center min-w-0">
-                <span className={`font-semibold text-on-surface group-hover:text-primary transition-colors whitespace-nowrap overflow-hidden text-ellipsis ${cat.name.length > 10 ? 'text-sm md:text-xl' : 'text-base md:text-xl'}`}>
-                  {cat.name}
-                </span>
-                <span className="text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mt-0.5">
-                  {categoryCounts[cat.name] !== undefined ? `${categoryCounts[cat.name]} ${categoryCounts[cat.name] === 1 ? 'receita' : 'receitas'}` : 'Explorar'}
-                </span>
-              </div>
-
-              <div className="ml-auto md:hidden pr-2">
-                <ArrowRight className="w-4 h-4 text-on-surface-variant/40 group-hover:text-primary transition-colors" />
-              </div>
-            </Link>
-          ))}
+                <div className="flex flex-col items-center text-center w-full min-w-0 px-1">
+                  <span className="font-semibold text-on-surface group-hover:text-primary transition-colors text-xs sm:text-sm md:text-xl truncate w-full">
+                    {displayName}
+                  </span>
+                  <span className="hidden md:block text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mt-0.5">
+                    {categoryCounts[cat.name] !== undefined ? `${categoryCounts[cat.name]} ${categoryCounts[cat.name] === 1 ? 'receita' : 'receitas'}` : 'Explorar'}
+                  </span>
+                </div>
+              </Link>
+            )})}
           </div>
         )}
       </section>
