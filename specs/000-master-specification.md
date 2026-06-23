@@ -44,6 +44,7 @@ A progressão recalcula as metas dinamicamente multiplicando o valor base pelo N
 ### 5.4 MCP (Model Context Protocol) e RAG
 O portal conta com o **Chef IA**, um copilot persistente e flutuante acessível globalmente. O backend Express atua como Host servindo o protocolo via Server-Sent Events (SSE) e integrando buscas semânticas vetoriais (`pgvector` e Google Gemini Embeddings) no banco PostgreSQL.
 - **Interação Psicológica e Cognitiva:** Utiliza as heurísticas de **Efeito ELIZA** (para espelhamento emocional e validação de dores culinárias do usuário), **Injeção Cognitiva** (explicação técnica e científica curta de ingredientes/processos) e **Comportamento Socrático** para refinamento interativo antes de propor as receitas.
+- **Saudação e Naturalidade (Fase 0):** A interface utiliza `localStorage` (`alquimia_chef_last_interaction`) para controlar o tempo desde a última interação e apresentar saudações personalizadas na UI ao invés de repetições textuais pelo LLM, criando conversas orgânicas e diretas após a primeira mensagem.
 - **Ferramentas MCP (Tools):** Expõe as ferramentas `get_user_culinary_profile`, `update_user_culinary_profile` (gravação de dores e motivações) e `trigger_gamification_event` (disparo de eventos de progresso, incluindo o acerto de mini-desafios cognitivos via evento `QUIZ_ANSWERED_CORRECTLY` que adiciona 5 XP).
 - **Tratamento Conversacional de Fallback:** Termos culinários não encontrados ou muito amplos (ex: "carnes") não acionam recusas rígidas. O Chef IA acolhe o interesse, explica o conceito de forma teórica e devolve uma pergunta guia instigando o usuário a explorar subcategorias e receitas disponíveis. A busca vazia gera internamente a tag `[PENDÊNCIA_ANOTADA]` que é gravada na tabela `unansweredQuery` no Postgres para auditoria administrativa de conteúdo ausente, sendo removida antes da exibição ao usuário.
 
@@ -54,6 +55,7 @@ Para contornar o peso da busca vetorial, o painel do Lounge consome um **Índice
 - Padrão **Clean Code**: Funções curtas, variáveis explícitas e em inglês.
 - O idioma obrigatório da UI, enums, tipos no Firestore e *prompts* de IA é **Português (pt-BR)**.
 - Componentes não usam classes utilitárias isoladas excessivamente e respeitam os tokens e design moderno implementados no Tailwind v4.
+- **Mobile-First e Responsividade:** O projeto aplica breakpoints adaptativos (especialmente `md:`), provendo em telas menores listas com densidade compacta de 2 colunas e cartões verticais proporção `aspect-[4/5]`, escalando para grid expandido em desktop.
 
 ---
 

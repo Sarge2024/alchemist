@@ -300,14 +300,14 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-start justify-center px-4 py-8 md:p-8 bg-black/60 backdrop-blur-md overflow-y-auto">
       <motion.div 
         id="welcome-popup-container"
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.4, ease: "easeOut" }}
-        className="relative w-full max-w-5xl bg-neutral-50 dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-amber-100/50 dark:border-zinc-800/80 my-8"
+        className="relative w-full max-w-5xl bg-neutral-50 dark:bg-zinc-900 rounded-3xl overflow-hidden shadow-2xl border border-amber-100/50 dark:border-zinc-800/80 m-auto shrink-0"
       >
         {/* TOP STATUS BAR (when creating user) */}
         {step > 1 && (

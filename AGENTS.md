@@ -90,10 +90,10 @@ API key check is bypassed in dev when `APP_API_KEY` is not a placeholder.
 - Floating persistent copilot chatbot (Chef IA) allows global user queries from any view.
 - Uses pgvector (PostgreSQL) and Google Gemini Embeddings to enable retrieval augmented generation (RAG) across the culinary technical base (Acervo Técnico).
 - **Progressive Dialogue System**: Conversation evolves in 3 phases based on user turn count:
-  - **Phase 0 (First Contact)**: Short response (3-5 lines). Empathy + directional questions only. No teaching, no recipes.
+  - **Phase 0 (First Contact)**: Short response (3-5 lines). Empathy + directional questions only. No teaching, no recipes. The frontend uses `localStorage` (`alquimia_chef_last_interaction`) to inject the user's name only if they haven't interacted recently (e.g. >24h), avoiding repetitive greetings. The system prompt explicitly forbids repetitive "Hellos" and name drops.
   - **Phase 1 (Exploration, turns 2-3)**: Moderate response. One cognitive insight + 1-2 acervo links + ELIZA question. Selectable options (A/B/C) when useful.
   - **Phase 2 (Deep Dive, turn 4+)**: Full response with recipes, combinations, quizzes, gamification hooks, and selectable options.
-- The user is always addressed by their registered `displayName` (passed from frontend via `userName` parameter).
+- The user is addressed organically. The frontend handles the initial personalized welcome message.
 - Dialogue uses **Efeito ELIZA** (empathy & mirroring), **Cognitive Injection** (food science), and **Socratic refinement**.
 - Integrates three MCP tools exposed by the Express backend: `get_user_culinary_profile`, `update_user_culinary_profile`, and `trigger_gamification_event` (which triggers evo events like `QUIZ_ANSWERED_CORRECTLY` granting 5 XP).
 - Handles missing or generic culinary terms conversationally instead of returning flat errors: the AI acknowledges the topic, provides brief cognitive context, and asks a guiding question proposing categories/ingredients we do have in the database. Discretely appends `[PENDÊNCIA_ANOTADA]` to the response to log the query to Postgres `unansweredQuery` for analytics.
@@ -102,6 +102,7 @@ API key check is bypassed in dev when `APP_API_KEY` is not a placeholder.
 
 - All UI text in **Portuguese (pt-BR)**.
 - Recipe categories, difficulty, diet types, etc. are Portuguese enums (see `firebase-blueprint.json` for full enum lists).
+- **Responsive Mobile Layout**: Uses a dense 2-column grid layout for recipe listings (Home, Explore) on mobile, adopting a vertical `aspect-[4/5]` format for `RecipeCard` with reduced paddings/fonts via `md:` Tailwind breakpoints, maintaining the 4/3 aesthetic on desktop.
 
 ## Gotchas
 
