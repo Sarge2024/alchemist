@@ -95,20 +95,17 @@ export const LoungeChat: React.FC = () => {
     e.preventDefault();
     if (!inputText.trim() || !user || isSending) return;
 
-    // Interceptar se o destinatário for um Chef para enviar para o WhatsApp
+    // Notificar Chef pelo WhatsApp (abre aba para envio manual) e também postar no Lounge
     if (directedTo && directedTo.isChef) {
       const whatsappNumber = directedTo.whatsapp?.replace(/\D/g, '');
-      if (!whatsappNumber) {
-        alert('Este Chef não possui um número de WhatsApp cadastrado no perfil.');
-        return;
+      if (whatsappNumber) {
+        const text = encodeURIComponent(`Olá Chef ${directedTo.displayName}, nova mensagem no Lounge do Alquimia do Prato:\n\n"${inputText.trim()}"`);
+        const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${text}`;
+        window.open(whatsappUrl, '_blank');
+      } else {
+        alert('Este Chef não possui WhatsApp cadastrado no perfil. A mensagem será enviada apenas no Lounge.');
       }
-      const text = encodeURIComponent(inputText.trim());
-      const whatsappUrl = `https://api.whatsapp.com/send?phone=${whatsappNumber}&text=${text}`;
-      window.open(whatsappUrl, '_blank');
-      
-      setInputText('');
-      setDirectedTo(null);
-      return;
+      // Não fazemos return aqui! Deixa o fluxo continuar para salvar no Firebase.
     }
 
     const textToSend = inputText.trim();
