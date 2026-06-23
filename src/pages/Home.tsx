@@ -4,7 +4,7 @@
  * Apresenta o destaque editorial, categorias populares de receitas e as publicações mais recentes da comunidade.
  */
 import { motion } from 'motion/react';
-import { ArrowRight, Clock, Utensils, Loader2, Coffee, Soup, Pizza, GlassWater, Cake, Plus } from 'lucide-react';
+import { ArrowRight, Clock, Utensils, Loader2, Coffee, Soup, Pizza, GlassWater, Cake, Plus, BookOpen, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { recipeService, Recipe } from '../infra/services/recipeService';
@@ -212,9 +212,14 @@ export default function Home() {
               <Link to="/explore" className="inline-flex bg-primary hover:bg-primary-container text-white font-bold px-6 md:px-8 py-3.5 md:py-4 rounded-xl shadow-lg transition-all items-center gap-3 active:scale-95 w-full sm:w-fit text-base md:text-lg justify-center shadow-primary/30">
                 Explorar Receitas <ArrowRight className="w-5 h-5" />
               </Link>
-              <Link to="/submit" className="inline-flex bg-white/10 hover:bg-white/20 text-white font-bold px-6 md:px-8 py-3.5 md:py-4 rounded-xl border border-white/20 transition-all items-center gap-3 active:scale-95 w-full sm:w-fit text-base md:text-lg justify-center backdrop-blur-sm">
-                Começar a compartilhar <Plus className="w-5 h-5 text-secondary" />
-              </Link>
+              <div className="flex flex-row items-center gap-3 w-full sm:w-fit">
+                <Link to="/acervo" className="inline-flex flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-bold px-4 md:px-6 py-3.5 md:py-4 rounded-xl border border-white/20 transition-all items-center gap-2 active:scale-95 justify-center backdrop-blur-sm text-sm md:text-lg">
+                  <BookOpen className="w-4 h-4 md:w-5 md:h-5 text-secondary" /> Acervo
+                </Link>
+                <Link to="/lounge" className="inline-flex flex-1 sm:flex-none bg-white/10 hover:bg-white/20 text-white font-bold px-4 md:px-6 py-3.5 md:py-4 rounded-xl border border-white/20 transition-all items-center gap-2 active:scale-95 justify-center backdrop-blur-sm text-sm md:text-lg">
+                  <Users className="w-4 h-4 md:w-5 md:h-5 text-secondary" /> Lounge
+                </Link>
+              </div>
             </div>
           </div>
         </motion.div>
