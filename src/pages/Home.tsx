@@ -62,6 +62,8 @@ const MOCK_RECIPES: Recipe[] = [];
 
 export default function Home() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [allRecipes, setAllRecipes] = useState<Recipe[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [customImages, setCustomImages] = useState<Record<string, string>>({});
@@ -107,9 +109,57 @@ export default function Home() {
     }
   };
 
+  const getMixedRecipes = (data: Recipe[]) => {
+    const shuffled = [...data].sort(() => 0.5 - Math.random());
+    const selectedRecipes: Recipe[] = [];
+    const usedCategories = new Set<string>();
+
+    for (const recipe of shuffled) {
+      if (selectedRecipes.length >= 8) break;
+      const typeField = (recipe as any).tipo_prato;
+      const momentField = (recipe as any).momento;
+      const mainCat = (Array.isArray(typeField) && typeField[0]) || (Array.isArray(momentField) && momentField[0]) || 'Outros';
+
+      if (!usedCategories.has(mainCat)) {
+        usedCategories.add(mainCat);
+        selectedRecipes.push(recipe);
+      }
+    }
+
+    if (selectedRecipes.length < 8) {
+      for (const recipe of shuffled) {
+        if (selectedRecipes.length >= 8) break;
+        if (!selectedRecipes.some(r => r.id === recipe.id)) {
+          selectedRecipes.push(recipe);
+        }
+      }
+    }
+    return selectedRecipes;
+  };
+
+  const handleCategoryClick = (catName: string) => {
+    if (selectedCategory === catName) {
+      setSelectedCategory(null);
+      setRecipes(getMixedRecipes(allRecipes));
+      return;
+    }
+    
+    setSelectedCategory(catName);
+    const cat = CATEGORIES.find(c => c.name === catName);
+    if (!cat) return;
+    
+    const field = cat.filter.key === 'momento' ? 'momento' : 'tipo_prato';
+    const filtered = allRecipes.filter(r => {
+      const values = (r as any)[field];
+      return Array.isArray(values) && values.includes(cat.filter.value);
+    });
+    setRecipes(filtered.slice(0, 8)); // show up to 8 filtered
+  };
+
   const loadRecentRecipes = async () => {
     try {
       const data = await recipeService.getAllRecipes();
+      setAllRecipes(data);
       
       // Calculate category counts based on real data
       const counts: Record<string, number> = {};
@@ -122,35 +172,7 @@ export default function Home() {
       });
       setCategoryCounts(counts);
       
-      // Shuffle and pick 6 distinct category recipes for rotation
-      const shuffled = [...data].sort(() => 0.5 - Math.random());
-      const selectedRecipes: Recipe[] = [];
-      const usedCategories = new Set<string>();
-
-      for (const recipe of shuffled) {
-        if (selectedRecipes.length >= 8) break;
-        
-        const typeField = (recipe as any).tipo_prato;
-        const momentField = (recipe as any).momento;
-        const mainCat = (Array.isArray(typeField) && typeField[0]) || (Array.isArray(momentField) && momentField[0]) || 'Outros';
-
-        if (!usedCategories.has(mainCat)) {
-          usedCategories.add(mainCat);
-          selectedRecipes.push(recipe);
-        }
-      }
-
-      // Fill remaining slots if we couldn't find 8 distinct categories
-      if (selectedRecipes.length < 8) {
-        for (const recipe of shuffled) {
-          if (selectedRecipes.length >= 8) break;
-          if (!selectedRecipes.some(r => r.id === recipe.id)) {
-            selectedRecipes.push(recipe);
-          }
-        }
-      }
-
-      setRecipes(selectedRecipes);
+      setRecipes(getMixedRecipes(data));
     } catch (error) {
       console.error('Error loading recent recipes:', error);
       setRecipes([]);
@@ -248,27 +270,33 @@ export default function Home() {
             {CATEGORIES.map((cat, i) => {
               const displayName = cat.name === 'Café da Manhã' ? 'Café' : cat.name;
               return (
-              <Link 
+              <button 
                 key={i} 
-                to={`/explore?${cat.filter.key}=${encodeURIComponent(cat.filter.value)}`}
-                className="group flex flex-col items-center gap-2 md:gap-4 cursor-pointer transition-all min-w-0 flex-1 md:flex-none"
+                onClick={() => handleCategoryClick(cat.name)}
+                className={`group flex flex-col items-center gap-2 md:gap-4 cursor-pointer transition-all min-w-0 flex-1 md:flex-none ${selectedCategory === cat.name ? 'scale-105' : 'hover:scale-105'}`}
               >
                 <motion.div 
                   whileHover={{ y: -5 }}
-                  className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 rounded-full overflow-hidden border-2 md:border-4 border-transparent group-hover:border-primary/50 transition-all duration-300 p-0.5 md:p-1 bg-surface-container shadow-inner flex-shrink-0"
+                  className={`w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 xl:w-32 xl:h-32 rounded-full overflow-hidden border-2 md:border-4 transition-all duration-300 p-0.5 md:p-1 shadow-inner flex-shrink-0 ${
+                    selectedCategory === cat.name 
+                      ? 'border-primary bg-primary/20' 
+                      : 'border-transparent group-hover:border-primary/50 bg-surface-container'
+                  }`}
                 >
                   <img src={getAssetUrl(customImages[cat.name] || cat.img)} alt={cat.name} className="w-full h-full object-cover rounded-full" referrerPolicy="no-referrer" />
                 </motion.div>
 
                 <div className="flex flex-col items-center text-center w-full min-w-0 px-1">
-                  <span className="font-semibold text-on-surface group-hover:text-primary transition-colors text-xs sm:text-sm lg:text-base xl:text-xl truncate w-full">
+                  <span className={`font-semibold transition-colors text-xs sm:text-sm lg:text-base xl:text-xl truncate w-full ${
+                    selectedCategory === cat.name ? 'text-primary' : 'text-on-surface group-hover:text-primary'
+                  }`}>
                     {displayName}
                   </span>
                   <span className="hidden lg:block text-[10px] text-on-surface-variant uppercase font-bold tracking-widest mt-0.5">
                     {categoryCounts[cat.name] !== undefined ? `${categoryCounts[cat.name]} ${categoryCounts[cat.name] === 1 ? 'receita' : 'receitas'}` : 'Explorar'}
                   </span>
                 </div>
-              </Link>
+              </button>
             )})}
           </div>
         )}
@@ -276,9 +304,11 @@ export default function Home() {
 
       {/* Recent Recipes */}
       <section className="max-w-[1600px] w-full mx-auto px-6 mb-xl">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl md:text-3xl font-bold text-on-surface">Receitas Recentes</h2>
-          <Link to="/explore" className="text-primary font-bold flex items-center gap-2 hover:underline">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
+          <h2 className="text-2xl md:text-3xl font-bold text-on-surface">
+            {selectedCategory ? `Receitas de ${selectedCategory}` : 'Receitas Recentes'}
+          </h2>
+          <Link to={selectedCategory ? `/explore?${CATEGORIES.find(c => c.name === selectedCategory)?.filter.key}=${encodeURIComponent(CATEGORIES.find(c => c.name === selectedCategory)?.filter.value || '')}` : "/explore"} className="text-primary font-bold flex items-center gap-2 hover:underline">
             Ver todas <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
