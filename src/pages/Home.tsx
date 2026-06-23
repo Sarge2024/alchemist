@@ -229,7 +229,7 @@ export default function Home() {
             <Loader2 className="w-8 h-8 text-primary animate-spin" />
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap md:justify-center gap-3 md:gap-16">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:flex md:flex-wrap md:justify-center gap-3 md:gap-16">
             {CATEGORIES.map((cat, i) => (
             <Link 
               key={i} 
@@ -280,7 +280,7 @@ export default function Home() {
             <p className="text-sm text-on-surface-variant">Carregando novidades...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-4 gap-8">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8">
             {recipes.map((recipe) => (
               <RecipeCard key={recipe.id || `home-recipe-${Math.random()}`} recipe={recipe} />
             ))}
