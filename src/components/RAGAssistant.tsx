@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Bot, User, Loader2, Maximize2, Minimize2 } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -40,27 +40,72 @@ import { useAuth } from '../context/AuthContext';
 export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeContext }) => {
   const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [hasAutoExpanded, setHasAutoExpanded] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Welcome message based on context
-    const welcomeText = recipeContext 
-      ? `Olá! 🧑‍🍳 Sou o **Chef IA Alchemist**. Vejo que você está explorando a receita de **${recipeContext}**! Me conte: quer dicas de preparo, substituições de ingredientes ou entender alguma técnica?`
-      : 'Olá, Alquimista! 🧑‍🍳 Sou o **Chef IA**, seu guia culinário pessoal. Me conte o que você quer preparar e juntos vamos encontrar a receita perfeita no nosso acervo!';
+    const firstName = user?.displayName?.split(' ')[0] || '';
+    const greetingName = firstName ? `**${firstName}**` : 'Alquimista';
     
+    const lastInteractionStr = localStorage.getItem('alquimia_chef_last_interaction');
+    let welcomeText = '';
+
+    if (!lastInteractionStr) {
+      // Primeiro contato absoluto
+      if (recipeContext) {
+        welcomeText = `Olá, ${greetingName}! 🧑‍🍳 Sou o **Chef IA Alchemist**. Que legal ter você aqui pela primeira vez! Vejo que você está de olho na receita de **${recipeContext}**. Quer dicas de preparo ou entender alguma técnica?`;
+      } else {
+        welcomeText = `Olá, ${greetingName}! 🧑‍🍳 Sou o **Chef IA**, seu guia culinário pessoal. É um prazer falar com você pela primeira vez! Me conte, o que você quer descobrir ou cozinhar hoje?`;
+      }
+    } else {
+      try {
+        const { timestamp, lastQuestion } = JSON.parse(lastInteractionStr);
+        const hoursSinceLast = (Date.now() - timestamp) / (1000 * 60 * 60);
+
+        if (hoursSinceLast > 24) {
+          // Muito tempo sem acessar (mais de 24h)
+          if (recipeContext) {
+            welcomeText = `Senti sua falta por aqui, ${greetingName}! 🧑‍🍳 Da última vez você perguntou sobre *"${lastQuestion}"*, espero que tenha dado tudo certo! Vejo que agora o alvo é **${recipeContext}**. Mas e aí, como posso ajudar com ela?`;
+          } else {
+            welcomeText = `Que bom te ver de novo, ${greetingName}! Senti sua falta na nossa cozinha! 🧑‍🍳 Da última vez a conversa rendeu sobre *"${lastQuestion}"*... Mas e aí, o que vamos ter para hoje?`;
+          }
+        } else {
+          // Retorno recente (menos de 24h)
+          if (recipeContext) {
+            welcomeText = `De volta à ativa, ${greetingName}! 🧑‍🍳 Estamos explorando **${recipeContext}** agora, certo? Conta pra mim, que dúvida pintou?`;
+          } else {
+            welcomeText = `E aí, ${greetingName}! 🧑‍🍳 Prontos para continuar nossa alquimia na cozinha? O que vamos preparar agora?`;
+          }
+        }
+      } catch (e) {
+        // Fallback em caso de erro no parse do JSON
+        welcomeText = `E aí, ${greetingName}! 🧑‍🍳 Bora pra cozinha? Me conte o que você quer explorar e juntos vamos descobrir algo incrível!`;
+      }
+    }
+
     setMessages([
       { id: 'welcome', sender: 'ai', text: welcomeText }
     ]);
-  }, [recipeContext]);
+  }, [recipeContext, user?.displayName]);
+
+  useEffect(() => {
+    // Auto-expand after 2 user turns
+    const userTurns = messages.filter(m => m.sender === 'user').length;
+    if (userTurns >= 2 && !hasAutoExpanded && isOpen) {
+      setIsExpanded(true);
+      setHasAutoExpanded(true);
+    }
+  }, [messages, hasAutoExpanded, isOpen]);
 
   useEffect(() => {
     if (isOpen && messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isExpanded]);
 
   if (!user) return null;
 
@@ -70,6 +115,13 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
 
     const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: input };
     setMessages(prev => [...prev, userMsg]);
+    
+    // Salva a interação para personalização futura de saudação
+    localStorage.setItem('alquimia_chef_last_interaction', JSON.stringify({
+      timestamp: Date.now(),
+      lastQuestion: input.substring(0, 80) + (input.length > 80 ? '...' : '') // Limita o tamanho para não estragar o layout
+    }));
+
     setInput('');
     setIsTyping(true);
 
@@ -88,7 +140,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
           'Content-Type': 'application/json',
           'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || 'alchemist-app-secret-2024'
         },
-        body: JSON.stringify({ question: userMsg.text, history })
+        body: JSON.stringify({ question: userMsg.text, history, userId: user?.uid, userName: user?.displayName })
       });
 
       const data = await response.json();
@@ -124,14 +176,33 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
         )}
       </AnimatePresence>
 
+      {/* Backdrop for Expanded State */}
+      <AnimatePresence>
+        {isOpen && isExpanded && (
+          <motion.div 
+            initial={{ opacity: 0 }} 
+            animate={{ opacity: 1 }} 
+            exit={{ opacity: 0 }} 
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[45]"
+            onClick={() => setIsExpanded(false)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Chat Window */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
+            layout
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-6 right-6 w-[350px] sm:w-[400px] max-h-[600px] h-[80vh] bg-surface-container-lowest border border-surface-container rounded-3xl shadow-2xl z-50 flex flex-col overflow-hidden"
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className={`fixed z-50 flex flex-col overflow-hidden bg-surface-container-lowest border border-surface-container rounded-3xl shadow-2xl ${
+              isExpanded 
+                ? "inset-0 m-auto w-[90vw] sm:w-[80vw] max-w-3xl h-[85vh] max-h-[800px]" 
+                : "bottom-6 right-6 w-[350px] sm:w-[400px] max-h-[600px] h-[80vh]"
+            }`}
           >
             {/* Header */}
             <div className="bg-primary px-6 py-4 flex items-center justify-between text-white">
@@ -144,12 +215,21 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
                   <p className="text-xs text-white/80">Seu guia culinário</p>
                 </div>
               </div>
-              <button 
-                onClick={() => setIsOpen(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                  title={isExpanded ? "Minimizar" : "Expandir"}
+                >
+                  {isExpanded ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </button>
+                <button 
+                  onClick={() => setIsOpen(false)}
+                  className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/20 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Messages Area */}

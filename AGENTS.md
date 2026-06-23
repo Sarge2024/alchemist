@@ -87,8 +87,16 @@ API key check is bypassed in dev when `APP_API_KEY` is not a placeholder.
 ## Model Context Protocol (MCP) & RAG
 
 - The backend serves an MCP Server over Server-Sent Events (SSE).
-- Floating persistent copilot chatbot allows global user queries from any view.
+- Floating persistent copilot chatbot (Chef IA) allows global user queries from any view.
 - Uses pgvector (PostgreSQL) and Google Gemini Embeddings to enable retrieval augmented generation (RAG) across the culinary technical base (Acervo Técnico).
+- **Progressive Dialogue System**: Conversation evolves in 3 phases based on user turn count:
+  - **Phase 0 (First Contact)**: Short response (3-5 lines). Empathy + directional questions only. No teaching, no recipes.
+  - **Phase 1 (Exploration, turns 2-3)**: Moderate response. One cognitive insight + 1-2 acervo links + ELIZA question. Selectable options (A/B/C) when useful.
+  - **Phase 2 (Deep Dive, turn 4+)**: Full response with recipes, combinations, quizzes, gamification hooks, and selectable options.
+- The user is always addressed by their registered `displayName` (passed from frontend via `userName` parameter).
+- Dialogue uses **Efeito ELIZA** (empathy & mirroring), **Cognitive Injection** (food science), and **Socratic refinement**.
+- Integrates three MCP tools exposed by the Express backend: `get_user_culinary_profile`, `update_user_culinary_profile`, and `trigger_gamification_event` (which triggers evo events like `QUIZ_ANSWERED_CORRECTLY` granting 5 XP).
+- Handles missing or generic culinary terms conversationally instead of returning flat errors: the AI acknowledges the topic, provides brief cognitive context, and asks a guiding question proposing categories/ingredients we do have in the database. Discretely appends `[PENDÊNCIA_ANOTADA]` to the response to log the query to Postgres `unansweredQuery` for analytics.
 
 ## UI / Locale
 

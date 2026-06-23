@@ -40,14 +40,14 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
   const [authLoading, setAuthLoading] = useState(false);
   const [avatarsList, setAvatarsList] = useState<string[]>(AVATARS);
   const [showOnStartup, setShowOnStartup] = useState(() => {
-    return localStorage.getItem("alquimia_hide_onboarding") !== "true";
+    return localStorage.getItem("hide_welcome_startup") !== "true";
   });
 
   useEffect(() => {
     if (showOnStartup) {
-      localStorage.removeItem("alquimia_hide_onboarding");
+      localStorage.removeItem("hide_welcome_startup");
     } else {
-      localStorage.setItem("alquimia_hide_onboarding", "true");
+      localStorage.setItem("hide_welcome_startup", "true");
     }
   }, [showOnStartup]);
 
@@ -577,10 +577,21 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-between gap-4">
-                  <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
-                    Voltar
-                  </button>
+                <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
+                      Voltar
+                    </button>
+                    <label className="flex items-center gap-2 cursor-pointer text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={showOnStartup}
+                        onChange={(e) => setShowOnStartup(e.target.checked)}
+                        className="rounded border-neutral-300 text-amber-600 focus:ring-amber-500 bg-white dark:bg-zinc-800"
+                      />
+                      Apresentar no início
+                    </label>
+                  </div>
                   <button onClick={handleNextStep} className="px-8 py-2.5 bg-amber-800 hover:bg-amber-900 text-white rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md">
                     Prosseguir
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -1044,13 +1055,22 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                   </div>
                 </div>
 
-                <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex justify-center">
+                <div className="mt-8 pt-6 border-t border-neutral-100 dark:border-zinc-800 flex flex-col items-center gap-4">
                   <button 
                     onClick={handleFinishOnboarding}
                     className="px-12 py-4 bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white rounded-full font-bold text-sm shadow-xl hover:shadow-orange-950/20 hover:scale-103 transition-all uppercase tracking-wider"
                   >
                     Entrar no Portal Alquimia do Prato
                   </button>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-300 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={showOnStartup}
+                      onChange={(e) => setShowOnStartup(e.target.checked)}
+                      className="rounded border-neutral-300 text-amber-600 focus:ring-amber-500 bg-white dark:bg-zinc-800"
+                    />
+                    Apresentar no início
+                  </label>
                 </div>
               </motion.div>
             )}

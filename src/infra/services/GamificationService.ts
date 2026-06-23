@@ -9,6 +9,7 @@ export class GamificationService {
     PROFILE_PARTIAL: 10,              // Preenchimento de Cadastro Parcial
     PROFILE_COMPLETE: 25,             // Cadastro Completo
     PROFILE_QUIZ: 5,                  // Quiz de perfil/preferências
+    QUIZ_ANSWERED_CORRECTLY: 5,       // Acertou o quiz do Chef IA
     ARTICLE_PUBLISHED: 50,            // Publicação de Artigos em PDF
     RECIPE_PUBLISHED: 50,             // Publicação de Receitas (50 pts)
     RECIPE_UPVOTE_RECEIVED: 10,       // Avaliação positiva de receita

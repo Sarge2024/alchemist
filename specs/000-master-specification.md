@@ -42,7 +42,10 @@ Escala baseada em 5 níveis (Aprendiz a Mestre Alquimista). Utiliza a **Matriz d
 A progressão recalcula as metas dinamicamente multiplicando o valor base pelo Nível atual. Excedentes de XP progridem perfeitamente para o próximo nível. O backend calcula e submete eventos (`/api/gamification/event`).
 
 ### 5.4 MCP (Model Context Protocol) e RAG
-Um chat flutuante, servido via Server-Sent Events (SSE). Permite a busca semântica em todo o *Acervo Técnico* transformando receitas e regras culinárias em vetores gerenciados via `pgvector`.
+O portal conta com o **Chef IA**, um copilot persistente e flutuante acessível globalmente. O backend Express atua como Host servindo o protocolo via Server-Sent Events (SSE) e integrando buscas semânticas vetoriais (`pgvector` e Google Gemini Embeddings) no banco PostgreSQL.
+- **Interação Psicológica e Cognitiva:** Utiliza as heurísticas de **Efeito ELIZA** (para espelhamento emocional e validação de dores culinárias do usuário), **Injeção Cognitiva** (explicação técnica e científica curta de ingredientes/processos) e **Comportamento Socrático** para refinamento interativo antes de propor as receitas.
+- **Ferramentas MCP (Tools):** Expõe as ferramentas `get_user_culinary_profile`, `update_user_culinary_profile` (gravação de dores e motivações) e `trigger_gamification_event` (disparo de eventos de progresso, incluindo o acerto de mini-desafios cognitivos via evento `QUIZ_ANSWERED_CORRECTLY` que adiciona 5 XP).
+- **Tratamento Conversacional de Fallback:** Termos culinários não encontrados ou muito amplos (ex: "carnes") não acionam recusas rígidas. O Chef IA acolhe o interesse, explica o conceito de forma teórica e devolve uma pergunta guia instigando o usuário a explorar subcategorias e receitas disponíveis. A busca vazia gera internamente a tag `[PENDÊNCIA_ANOTADA]` que é gravada na tabela `unansweredQuery` no Postgres para auditoria administrativa de conteúdo ausente, sendo removida antes da exibição ao usuário.
 
 ### 5.5 Fast Routing (Lounge)
 Para contornar o peso da busca vetorial, o painel do Lounge consome um **Índice Compilado em Memória**. Este módulo (detalhado nos documentos indexados) entrega sugestões instantâneas utilizando failover multichaves e fallbacks heurísticos independentes da API da LLM.
