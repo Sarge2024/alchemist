@@ -120,6 +120,7 @@ export interface Recipe {
   custo_estimado?: string;
   ingredients: (string | Ingredient)[];
   instructions: string[];
+  equipment?: string[];
   ownerId: string;
   createdAt?: any;
   updatedAt?: any;

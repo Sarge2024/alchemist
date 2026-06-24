@@ -39,6 +39,7 @@ export default function Submit() {
     difficulty: 'Médio',
     ingredients: [{ name: '', quantity: '', group: '' }],
     instructions: [''],
+    equipment: [],
     isClassic: false,
     chefTips: '',
   });
@@ -110,6 +111,7 @@ export default function Submit() {
             typeof ing === 'string' ? { name: ing, quantity: '' } : ing
           ),
           instructions: recipe.instructions,
+          equipment: recipe.equipment || [],
           isClassic: recipe.isClassic || false,
           chefTips: recipe.chefTips || '',
         });
@@ -767,6 +769,51 @@ export default function Submit() {
                 )}
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Equipment */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between border-b border-stone-200 pb-4">
+            <h2 className="text-2xl font-bold text-on-surface">Utensílios e Equipamentos</h2>
+            <button 
+              type="button" 
+              onClick={() => setFormData(prev => ({ ...prev, equipment: [...(prev.equipment || []), ''] }))}
+              className="text-primary font-bold flex items-center gap-2 hover:bg-primary/10 px-4 py-2 rounded-lg transition-all"
+            >
+              <Plus className="w-5 h-5" /> Adicionar
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            {(formData.equipment || []).map((item, i) => (
+              <div key={i} className="flex items-center gap-2 bg-surface-container rounded-xl px-1 pr-1 group">
+                <input 
+                  type="text" 
+                  value={item}
+                  onChange={(e) => {
+                    const newEquip = [...(formData.equipment || [])];
+                    newEquip[i] = e.target.value;
+                    setFormData(prev => ({ ...prev, equipment: newEquip }));
+                  }}
+                  placeholder="Ex: Frigideira antiaderente" 
+                  className="p-3 bg-transparent border-none focus:ring-0 outline-none text-sm min-w-[200px]" 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const newEquip = [...(formData.equipment || [])];
+                    newEquip.splice(i, 1);
+                    setFormData(prev => ({ ...prev, equipment: newEquip }));
+                  }}
+                  className="p-2 text-stone-400 hover:text-red-500 transition-colors rounded-full"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+            {(!formData.equipment || formData.equipment.length === 0) && (
+              <p className="text-sm text-on-surface-variant italic py-2">Nenhum utensílio adicionado. Clique em "Adicionar" para listar os equipamentos necessários.</p>
+            )}
           </div>
         </section>
 

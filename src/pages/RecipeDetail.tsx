@@ -156,6 +156,60 @@ const MOCK_RECIPES_DETAIL: Record<string, Recipe> = {
     createdAt: new Date().toISOString()
   }
 };
+const formatScaledNumber = (num: number): string => {
+  if (Number.isInteger(num)) return num.toString();
+  const fractionMap: Record<string, string> = {
+    '0.25': '1/4',
+    '0.5': '1/2',
+    '0.75': '3/4',
+    '0.33': '1/3',
+    '0.66': '2/3',
+    '0.125': '1/8'
+  };
+  const whole = Math.floor(num);
+  const remainder = num - whole;
+  
+  for (const [decStr, fracStr] of Object.entries(fractionMap)) {
+    if (Math.abs(remainder - parseFloat(decStr)) < 0.05) {
+      if (whole > 0) return `${whole} e ${fracStr}`;
+      return fracStr;
+    }
+  }
+  return num.toFixed(1).replace('.0', '').replace('.', ',');
+};
+
+const multiplyQuantityString = (quantity: string | undefined, multiplier: number): string => {
+  if (!quantity) return '';
+
+  const regex = /(\d+\s*(?:e\s*)?\d+\/\d+|\d+\/\d+|\d+(?:[,.]\d+)?)/;
+  const match = quantity.match(regex);
+  
+  if (!match) return quantity;
+
+  const numStr = match[1];
+  let val = 0;
+
+  if (numStr.includes('/')) {
+    const parts = numStr.split(/e|\s/).map(p => p.trim()).filter(Boolean);
+    if (parts.length === 2 && parts[1].includes('/')) {
+      const whole = parseInt(parts[0], 10);
+      const [n, d] = parts[1].split('/');
+      val = whole + (parseInt(n, 10) / parseInt(d, 10));
+    } else if (parts.length === 1 && parts[0].includes('/')) {
+      const [n, d] = parts[0].split('/');
+      val = parseInt(n, 10) / parseInt(d, 10);
+    }
+  } else {
+    val = parseFloat(numStr.replace(',', '.'));
+  }
+
+  if (isNaN(val)) return quantity;
+
+  const scaledVal = val * multiplier;
+  const newStr = formatScaledNumber(scaledVal);
+  
+  return quantity.replace(numStr, newStr);
+};
 
 export default function RecipeDetail() {
   const { id, slug } = useParams();
@@ -163,6 +217,8 @@ export default function RecipeDetail() {
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [recipe, setRecipe] = useState<Recipe | null>(null);
+  const [selectedPortions, setSelectedPortions] = useState<number>(4);
+  const [activePortions, setActivePortions] = useState<number>(4);
   const [loading, setLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
@@ -556,7 +612,13 @@ export default function RecipeDetail() {
           "@type": "HowToStep",
           "position": index + 1,
           "text": inst
-        }))
+        })),
+        ...(recipe.equipment && recipe.equipment.length > 0 ? {
+          "tool": recipe.equipment.map(item => ({
+            "@type": "HowToTool",
+            "name": item
+          }))
+        } : {})
       };
 
       const script = document.createElement('script');
@@ -997,6 +1059,31 @@ export default function RecipeDetail() {
         <aside className="lg:col-span-1 space-y-8">
           <div className="bg-surface-container-low p-8 rounded-3xl border border-surface-container-high">
             <h3 className="text-2xl font-bold mb-6 text-primary border-b border-primary/10 pb-4">Ingredientes</h3>
+            
+            {/* Porções Selector */}
+            <div className="mb-8">
+              <label className="block text-sm font-bold text-primary mb-3">Atualizar receita para:</label>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <select 
+                  value={selectedPortions}
+                  onChange={(e) => setSelectedPortions(Number(e.target.value))}
+                  className="bg-surface-container text-on-surface border border-stone-200 rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none flex-grow sm:flex-grow-0 min-w-[150px] shadow-sm font-medium"
+                >
+                  <option value={2}>2 Pessoas</option>
+                  <option value={4}>4 Pessoas</option>
+                  <option value={6}>6 Pessoas</option>
+                  <option value={8}>8 Pessoas</option>
+                  <option value={10}>10 Pessoas</option>
+                </select>
+                <button
+                  onClick={() => setActivePortions(selectedPortions)}
+                  className="bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-lg transition-colors uppercase tracking-wide text-sm shadow-sm"
+                >
+                  ATUALIZAR RECEITA
+                </button>
+              </div>
+            </div>
+
             <div className="space-y-8">
               {groupKeys.map(groupName => (
                 <div key={groupName} className="space-y-4">
@@ -1013,7 +1100,9 @@ export default function RecipeDetail() {
                         </div>
                         <div className="flex flex-col">
                           {typeof ing === 'object' && ing.quantity && (
-                            <span className="text-[10px] font-bold uppercase text-primary mb-0.5">{ing.quantity}</span>
+                            <span className="text-[10px] font-bold uppercase text-primary mb-0.5">
+                              {multiplyQuantityString(ing.quantity, activePortions)}
+                            </span>
                           )}
                           <span className="text-on-surface-variant group-hover:text-on-surface transition-colors font-medium text-sm">
                             {typeof ing === 'string' ? ing : ing.name}
@@ -1026,6 +1115,25 @@ export default function RecipeDetail() {
               ))}
             </div>
           </div>
+
+          {/* Equipment Section */}
+          {recipe.equipment && recipe.equipment.length > 0 && (
+            <div className="bg-surface-container-low p-8 rounded-3xl border border-surface-container-high">
+              <h3 className="text-2xl font-bold mb-6 text-secondary border-b border-secondary/10 pb-4 flex items-center gap-2">
+                <Utensils className="w-5 h-5" /> Utensílios
+              </h3>
+              <ul className="space-y-3">
+                {recipe.equipment.map((item, i) => (
+                  <li key={i} className="flex items-center gap-3 group cursor-pointer border-b border-secondary/5 pb-2 last:border-0">
+                    <div className="w-2 h-2 rounded-full bg-secondary/40 group-hover:bg-secondary transition-colors flex-shrink-0"></div>
+                    <span className="text-on-surface-variant group-hover:text-on-surface transition-colors font-medium text-sm">
+                      {item}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </aside>
 
         <section className="lg:col-span-2 space-y-8">
@@ -1494,7 +1602,9 @@ export default function RecipeDetail() {
                         {groupedIngredients[groupName].map((ing, i) => (
                           <li key={i} style={{ paddingBottom: '1mm', borderBottom: '1px solid #f5f5f4', marginBottom: '1mm' }}>
                             {typeof ing === 'object' && ing.quantity && (
-                              <div style={{ fontSize: '6.5pt', fontWeight: 'bold', color: '#914730', marginBottom: '0.2pt' }}>{ing.quantity}</div>
+                              <div style={{ fontSize: '6.5pt', fontWeight: 'bold', color: '#914730', marginBottom: '0.2pt' }}>
+                                {multiplyQuantityString(ing.quantity, activePortions)}
+                              </div>
                             )}
                             <div style={{ fontSize: '8.5pt', color: '#1c1917', fontWeight: '500' }}>{typeof ing === 'string' ? ing : ing.name}</div>
                           </li>
@@ -1504,6 +1614,23 @@ export default function RecipeDetail() {
                   ))}
                 </div>
               </div>
+
+              {/* Sidebar Equipment */}
+              {recipe.equipment && recipe.equipment.length > 0 && (
+                <div style={{ marginTop: '4mm' }}>
+                  <h3 style={{ fontSize: '10pt', fontWeight: 'bold', color: '#914730', borderBottom: '1.5px solid #914730', paddingBottom: '1.5mm', marginBottom: '3mm', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Utensílios
+                  </h3>
+                  <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                    {recipe.equipment.map((item, i) => (
+                      <li key={i} style={{ paddingBottom: '1mm', borderBottom: '1px solid #f5f5f4', marginBottom: '1mm', fontSize: '8.5pt', color: '#1c1917', fontWeight: '500', display: 'flex', alignItems: 'center', gap: '2mm' }}>
+                        <div style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: '#914730', flexShrink: 0 }}></div>
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {/* Main Instructions */}
               <div style={{ flex: 1 }}>

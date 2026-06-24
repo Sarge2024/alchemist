@@ -63,6 +63,10 @@ export const geminiService = {
           - "1/2 copo de água" -> { quantity: "1/2 copo", name: "água" }
           - "sal a gosto" -> { quantity: "a gosto", name: "sal" }
         - instructions (string[]).
+        - equipment (string[]): Liste TODOS os utensílios e equipamentos de cozinha necessários para o preparo da receita.
+          Analise os ingredientes e instruções para inferir os equipamentos mesmo que não estejam explícitos no texto.
+          EXEMPLOS: "Frigideira antiaderente", "Panela de pressão", "Liquidificador", "Forno", "Assadeira", "Batedeira", "Peneira", "Tábua de corte", "Faca de chef", "Espátula de silicone", "Forma de pudim", "Papel manteiga", "Termômetro culinário".
+          NÃO inclua utensílios genéricos óbvios como "prato" ou "copo". Foque nos itens específicos necessários para o preparo.
         - chefTips (string): Dicas adicionais, segredos do chef, variações da receita ou conselhos técnicos importantes. Procure por blocos de texto que contenham dicas, notas ou "Dica do Chef".
         - image, imageOptions (string[]).
     `;
@@ -232,6 +236,14 @@ export const geminiService = {
         recipeData.instructions = recipeData.instructions.map((step: any) => String(step).substring(0, 1000));
       } else {
         recipeData.instructions = [];
+      }
+
+      if (Array.isArray(recipeData.equipment)) {
+        recipeData.equipment = recipeData.equipment
+          .map((item: any) => String(item).substring(0, 200).trim())
+          .filter((item: string) => item.length > 0);
+      } else {
+        recipeData.equipment = [];
       }
 
       recipeData.chefTips = String(recipeData.chefTips || "").substring(0, 2000);
