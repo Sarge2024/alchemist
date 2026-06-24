@@ -220,6 +220,15 @@ export default function RecipeDetail() {
   const [selectedPortions, setSelectedPortions] = useState<number>(4);
   const [activePortions, setActivePortions] = useState<number>(4);
   const [loading, setLoading] = useState(true);
+
+  // Derive multiplier from recipe servings
+  const getBasePortions = (servingsStr?: string): number => {
+    if (!servingsStr) return 4; // Default to 4
+    const match = servingsStr.match(/\d+/);
+    return match ? parseInt(match[0], 10) : 4;
+  };
+  const basePortions = getBasePortions(recipe?.servings);
+  const multiplier = activePortions / basePortions;
   const [isDeleting, setIsDeleting] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
@@ -1101,7 +1110,7 @@ export default function RecipeDetail() {
                         <div className="flex flex-col">
                           {typeof ing === 'object' && ing.quantity && (
                             <span className="text-[10px] font-bold uppercase text-primary mb-0.5">
-                              {multiplyQuantityString(ing.quantity, activePortions)}
+                              {multiplyQuantityString(ing.quantity, multiplier)}
                             </span>
                           )}
                           <span className="text-on-surface-variant group-hover:text-on-surface transition-colors font-medium text-sm">
@@ -1603,7 +1612,7 @@ export default function RecipeDetail() {
                           <li key={i} style={{ paddingBottom: '1mm', borderBottom: '1px solid #f5f5f4', marginBottom: '1mm' }}>
                             {typeof ing === 'object' && ing.quantity && (
                               <div style={{ fontSize: '6.5pt', fontWeight: 'bold', color: '#914730', marginBottom: '0.2pt' }}>
-                                {multiplyQuantityString(ing.quantity, activePortions)}
+                                {multiplyQuantityString(ing.quantity, multiplier)}
                               </div>
                             )}
                             <div style={{ fontSize: '8.5pt', color: '#1c1917', fontWeight: '500' }}>{typeof ing === 'string' ? ing : ing.name}</div>
