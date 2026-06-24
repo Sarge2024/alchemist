@@ -33,12 +33,9 @@ const hasAuthToken = () => {
   // Se está voltando do Google OAuth (tem hash de access_token ou code de redirecionamento)
   if (hash.includes('access_token') || search.includes('code=')) return true;
   
-  // Procura pela chave do token do supabase no localStorage
-  for (let i = 0; i < localStorage.length; i++) {
-    const key = localStorage.key(i);
-    if (key?.startsWith('sb-') && key?.endsWith('-auth-token')) {
-      return true; // Tem token salvo
-    }
+  // Procura pela chave do token do supabase nos cookies
+  if (typeof document !== 'undefined' && document.cookie.includes('-auth-token=')) {
+    return true;
   }
   return false; // Não tem token, não precisa esperar o auth inicializar para saber que está deslogado
 };

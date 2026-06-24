@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageSquare, X, Send, Bot, User, Loader2, Maximize2, Minimize2 } from 'lucide-react';
-
+import { cookieStorage } from '../lib/cookieStorage';
 interface ChatMessage {
   id: string;
   sender: 'ai' | 'user';
@@ -51,7 +51,7 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
     const firstName = user?.displayName?.split(' ')[0] || '';
     const greetingName = firstName ? `**${firstName}**` : 'Alquimista';
     
-    const lastInteractionStr = localStorage.getItem('alquimia_chef_last_interaction');
+    const lastInteractionStr = cookieStorage.getItem('alquimia_chef_last_interaction');
     let welcomeText = '';
 
     if (!lastInteractionStr) {
@@ -116,8 +116,8 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
     const userMsg: ChatMessage = { id: Date.now().toString(), sender: 'user', text: input };
     setMessages(prev => [...prev, userMsg]);
     
-    // Salva a interação para personalização futura de saudação
-    localStorage.setItem('alquimia_chef_last_interaction', JSON.stringify({
+    // Salva a interação para personalização futura de saudação usando cookie
+    cookieStorage.setItem('alquimia_chef_last_interaction', JSON.stringify({
       timestamp: Date.now(),
       lastQuestion: input.substring(0, 80) + (input.length > 80 ? '...' : '') // Limita o tamanho para não estragar o layout
     }));

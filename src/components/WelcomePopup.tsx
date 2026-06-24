@@ -52,6 +52,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
   }, [showOnStartup]);
 
   // Quiz states
+  const [quizIndex, setQuizIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
   const [quizSubmitted, setQuizSubmitted] = useState(false);
   const [quizXP, setQuizXP] = useState(0);
@@ -124,7 +125,7 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
 
   if (!isOpen) return null;
 
-  const currentQuiz = TRIVIA_QUESTIONS[0]; // Maillard Reaction
+  const currentQuiz = TRIVIA_QUESTIONS[quizIndex];
 
   // Auth logic
   const handleGoogleLogin = async () => {
@@ -190,6 +191,12 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
 
   const handlePrevStep = () => {
     setStep((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleNextQuestion = () => {
+    setQuizSubmitted(false);
+    setSelectedAnswer(null);
+    setQuizIndex((prev) => (prev + 1) % TRIVIA_QUESTIONS.length);
   };
 
   const handleAnswerSubmit = (optionIndex: number) => {
@@ -686,14 +693,24 @@ export default function WelcomePopup({ onComplete, isOpen, onClose }: WelcomePop
                   <button onClick={handlePrevStep} className="px-6 py-2.5 rounded-full text-xs text-neutral-500 hover:text-neutral-700 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:text-neutral-200 dark:hover:bg-zinc-800 font-medium">
                     Voltar
                   </button>
-                  <button 
-                    disabled={!quizSubmitted}
-                    onClick={handleNextStep} 
-                    className={`px-8 py-2.5 rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md transition-all ${quizSubmitted ? "bg-amber-800 hover:bg-amber-900 text-white cursor-pointer" : "bg-neutral-200 text-neutral-400 dark:bg-zinc-800 dark:text-zinc-500 cursor-not-allowed"}`}
-                  >
-                    Prosseguir
-                    <ChevronRight className="w-3.5 h-3.5" />
-                  </button>
+                  <div className="flex gap-2">
+                    {quizSubmitted && (
+                      <button 
+                        onClick={handleNextQuestion} 
+                        className="px-6 py-2.5 rounded-full text-xs font-medium inline-flex items-center bg-emerald-100 text-emerald-800 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 transition-all"
+                      >
+                        Próxima Questão
+                      </button>
+                    )}
+                    <button 
+                      disabled={!quizSubmitted}
+                      onClick={handleNextStep} 
+                      className={`px-6 py-2.5 rounded-full text-xs font-medium inline-flex items-center gap-1.5 shadow-md transition-all ${quizSubmitted ? "bg-amber-800 hover:bg-amber-900 text-white cursor-pointer" : "bg-neutral-200 text-neutral-400 dark:bg-zinc-800 dark:text-zinc-500 cursor-not-allowed"}`}
+                    >
+                      Prosseguir
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               </motion.div>
             )}

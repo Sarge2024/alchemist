@@ -188,7 +188,7 @@ export default function Home() {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="relative rounded-2xl md:rounded-3xl overflow-hidden bg-stone-900 min-h-[500px] md:min-h-[600px] flex items-center group"
+          className="relative rounded-2xl md:rounded-3xl overflow-hidden bg-stone-900 min-h-[400px] md:min-h-[500px] flex items-center group"
         >
           <div className="absolute inset-0 z-0">
             <img 
@@ -204,14 +204,7 @@ export default function Home() {
           </div>
 
           <div className="relative z-10 max-w-2xl px-6 md:px-12 py-12 md:py-20 text-white w-full">
-            <motion.span 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.2 }}
-              className="inline-block px-3 py-1 rounded-full bg-secondary text-white text-[10px] md:text-sm font-bold mb-3 md:mb-4 tracking-widest uppercase"
-            >
-              Escolha do Editor
-            </motion.span>
+
             <h1 className="text-3xl md:text-5xl font-bold mb-3 md:mb-4 leading-tight font-sans drop-shadow-md">
               Segredos da Alquimia do Prato: Tradição e Sabor
             </h1>

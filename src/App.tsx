@@ -35,9 +35,7 @@ import { TelemetryTracker } from './components/TelemetryTracker';
 import WelcomePopup from './components/WelcomePopup';
 import { UserProgress } from './types/onboarding';
 export default function App() {
-  const [isOnboardingOpen, setIsOnboardingOpen] = useState(() => {
-    return localStorage.getItem("hide_welcome_startup") !== "true";
-  });
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
 
   const handleCompleteOnboarding = (progress: UserProgress) => {
     localStorage.setItem("alquimia_progress", JSON.stringify(progress));

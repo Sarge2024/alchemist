@@ -362,7 +362,7 @@ export default function Acervo() {
       <div className="flex gap-4 mb-8 overflow-x-auto pb-2 no-scrollbar">
         <button 
           onClick={() => setSelectedType('all')}
-          className={`flex-shrink-0 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${selectedType === 'all' ? 'bg-on-surface text-surface' : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}
+          className={`flex-shrink-0 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${selectedType === 'all' ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-surface-container-high text-on-surface hover:bg-surface-container'}`}
         >
           Todos os Formatos
         </button>
@@ -372,7 +372,7 @@ export default function Acervo() {
             <button
               key={type}
               onClick={() => setSelectedType(type)}
-              className={`flex-shrink-0 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${selectedType === type ? `${Config.bg} ${Config.color} ring-1 ring-current/20` : 'bg-surface-container-low text-on-surface-variant hover:bg-surface-container'}`}
+              className={`flex-shrink-0 px-6 py-3 rounded-2xl font-bold flex items-center gap-2 transition-all ${selectedType === type ? `${Config.bg} ${Config.color} ring-1 ring-current/20` : 'bg-surface-container-high text-on-surface hover:bg-surface-container'}`}
             >
               <Config.icon className="w-5 h-5" />
               {Config.label}s
