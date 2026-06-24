@@ -102,7 +102,7 @@ export const geminiService = {
         try {
           const client = new GoogleGenAI({ apiKey });
           // List of models to try in order of preference
-          const models = ["gemini-3-flash-preview", "gemini-1.0-pro"];
+          const models = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"];
           for (const modelName of models) {
             try {
               const result = await client.models.generateContent({
