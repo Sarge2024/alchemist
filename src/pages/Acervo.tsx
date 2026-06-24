@@ -52,7 +52,7 @@ export default function Acervo() {
   
   // Registration/Edit Form State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewItem, setPreviewItem] = useState<LibraryItem | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
@@ -236,7 +236,7 @@ export default function Acervo() {
     <div className="max-w-7xl mx-auto px-6 py-12">
         {/* Preview Modal */}
         <AnimatePresence>
-          {previewUrl && (
+          {previewItem && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -255,7 +255,7 @@ export default function Acervo() {
                   </div>
                   <div className="flex items-center gap-3">
                     <a 
-                      href={previewUrl} 
+                      href={previewItem.url} 
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-full text-sm font-bold hover:bg-primary-hover transition-all"
@@ -264,7 +264,7 @@ export default function Acervo() {
                       Baixar Original
                     </a>
                     <button 
-                      onClick={() => setPreviewUrl(null)}
+                      onClick={() => setPreviewItem(null)}
                       className="flex items-center gap-2 px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded-full text-sm font-bold transition-all"
                     >
                       <X className="w-4 h-4" />
@@ -273,20 +273,30 @@ export default function Acervo() {
                   </div>
                 </div>
                 
-                <div className="flex-1 bg-stone-100 relative flex flex-col">
+                <div className="flex-1 bg-stone-100 relative flex flex-col items-center justify-center overflow-auto">
                   {/* Fallback info */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-on-surface-variant/40">
-                    <FileText className="w-16 h-16 mb-4 opacity-20" />
-                    <p className="text-sm font-medium max-w-xs">
-                      Se o arquivo não carregar em alguns segundos, clique em <strong>"Baixar Original"</strong> no topo para visualizar diretamente no seu dispositivo.
-                    </p>
-                  </div>
+                  {previewItem.type !== 'infographic' && !previewItem.url.match(/\.(webp|jpg|jpeg|png|gif|bmp)$/i) && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center p-12 text-center text-on-surface-variant/40 pointer-events-none z-0">
+                      <FileText className="w-16 h-16 mb-4 opacity-20" />
+                      <p className="text-sm font-medium max-w-xs">
+                        Se o arquivo não carregar em alguns segundos, clique em <strong>"Baixar Original"</strong> no topo para visualizar diretamente no seu dispositivo.
+                      </p>
+                    </div>
+                  )}
                   
-                  <iframe 
-                    src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(previewUrl)}`}
-                    className="relative z-10 w-full h-full border-none"
-                    title="Document Preview"
-                  />
+                  {previewItem.type === 'infographic' || previewItem.url.match(/\.(webp|jpg|jpeg|png|gif|bmp)$/i) ? (
+                    <img 
+                      src={previewItem.url} 
+                      alt="Visualização do Infográfico" 
+                      className="relative z-10 max-w-full max-h-full object-contain p-4 drop-shadow-md"
+                    />
+                  ) : (
+                    <iframe 
+                      src={`https://docs.google.com/gview?embedded=true&url=${encodeURIComponent(previewItem.url)}`}
+                      className="relative z-10 w-full h-full border-none"
+                      title="Document Preview"
+                    />
+                  )}
                 </div>
               </motion.div>
             </motion.div>
@@ -455,7 +465,7 @@ export default function Acervo() {
                         </a>
                       ) : (
                         <button 
-                          onClick={() => setPreviewUrl(item.url)}
+                          onClick={() => setPreviewItem(item)}
                           className={`flex items-center gap-2 font-bold text-sm ${Config.color} hover:underline`}
                         >
                           <Eye className="w-4 h-4" />
