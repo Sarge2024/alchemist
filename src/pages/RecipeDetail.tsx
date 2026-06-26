@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 import { ShareIncentive } from '../components/ShareIncentive';
 
 import { ASSETS, getAssetUrl } from '../lib/assets';
+import { findGramEquivalent, smartConvertUnit, findUnitEquivalent } from '../lib/culinaryMath';
 
 const MOCK_RECIPES_DETAIL: Record<string, Recipe> = {
   'tapioca-rendada': {
@@ -171,22 +172,24 @@ const formatScaledNumber = (num: number): string => {
   
   for (const [decStr, fracStr] of Object.entries(fractionMap)) {
     if (Math.abs(remainder - parseFloat(decStr)) < 0.05) {
-      if (whole > 0) return `${whole} e ${fracStr}`;
+      if (whole > 0) return `${whole} ${fracStr}`;
       return fracStr;
     }
   }
   return num.toFixed(1).replace('.0', '').replace('.', ',');
 };
 
-const multiplyQuantityString = (quantity: string | undefined, multiplier: number): string => {
+const multiplyQuantityString = (quantity: string | undefined, ingredientName: string, multiplier: number, activePortions?: number): string => {
   if (!quantity) return '';
 
-  const regex = /(\d+\s*(?:e\s*)?\d+\/\d+|\d+\/\d+|\d+(?:[,.]\d+)?)/;
+  const regex = /^(.*?)(\d+\s*(?:e\s*)?\d+\/\d+|\d+\/\d+|\d+(?:[,.]\d+)?)\s*(.*)$/i;
   const match = quantity.match(regex);
   
   if (!match) return quantity;
 
-  const numStr = match[1];
+  const prefix = match[1] || '';
+  const numStr = match[2];
+  const unitStr = match[3] || '';
   let val = 0;
 
   if (numStr.includes('/')) {
@@ -205,11 +208,108 @@ const multiplyQuantityString = (quantity: string | undefined, multiplier: number
 
   if (isNaN(val)) return quantity;
 
-  const scaledVal = val * multiplier;
-  const newStr = formatScaledNumber(scaledVal);
+  let scaledVal = val * multiplier;
   
-  return quantity.replace(numStr, newStr);
+  let eggAdjective = '';
+  const isEgg = /\bovos?\b/i.test(ingredientName) && 
+                !/\b(clara|gema)s?\b/i.test(ingredientName) &&
+                !/maltine/i.test(ingredientName);
+                
+  if (isEgg) {
+    const targetWeight = val * 50 * multiplier;
+    const sizes = [
+      { weight: 25, adjective: 'pequeno' },
+      { weight: 50, adjective: '' },
+      { weight: 75, adjective: 'grande' }
+    ];
+    
+    let bestCount = Math.max(1, Math.round(targetWeight / 50));
+    let bestAdjective = '';
+    let minScore = Math.abs(bestCount * 50 - targetWeight) + (bestCount * 0.1);
+    
+    const minCount = Math.max(1, Math.floor(targetWeight / 75));
+    const maxCount = Math.max(1, Math.ceil(targetWeight / 25));
+    
+    for (let c = minCount; c <= maxCount; c++) {
+      for (const size of sizes) {
+        const diff = Math.abs(c * size.weight - targetWeight);
+        const penalty = (size.adjective === '' ? 0 : 3) + (c * 0.1);
+        const score = diff + penalty;
+        
+        if (score < minScore) {
+          minScore = score;
+          bestCount = c;
+          bestAdjective = size.adjective;
+        }
+      }
+    }
+    
+    scaledVal = bestCount;
+    eggAdjective = bestAdjective;
+  }
+
+
+
+  const { newVal, newUnit } = smartConvertUnit(scaledVal, unitStr);
+
+  const formatUnitCase = (u: string) => {
+    const lower = u.trim().toLowerCase();
+    if (lower === 'ml' || lower === 'mililitros' || lower === 'mililitro') return 'mL';
+    if (lower === 'l' || lower === 'litro' || lower === 'litros') return 'L';
+    if (lower === 'g' || lower === 'gramas' || lower === 'grama') return 'g';
+    if (lower === 'kg' || lower === 'quilos' || lower === 'quilo') return 'kg';
+    if (lower === 'mg') return 'mg';
+    return u.trim();
+  };
+
+  let formattedUnit = formatUnitCase(newUnit);
+  if (eggAdjective) {
+    const formattedAdj = newVal > 1 ? `${eggAdjective}s` : eggAdjective;
+    formattedUnit = formattedUnit ? `${formattedAdj} ${formattedUnit}` : formattedAdj;
+  }
+  
+  const isMetricUnit = /^(g|mL|L|kg|mg)$/i.test(formattedUnit.trim());
+  
+  let newStr = isMetricUnit ? Math.round(newVal).toString() : formatScaledNumber(newVal);
+  let result = `${prefix}${newStr} ${formattedUnit}`.trim();
+  
+  if (isEgg) {
+    const targetWeight = val * 50 * multiplier;
+    result += ` (~${Math.round(targetWeight)}g)`;
+  } else {
+    if (isMetricUnit && /^(g|gramas?)$/i.test(formattedUnit.trim())) {
+      const unitEq = findUnitEquivalent(ingredientName, newVal);
+      if (unitEq) {
+        result = `${prefix}${unitEq} (~${Math.round(newVal)}g)`.trim();
+      }
+    } else {
+      const gramEquivalent = findGramEquivalent(ingredientName, newVal, newUnit);
+      if (gramEquivalent) {
+        result += ` ${gramEquivalent}`;
+      }
+    }
+  }
+  
+  return result;
 };
+
+const getFormattedIngredientName = (name: string, quantityStr: string) => {
+  const isEgg = /\bovos?\b/i.test(name) && 
+                !/\b(clara|gema)s?\b/i.test(name) &&
+                !/maltine/i.test(name);
+  if (!isEgg) return name;
+  
+  const match = quantityStr.match(/^(\d+)/);
+  if (!match) return name;
+  
+  const qtyVal = parseInt(match[1], 10);
+  if (qtyVal === 1) {
+    return name.replace(/\bovos\b/i, 'ovo');
+  } else {
+    return name.replace(/\bovo\b/i, 'ovos');
+  }
+};
+
 
 export default function RecipeDetail() {
   const { id, slug } = useParams();
@@ -687,6 +787,9 @@ export default function RecipeDetail() {
       
       if (data) {
         setRecipe(data);
+        const initialPortions = getBasePortions(data.servings);
+        setSelectedPortions(initialPortions);
+        setActivePortions(initialPortions);
         if (data.id) loadReviews(data.id);
         
         // Redireciona 301 client-side se entrou pelo /recipe/:id mas a receita já tem slug
@@ -695,7 +798,11 @@ export default function RecipeDetail() {
         }
       } else if (MOCK_RECIPES_DETAIL[param]) {
         // Fallback for popular/mock recipes
-        setRecipe(MOCK_RECIPES_DETAIL[param]);
+        const mockData = MOCK_RECIPES_DETAIL[param];
+        setRecipe(mockData);
+        const initialPortions = getBasePortions(mockData.servings);
+        setSelectedPortions(initialPortions);
+        setActivePortions(initialPortions);
         loadReviews(param);
       } else {
         console.warn('Recipe not found in Firestore or Mocks');
@@ -704,7 +811,11 @@ export default function RecipeDetail() {
       console.error('Error loading recipe:', error);
       // Even on error, try to check mocks as fallback
       if (MOCK_RECIPES_DETAIL[param]) {
-        setRecipe(MOCK_RECIPES_DETAIL[param]);
+        const mockData = MOCK_RECIPES_DETAIL[param];
+        setRecipe(mockData);
+        const initialPortions = getBasePortions(mockData.servings);
+        setSelectedPortions(initialPortions);
+        setActivePortions(initialPortions);
         loadReviews(param);
       }
     } finally {
@@ -1109,12 +1220,12 @@ export default function RecipeDetail() {
                         </div>
                         <div className="flex flex-col">
                           {typeof ing === 'object' && ing.quantity && (
-                            <span className="text-[10px] font-bold uppercase text-primary mb-0.5">
-                              {multiplyQuantityString(ing.quantity, multiplier)}
+                            <span className="text-[10px] font-bold text-primary mb-0.5">
+                              {multiplyQuantityString(ing.quantity, typeof ing === 'string' ? ing : ing.name, multiplier, activePortions)}
                             </span>
                           )}
                           <span className="text-on-surface-variant group-hover:text-on-surface transition-colors font-medium text-sm">
-                            {typeof ing === 'string' ? ing : ing.name}
+                            {typeof ing === 'string' ? ing : getFormattedIngredientName(ing.name, multiplyQuantityString(ing.quantity, ing.name, multiplier, activePortions))}
                           </span>
                         </div>
                       </li>
@@ -1612,10 +1723,12 @@ export default function RecipeDetail() {
                           <li key={i} style={{ paddingBottom: '1mm', borderBottom: '1px solid #f5f5f4', marginBottom: '1mm' }}>
                             {typeof ing === 'object' && ing.quantity && (
                               <div style={{ fontSize: '6.5pt', fontWeight: 'bold', color: '#914730', marginBottom: '0.2pt' }}>
-                                {multiplyQuantityString(ing.quantity, multiplier)}
+                                {multiplyQuantityString(ing.quantity, typeof ing === 'string' ? ing : ing.name, multiplier, activePortions)}
                               </div>
                             )}
-                            <div style={{ fontSize: '8.5pt', color: '#1c1917', fontWeight: '500' }}>{typeof ing === 'string' ? ing : ing.name}</div>
+                            <div style={{ fontSize: '8.5pt', color: '#1c1917', fontWeight: '500' }}>
+                              {typeof ing === 'string' ? ing : getFormattedIngredientName(ing.name, multiplyQuantityString(ing.quantity, ing.name, multiplier, activePortions))}
+                            </div>
                           </li>
                         ))}
                       </ul>

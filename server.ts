@@ -1653,20 +1653,91 @@ async function startServer() {
     console.error("[Startup] Falha na sincronização de receitas para RAG:", err);
   });
 
+  // Injeção de Meta Tags (SEO) para Receitas
+  const serveRecipeHTML = async (req: express.Request, res: express.Response, next: express.NextFunction, vite?: any) => {
+    try {
+      const { slug, id } = req.params;
+      const db = getFirestore();
+      let recipeData = null;
+
+      if (slug) {
+        const snapshot = await db.collection('recipes').where('slug', '==', slug).limit(1).get();
+        if (!snapshot.empty) recipeData = snapshot.docs[0].data();
+      } else if (id) {
+        const doc = await db.collection('recipes').doc(id).get();
+        if (doc.exists) recipeData = doc.data();
+      }
+
+      let template = "";
+      if (process.env.NODE_ENV !== "production" && vite) {
+        template = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+      } else {
+        template = fs.readFileSync(path.join(process.cwd(), 'dist', 'index.html'), 'utf-8');
+      }
+
+      if (recipeData) {
+        const title = `${recipeData.title} - Alquimia do Prato`;
+        const desc = recipeData.description || 'Confira esta deliciosa receita no Alquimia do Prato!';
+        // Fallback to absolute URL for og:image as social scrapers require absolute URLs
+        const img = recipeData.image 
+          ? (recipeData.image.startsWith('http') ? recipeData.image : `https://alquimiadoprato.com${recipeData.image}`)
+          : 'https://alquimiadoprato.com/pwa-icon-512.png';
+        
+        const metaTags = `
+    <title>${title}</title>
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${desc}" />
+    <meta property="og:image" content="${img}" />
+    <meta property="og:type" content="article" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="description" content="${desc}" />`;
+        
+        template = template.replace(/<title>.*?<\/title>/, metaTags);
+      }
+
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+    } catch (e) {
+      next(e);
+    }
+  };
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa",
+      appType: "custom", // Changed from "spa" so Vite doesn't auto-handle index.html for us
     });
+
+    // Intercept recipes for SEO
+    app.get(["/receita/:slug", "/recipe/:id"], (req, res, next) => serveRecipeHTML(req, res, next, vite));
+    
     app.use(vite.middlewares);
+
+    // Fallback for all other routes in dev
+    app.use("*", async (req, res, next) => {
+      try {
+        let template = fs.readFileSync(path.join(process.cwd(), 'index.html'), 'utf-8');
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ 'Content-Type': 'text/html' }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e as Error);
+        next(e);
+      }
+    });
+
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-
-
-app.get("*", (req, res) => {
+    
+    // Serve static assets first
+    app.use(express.static(distPath, { index: false })); // Disable automatic index.html serving
+    
+    // Intercept recipes for SEO
+    app.get(["/receita/:slug", "/recipe/:id"], (req, res, next) => serveRecipeHTML(req, res, next));
+    
+    // Fallback for all other routes
+    app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });
   }
