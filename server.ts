@@ -928,6 +928,38 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
   }
 });
 
+// Endpoint to get the RAG Assistant Chat History
+app.get("/api/chat/history", authenticateAPI, async (req, res) => {
+  try {
+    const userId = req.query.userId as string;
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+
+    const db = getFirestore();
+    const snapshot = await db.collection("copilot_chat_history")
+      .where("userId", "==", userId)
+      .orderBy("timestamp", "desc")
+      .limit(6)
+      .get();
+
+    const history = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        sender: data.role === 'user' ? 'user' : 'ai',
+        text: data.text,
+        timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date()
+      };
+    }).reverse();
+
+    res.json({ success: true, history });
+  } catch (error) {
+    console.error("[Chat History] Error fetching chat history:", error);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
+
 // Endpoint to ask the RAG Assistant (AI Chat)
 app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   try {
@@ -946,6 +978,25 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
     
     // Calls the RAG Backend Service with conversation history for multi-turn context
     const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory, 5, userId, userName);
+
+    if (userId) {
+      const db = getFirestore();
+      
+      // Save to Firestore with a slight offset to ensure stable sorting
+      await db.collection("copilot_chat_history").add({
+        userId,
+        role: "user",
+        text: question.substring(0, 2000),
+        timestamp: new Date(Date.now() - 10)
+      });
+      
+      await db.collection("copilot_chat_history").add({
+        userId,
+        role: "assistant",
+        text: answer,
+        timestamp: new Date()
+      });
+    }
     
     res.json({ success: true, answer });
   } catch (error: any) {

@@ -48,49 +48,68 @@ export const RAGAssistant: React.FC<{ recipeContext?: string }> = ({ recipeConte
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const firstName = user?.displayName?.split(' ')[0] || '';
-    const greetingName = firstName ? `**${firstName}**` : 'Alquimista';
-    
-    const lastInteractionStr = cookieStorage.getItem('alquimia_chef_last_interaction');
-    let welcomeText = '';
+    if (!user?.uid) return;
 
-    if (!lastInteractionStr) {
-      // Primeiro contato absoluto
-      if (recipeContext) {
-        welcomeText = `Olá, ${greetingName}! 🧑‍🍳 Sou o **Chef IA Alchemist**. Que legal ter você aqui pela primeira vez! Vejo que você está de olho na receita de **${recipeContext}**. Quer dicas de preparo ou entender alguma técnica?`;
-      } else {
-        welcomeText = `Olá, ${greetingName}! 🧑‍🍳 Sou o **Chef IA**, seu guia culinário pessoal. É um prazer falar com você pela primeira vez! Me conte, o que você quer descobrir ou cozinhar hoje?`;
-      }
-    } else {
+    const fetchHistory = async () => {
       try {
-        const { timestamp, lastQuestion } = JSON.parse(lastInteractionStr);
-        const hoursSinceLast = (Date.now() - timestamp) / (1000 * 60 * 60);
-
-        if (hoursSinceLast > 24) {
-          // Muito tempo sem acessar (mais de 24h)
-          if (recipeContext) {
-            welcomeText = `Senti sua falta por aqui, ${greetingName}! 🧑‍🍳 Da última vez você perguntou sobre *"${lastQuestion}"*, espero que tenha dado tudo certo! Vejo que agora o alvo é **${recipeContext}**. Mas e aí, como posso ajudar com ela?`;
-          } else {
-            welcomeText = `Que bom te ver de novo, ${greetingName}! Senti sua falta na nossa cozinha! 🧑‍🍳 Da última vez a conversa rendeu sobre *"${lastQuestion}"*... Mas e aí, o que vamos ter para hoje?`;
+        const response = await fetch(`/api/chat/history?userId=${user.uid}`, {
+          headers: {
+            'X-API-KEY': (import.meta.env.VITE_APP_API_KEY as string) || 'alchemist-app-secret-2024'
           }
-        } else {
-          // Retorno recente (menos de 24h)
-          if (recipeContext) {
-            welcomeText = `De volta à ativa, ${greetingName}! 🧑‍🍳 Estamos explorando **${recipeContext}** agora, certo? Conta pra mim, que dúvida pintou?`;
-          } else {
-            welcomeText = `E aí, ${greetingName}! 🧑‍🍳 Prontos para continuar nossa alquimia na cozinha? O que vamos preparar agora?`;
-          }
+        });
+        const data = await response.json();
+        
+        if (data.success && data.history && data.history.length > 0) {
+          // Option A: Just show history, no extra welcome message
+          setMessages(data.history);
+          return;
         }
-      } catch (e) {
-        // Fallback em caso de erro no parse do JSON
-        welcomeText = `E aí, ${greetingName}! 🧑‍🍳 Bora pra cozinha? Me conte o que você quer explorar e juntos vamos descobrir algo incrível!`;
+      } catch (err) {
+        console.error("Erro ao buscar historico", err);
       }
-    }
 
-    setMessages([
-      { id: 'welcome', sender: 'ai', text: welcomeText }
-    ]);
-  }, [recipeContext, user?.displayName]);
+      const firstName = user?.displayName?.split(' ')[0] || '';
+      const greetingName = firstName ? `**${firstName}**` : 'Alquimista';
+      
+      const lastInteractionStr = cookieStorage.getItem('alquimia_chef_last_interaction');
+      let welcomeText = '';
+
+      if (!lastInteractionStr) {
+        if (recipeContext) {
+          welcomeText = `Olá, ${greetingName}! 🧑‍🍳 Sou o **Chef IA Alchemist**. Que legal ter você aqui pela primeira vez! Vejo que você está de olho na receita de **${recipeContext}**. Quer dicas de preparo ou entender alguma técnica?`;
+        } else {
+          welcomeText = `Olá, ${greetingName}! 🧑‍🍳 Sou o **Chef IA**, seu guia culinário pessoal. É um prazer falar com você pela primeira vez! Me conte, o que você quer descobrir ou cozinhar hoje?`;
+        }
+      } else {
+        try {
+          const { timestamp, lastQuestion } = JSON.parse(lastInteractionStr);
+          const hoursSinceLast = (Date.now() - timestamp) / (1000 * 60 * 60);
+
+          if (hoursSinceLast > 24) {
+            if (recipeContext) {
+              welcomeText = `Senti sua falta por aqui, ${greetingName}! 🧑‍🍳 Da última vez você perguntou sobre *"${lastQuestion}"*, espero que tenha dado tudo certo! Vejo que agora o alvo é **${recipeContext}**. Mas e aí, como posso ajudar com ela?`;
+            } else {
+              welcomeText = `Que bom te ver de novo, ${greetingName}! Senti sua falta na nossa cozinha! 🧑‍🍳 Da última vez a conversa rendeu sobre *"${lastQuestion}"*... Mas e aí, o que vamos ter para hoje?`;
+            }
+          } else {
+            if (recipeContext) {
+              welcomeText = `De volta à ativa, ${greetingName}! 🧑‍🍳 Estamos explorando **${recipeContext}** agora, certo? Conta pra mim, que dúvida pintou?`;
+            } else {
+              welcomeText = `E aí, ${greetingName}! 🧑‍🍳 Prontos para continuar nossa alquimia na cozinha? O que vamos preparar agora?`;
+            }
+          }
+        } catch (e) {
+          welcomeText = `E aí, ${greetingName}! 🧑‍🍳 Bora pra cozinha? Me conte o que você quer explorar e juntos vamos descobrir algo incrível!`;
+        }
+      }
+
+      setMessages([
+        { id: 'welcome', sender: 'ai', text: welcomeText }
+      ]);
+    };
+
+    fetchHistory();
+  }, [recipeContext, user?.uid, user?.displayName]);
 
   useEffect(() => {
     // Auto-expand after 2 user turns
