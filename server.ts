@@ -21,6 +21,7 @@ import { FastRoutingService } from "./src/infra/services/fastRoutingService";
 import { put } from "@vercel/blob";
 import cron from "node-cron";
 import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
+import { dishAlchemistsRouter } from "./src/infra/api/dishAlchemistsRouter";
 import { RagBackendService } from "./src/infra/services/ragBackendService";
 import { prisma } from "./src/infra/prisma/client";
 
@@ -210,6 +211,9 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
 
 app.use(express.json());
 registerMcpRoutes(app);
+
+// Monta rotas de Receitas e Ingredientes
+app.use('/api', dishAlchemistsRouter);
 
 // Endpoint to update presence in Firestore (called from frontend AuthContext)
 app.post("/api/presence", async (req, res) => {
