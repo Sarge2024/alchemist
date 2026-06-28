@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prisma } from '../prisma/client';
 import { authenticateFirebase } from '../auth/firebaseAuthMiddleware';
 import fetch from 'node-fetch'; // O Node v24 suporta fetch globalmente, mas para garantir podemos usar global fetch.
+import { NutritionalEngineService } from '../services/NutritionalEngineService';
 
 export const dishAlchemistsRouter = Router();
 
@@ -38,12 +39,14 @@ dishAlchemistsRouter.get('/recipes', authenticateFirebase, async (req, res) => {
         quantity: ri.quantity,
         unit: ri.unit
       })),
-      total_nutrition: {
-        calories: 0, // Como não temos isso direto no banco, enviar 0 e calcular depois via TACO
-        protein: 0,
-        carbs: 0,
-        fat: 0
-      }
+      total_nutrition: r.recipeIngredients.reduce((acc, ri) => {
+        const factor = (Number(ri.quantity) || 0) / 100;
+        acc.calories += (ri.foodItem.calories || 0) * factor;
+        acc.protein += (ri.foodItem.protein || 0) * factor;
+        acc.carbs += (ri.foodItem.carbohydrates || 0) * factor;
+        acc.fat += (ri.foodItem.lipids || 0) * factor;
+        return acc;
+      }, { calories: 0, protein: 0, carbs: 0, fat: 0 })
     }));
 
     res.json(formattedRecipes);
@@ -89,12 +92,14 @@ dishAlchemistsRouter.get('/recipes/:id', authenticateFirebase, async (req, res) 
         quantity: ri.quantity,
         unit: ri.unit
       })),
-      total_nutrition: {
-        calories: 0,
-        protein: 0,
-        carbs: 0,
-        fat: 0
-      }
+      total_nutrition: recipe.recipeIngredients.reduce((acc, ri) => {
+        const factor = (Number(ri.quantity) || 0) / 100;
+        acc.calories += (ri.foodItem.calories || 0) * factor;
+        acc.protein += (ri.foodItem.protein || 0) * factor;
+        acc.carbs += (ri.foodItem.carbohydrates || 0) * factor;
+        acc.fat += (ri.foodItem.lipids || 0) * factor;
+        return acc;
+      }, { calories: 0, protein: 0, carbs: 0, fat: 0 })
     };
 
     res.json(formattedRecipe);
@@ -133,5 +138,22 @@ dishAlchemistsRouter.get('/ingredients', authenticateFirebase, async (req, res) 
   } catch (error: any) {
     console.error('[DishAlchemists API] Erro ao buscar ingredientes:', error);
     res.status(500).json({ error: 'Erro interno ao buscar ingredientes' });
+  }
+});
+
+// Endpoint para calcular nutrição com base na lista de ingredientes
+dishAlchemistsRouter.post('/nutrition/calculate', authenticateFirebase, async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    if (!ingredients || !Array.isArray(ingredients)) {
+      return res.status(400).json({ error: 'Array de ingredients obrigatório' });
+    }
+    
+    // Chama o serviço do Motor Nutricional
+    const result = await NutritionalEngineService.calculateRecipeNutrition(ingredients);
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('[DishAlchemists API] Erro ao calcular nutrição:', error);
+    res.status(500).json({ success: false, error: 'Erro interno no motor nutricional' });
   }
 });

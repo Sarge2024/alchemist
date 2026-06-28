@@ -75,6 +75,7 @@ model GlobalFoodItem {
   lipids          Float    @default(0)
   baseUnit        String   @default("g")
   baseQuantity    Float    @default(100)
+  micronutrients  Json?    // Optional JSON for vitamins, minerals, etc.
   
   recipeIngredients RecipeIngredient[]
 }
@@ -90,6 +91,7 @@ model RecipeIngredient {
   quantity        Float
   unit            String
   preparationMode String?  // cru, cozido, assado, frito
+  preparationTime Float?   // Tempo de permanência no método de preparo (em minutos)
 }
 
 // Modelos de Gamificação (adicionados conforme pedido original)

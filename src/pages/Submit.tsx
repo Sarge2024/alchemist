@@ -37,7 +37,7 @@ export default function Submit() {
     prepTime: '',
     servings: '',
     difficulty: 'Médio',
-    ingredients: [{ name: '', quantity: '', group: '' }],
+    ingredients: [{ name: '', quantity: '', group: '', preparationMode: '', preparationTime: '' }],
     instructions: [''],
     equipment: [],
     isClassic: false,
@@ -177,7 +177,7 @@ export default function Submit() {
 
   const addArrayItem = (field: 'ingredients' | 'instructions') => {
     if (field === 'ingredients') {
-      setFormData(prev => ({ ...prev, ingredients: [...prev.ingredients, { name: '', quantity: '', group: '' }] }));
+      setFormData(prev => ({ ...prev, ingredients: [...prev.ingredients, { name: '', quantity: '', group: '', preparationMode: '', preparationTime: '' }] }));
     } else {
       setFormData(prev => ({ ...prev, instructions: [...prev.instructions, ''] }));
     }
@@ -716,6 +716,33 @@ export default function Submit() {
                     value={ing.name}
                     onChange={(e) => handleIngredientChange(i, 'name', e.target.value)}
                     placeholder="Ex: Açúcar, Farinha..." 
+                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Preparo</label>
+                  <select
+                    value={ing.preparationMode || ''}
+                    onChange={(e) => handleIngredientChange(i, 'preparationMode', e.target.value)}
+                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm appearance-none"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="Cru">Cru</option>
+                    <option value="Cozido">Cozido</option>
+                    <option value="Assado">Assado</option>
+                    <option value="Frito">Frito</option>
+                    <option value="Grelhado">Grelhado</option>
+                    <option value="Refogado">Refogado</option>
+                  </select>
+                </div>
+                <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Tempo (min)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    value={ing.preparationTime || ''}
+                    onChange={(e) => handleIngredientChange(i, 'preparationTime', e.target.value)}
+                    placeholder="Ex: 15" 
                     className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
                   />
                 </div>

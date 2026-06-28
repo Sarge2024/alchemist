@@ -1,3 +1,5 @@
+import { prisma } from '../prisma/client';
+
 export interface IngredientQuery {
   name: string;
   quantity: number;
@@ -13,6 +15,7 @@ export interface NutritionalResult {
   protein: number;
   carbs: number;
   fat: number;
+  micronutrients?: any;
   base_data?: any;
 }
 
@@ -36,15 +39,23 @@ export class NutritionalEngineService {
     let totalFat = 0;
 
     for (const item of ingredients) {
-      // 1. Tenta buscar na TACO primeiro
-      let data = await this.fetchTacoData(item.name);
-      
-      // 2. Se falhar ou não achar, tenta na USDA
+      // 1. Busca local via Prisma (Cache Write-Through)
+      let data = await this.fetchLocalData(item.name);
+
+      // 2. Fallback USDA API se não encontrado
       if (!data) {
         data = await this.fetchUsdaData(item.name);
+        
+        if (data) {
+          // Salva no cache local para requisições futuras
+          await this.persistToLocalCache(data);
+        } else {
+          // Salva falha para não buscar novamente (impede esgotar Rate Limit)
+          await this.persistNotFound(item.name);
+        }
       }
 
-      if (data) {
+      if (data && data.source !== 'NOT_FOUND') {
         // Regra de três: (quantidade_inserida / base_100g) * valor_do_nutriente
         const factor = item.quantity / 100;
         
@@ -55,13 +66,14 @@ export class NutritionalEngineService {
 
         details.push({
           ingredient: item.name,
-          source: data.source,
+          source: data.source as any,
           quantity: item.quantity,
           unit: item.unit,
           calories: calcCals,
           protein: calcProt,
           carbs: calcCarbs,
           fat: calcFat,
+          micronutrients: data.micronutrients,
           base_data: data
         });
 
@@ -70,7 +82,7 @@ export class NutritionalEngineService {
         totalCarbs += calcCarbs;
         totalFat += calcFat;
       } else {
-        // Fallback: não encontrado
+        // Fallback: não encontrado (ou em cache como NOT_FOUND)
         details.push({
           ingredient: item.name,
           source: 'NOT_FOUND',
@@ -96,49 +108,86 @@ export class NutritionalEngineService {
   }
 
   /**
-   * Consulta a Taco API (Vercel)
+   * Busca dados localmente usando Prisma e Busca Fuzzy (ILIKE)
    */
-  private static async fetchTacoData(name: string): Promise<any | null> {
+  private static async fetchLocalData(name: string): Promise<any | null> {
     try {
-      // Usando o endpoint sugerido
-      const TACO_API = `https://taco-api-nodejs.vercel.app/api/v1/food`;
-      const response = await globalThis.fetch(TACO_API);
-
-      if (!response.ok) return null;
-      
-      const foods: any[] = await response.json();
-      
-      // Busca simplificada (case insensitive e contém o termo)
-      const searchTerm = name.toLowerCase();
-      const match = foods.find(f => f.description && f.description.toLowerCase().includes(searchTerm));
-
-      if (match) {
-        // Pega detalhes para ter os nutrientes corretos se preciso, mas a listagem principal já costuma ter atributos na Vercel
-        // Na API do Raul, os atributos vêm em 'attributes'
-        let protein = 0, carbs = 0, fat = 0, calories = 0;
-        
-        if (match.attributes) {
-          if (match.attributes.protein && typeof match.attributes.protein.qty === 'number') protein = match.attributes.protein.qty;
-          if (match.attributes.carbohydrate && typeof match.attributes.carbohydrate.qty === 'number') carbs = match.attributes.carbohydrate.qty;
-          if (match.attributes.lipid && typeof match.attributes.lipid.qty === 'number') fat = match.attributes.lipid.qty;
-          if (match.attributes.energy && match.attributes.energy.kcal && typeof match.attributes.energy.kcal === 'number') calories = match.attributes.energy.kcal;
+      // Tenta busca exata (case insensitive) ou que contenha o termo
+      const item = await prisma.globalFoodItem.findFirst({
+        where: {
+          name: {
+            contains: name,
+            mode: 'insensitive'
+          }
         }
-
+      });
+      
+      if (item) {
         return {
-          source: 'TACO',
-          id: match.id,
-          name: match.description,
-          calories,
-          protein,
-          carbs,
-          fat
+          source: item.source,
+          id: item.externalId,
+          name: item.name,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbohydrates,
+          fat: item.lipids,
+          micronutrients: item.micronutrients
         };
       }
-      
       return null;
-    } catch (err) {
-      console.warn(`[NutritionalEngine] Falha na TACO API para ${name}:`, err);
+    } catch (e) {
+      console.error("[NutritionalEngine] Falha ao buscar no Prisma:", e);
       return null;
+    }
+  }
+
+  /**
+   * Persiste resultado externo no banco local
+   */
+  private static async persistToLocalCache(data: any): Promise<void> {
+    try {
+      await prisma.globalFoodItem.upsert({
+        where: { name: data.name },
+        update: {},
+        create: {
+          name: data.name,
+          source: data.source,
+          externalId: String(data.id),
+          calories: data.calories,
+          protein: data.protein,
+          carbohydrates: data.carbs,
+          lipids: data.fat,
+          baseQuantity: 100,
+          baseUnit: "g",
+          micronutrients: data.micronutrients
+        }
+      });
+    } catch (e) {
+      console.error("[NutritionalEngine] Falha ao persistir cache local:", e);
+    }
+  }
+
+  /**
+   * Salva como NOT_FOUND para evitar novas consultas desnecessárias
+   */
+  private static async persistNotFound(name: string): Promise<void> {
+    try {
+      await prisma.globalFoodItem.upsert({
+        where: { name: name },
+        update: {},
+        create: {
+          name: name,
+          source: "NOT_FOUND",
+          calories: 0,
+          protein: 0,
+          carbohydrates: 0,
+          lipids: 0,
+          baseQuantity: 100,
+          baseUnit: "g"
+        }
+      });
+    } catch (e) {
+      // Ignorar erros de colisão aqui
     }
   }
 
@@ -147,8 +196,8 @@ export class NutritionalEngineService {
    */
   private static async fetchUsdaData(name: string): Promise<any | null> {
     const apiKey = process.env.USDA_API_KEY;
-    if (!apiKey) {
-      console.warn('[NutritionalEngine] USDA_API_KEY não configurada no .env');
+    if (!apiKey || apiKey.includes('placeholder')) {
+      console.warn('[NutritionalEngine] USDA_API_KEY não configurada corretamente');
       return null;
     }
 
@@ -176,14 +225,24 @@ export class NutritionalEngineService {
         const food = data.foods[0];
         
         let calories = 0, protein = 0, carbs = 0, fat = 0;
+        let micronutrients: any = {};
 
         // Nutrientes na USDA
         for (const nutrient of food.foodNutrients) {
           const nameLower = nutrient.nutrientName.toLowerCase();
-          if (nameLower.includes('energy') && nutrient.unitName.toLowerCase() === 'kcal') calories = nutrient.value;
-          else if (nameLower.includes('protein')) protein = nutrient.value;
-          else if (nameLower.includes('carbohydrate')) carbs = nutrient.value;
-          else if (nameLower.includes('lipid') || nameLower.includes('fat')) fat = nutrient.value;
+          const unit = nutrient.unitName.toLowerCase();
+          const val = nutrient.value;
+          
+          if (nameLower.includes('energy') && unit === 'kcal') calories = val;
+          else if (nameLower.includes('protein')) protein = val;
+          else if (nameLower.includes('carbohydrate')) carbs = val;
+          else if (nameLower.includes('lipid') || nameLower.includes('fat')) fat = val;
+          else if (nameLower.includes('fiber')) micronutrients.fiber = val;
+          else if (nameLower.includes('calcium')) micronutrients.calcium = val;
+          else if (nameLower.includes('iron')) micronutrients.iron = val;
+          else if (nameLower.includes('sodium')) micronutrients.sodium = val;
+          else if (nameLower.includes('potassium')) micronutrients.potassium = val;
+          else if (nameLower.includes('vitamin c')) micronutrients.vitamin_c = val;
         }
 
         return {
@@ -193,7 +252,8 @@ export class NutritionalEngineService {
           calories,
           protein,
           carbs,
-          fat
+          fat,
+          micronutrients
         };
       }
 

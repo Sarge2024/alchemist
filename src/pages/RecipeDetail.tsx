@@ -15,6 +15,7 @@ import html2pdf from 'html2pdf.js';
 import { reviewService, Review as ReviewType } from '../infra/services/reviewService';
 import { ChefHat, Info as InfoIcon, Lightbulb, HelpCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { NutritionalData } from '../components/NutritionalData';
 import { ShareIncentive } from '../components/ShareIncentive';
 
 import { ASSETS, getAssetUrl } from '../lib/assets';
@@ -1139,6 +1140,9 @@ export default function RecipeDetail() {
           </div>
         </div>
       </div>
+
+      {/* Tabela Nutricional IA + TACO */}
+      <NutritionalData recipe={recipe} />
 
       {/* Alchemist Sauce Pointer */}
       {mentionsSauce && (

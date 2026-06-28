@@ -100,6 +100,8 @@ export interface Ingredient {
   name: string;
   quantity: string;
   group?: string;
+  preparationMode?: string;
+  preparationTime?: string;
 }
 
 export interface Recipe {

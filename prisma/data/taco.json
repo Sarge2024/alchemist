@@ -1,0 +1,182 @@
+[
+  {
+    "id": 1,
+    "description": "Arroz, tipo 1, cozido",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 128,
+    "protein_g": 2.5,
+    "carbohydrate_g": 28.1,
+    "lipid_g": 0.2,
+    "micronutrients": {
+      "fiber_g": 1.6,
+      "calcium_mg": 4,
+      "iron_mg": 0.1,
+      "sodium_mg": 1,
+      "potassium_mg": 16,
+      "vitamin_c_mg": 0
+    }
+  },
+  {
+    "id": 2,
+    "description": "Feijão, carioca, cozido",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 76,
+    "protein_g": 4.8,
+    "carbohydrate_g": 13.6,
+    "lipid_g": 0.5,
+    "micronutrients": {
+      "fiber_g": 8.5,
+      "calcium_mg": 27,
+      "iron_mg": 1.3,
+      "sodium_mg": 2,
+      "potassium_mg": 255,
+      "vitamin_c_mg": 0
+    }
+  },
+  {
+    "id": 3,
+    "description": "Frango, peito, sem pele, cru",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 119,
+    "protein_g": 21.5,
+    "carbohydrate_g": 0,
+    "lipid_g": 3.0,
+    "micronutrients": {
+      "fiber_g": 0,
+      "calcium_mg": 5,
+      "iron_mg": 0.4,
+      "sodium_mg": 51,
+      "potassium_mg": 277,
+      "vitamin_c_mg": 0
+    }
+  },
+  {
+    "id": 4,
+    "description": "Ovo, de galinha, inteiro, cru",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 143,
+    "protein_g": 13.0,
+    "carbohydrate_g": 1.6,
+    "lipid_g": 8.9,
+    "micronutrients": {
+      "fiber_g": 0,
+      "calcium_mg": 42,
+      "iron_mg": 1.6,
+      "sodium_mg": 168,
+      "potassium_mg": 147,
+      "vitamin_c_mg": 0
+    }
+  },
+  {
+    "id": 5,
+    "description": "Alface, crespa, crua",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 11,
+    "protein_g": 1.3,
+    "carbohydrate_g": 1.7,
+    "lipid_g": 0.2,
+    "micronutrients": {
+      "fiber_g": 1.8,
+      "calcium_mg": 38,
+      "iron_mg": 0.6,
+      "sodium_mg": 3,
+      "potassium_mg": 267,
+      "vitamin_c_mg": 15
+    }
+  },
+  {
+    "id": 6,
+    "description": "Carne, bovina, patinho, sem gordura, cru",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 133,
+    "protein_g": 21.7,
+    "carbohydrate_g": 0,
+    "lipid_g": 4.5,
+    "micronutrients": {
+      "fiber_g": 0,
+      "calcium_mg": 4,
+      "iron_mg": 3.0,
+      "sodium_mg": 58,
+      "potassium_mg": 322,
+      "vitamin_c_mg": 0
+    }
+  },
+  {
+    "id": 7,
+    "description": "Banana, prata, crua",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 98,
+    "protein_g": 1.3,
+    "carbohydrate_g": 26.0,
+    "lipid_g": 0.1,
+    "micronutrients": {
+      "fiber_g": 2.0,
+      "calcium_mg": 8,
+      "iron_mg": 0.4,
+      "sodium_mg": 0,
+      "potassium_mg": 358,
+      "vitamin_c_mg": 21.6
+    }
+  },
+  {
+    "id": 8,
+    "description": "Batata, inglesa, cozida",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 52,
+    "protein_g": 1.2,
+    "carbohydrate_g": 11.9,
+    "lipid_g": 0.1,
+    "micronutrients": {
+      "fiber_g": 1.3,
+      "calcium_mg": 4,
+      "iron_mg": 0.2,
+      "sodium_mg": 2,
+      "potassium_mg": 161,
+      "vitamin_c_mg": 3.8
+    }
+  },
+  {
+    "id": 9,
+    "description": "Tomate, com semente, cru",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 15,
+    "protein_g": 1.1,
+    "carbohydrate_g": 3.1,
+    "lipid_g": 0.2,
+    "micronutrients": {
+      "fiber_g": 1.2,
+      "calcium_mg": 7,
+      "iron_mg": 0.2,
+      "sodium_mg": 1,
+      "potassium_mg": 204,
+      "vitamin_c_mg": 21.2
+    }
+  },
+  {
+    "id": 10,
+    "description": "Azeite de oliva, extravirgem",
+    "base_qty": 100,
+    "base_unit": "g",
+    "energy_kcal": 884,
+    "protein_g": 0,
+    "carbohydrate_g": 0,
+    "lipid_g": 100,
+    "micronutrients": {
+      "fiber_g": 0,
+      "calcium_mg": 1,
+      "iron_mg": 0.6,
+      "sodium_mg": 2,
+      "potassium_mg": 1,
+      "vitamin_c_mg": 0
+    }
+  }
+]

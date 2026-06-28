@@ -22,6 +22,7 @@ import { put } from "@vercel/blob";
 import cron from "node-cron";
 import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
 import { dishAlchemistsRouter } from "./src/infra/api/dishAlchemistsRouter";
+import { publicRecipesRouter } from "./src/infra/api/publicRecipesRouter";
 import { RagBackendService } from "./src/infra/services/ragBackendService";
 import { prisma } from "./src/infra/prisma/client";
 
@@ -212,8 +213,11 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
 app.use(express.json());
 registerMcpRoutes(app);
 
-// Monta rotas de Receitas e Ingredientes
+// Monta rotas de Receitas e Ingredientes (internas, com Firebase Auth)
 app.use('/api', dishAlchemistsRouter);
+
+// Monta API pública v1 (inter-app, com API Key auth)
+app.use('/api/v1/public', publicRecipesRouter);
 
 // Endpoint to update presence in Firestore (called from frontend AuthContext)
 app.post("/api/presence", async (req, res) => {
