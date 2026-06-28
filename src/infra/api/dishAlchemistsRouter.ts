@@ -10,7 +10,11 @@ dishAlchemistsRouter.get('/recipes', authenticateFirebase, async (req, res) => {
   try {
     const recipes = await prisma.recipe.findMany({
       include: {
-        ingredients: true
+        recipeIngredients: {
+          include: {
+            foodItem: true
+          }
+        }
       },
       take: 50 // Limite para não sobrecarregar
     });
@@ -24,15 +28,15 @@ dishAlchemistsRouter.get('/recipes', authenticateFirebase, async (req, res) => {
       prep_time_minutes: parseInt(r.prepTime || '0', 10),
       image_url: r.image || '',
       instructions: r.instructions,
-      ingredients: r.ingredients.map(ing => ({
+      ingredients: r.recipeIngredients.map(ri => ({
         ingredient: {
-          id: ing.id,
-          name: ing.name,
-          category: ing.group || 'Geral',
-          default_unit: 'g' // Simplificação para este mapeamento
+          id: ri.foodItem.id,
+          name: ri.foodItem.name,
+          category: ri.foodItem.category || 'Geral',
+          default_unit: ri.foodItem.baseUnit
         },
-        quantity: parseFloat(ing.quantity) || 0,
-        unit: 'g' // Seria necessário parsear a string quantity no futuro
+        quantity: ri.quantity,
+        unit: ri.unit
       })),
       total_nutrition: {
         calories: 0, // Como não temos isso direto no banco, enviar 0 e calcular depois via TACO
@@ -55,7 +59,11 @@ dishAlchemistsRouter.get('/recipes/:id', authenticateFirebase, async (req, res) 
     const recipe = await prisma.recipe.findUnique({
       where: { id: req.params.id },
       include: {
-        ingredients: true
+        recipeIngredients: {
+          include: {
+            foodItem: true
+          }
+        }
       }
     });
 
@@ -71,15 +79,15 @@ dishAlchemistsRouter.get('/recipes/:id', authenticateFirebase, async (req, res) 
       prep_time_minutes: parseInt(recipe.prepTime || '0', 10),
       image_url: recipe.image || '',
       instructions: recipe.instructions,
-      ingredients: recipe.ingredients.map(ing => ({
+      ingredients: recipe.recipeIngredients.map(ri => ({
         ingredient: {
-          id: ing.id,
-          name: ing.name,
-          category: ing.group || 'Geral',
-          default_unit: 'g'
+          id: ri.foodItem.id,
+          name: ri.foodItem.name,
+          category: ri.foodItem.category || 'Geral',
+          default_unit: ri.foodItem.baseUnit
         },
-        quantity: parseFloat(ing.quantity) || 0,
-        unit: 'g'
+        quantity: ri.quantity,
+        unit: ri.unit
       })),
       total_nutrition: {
         calories: 0,

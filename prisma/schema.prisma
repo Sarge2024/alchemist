@@ -60,16 +60,36 @@ model Recipe {
 
   ownerId         String
   owner           User           @relation(fields: [ownerId], references: [id])
-  ingredients     Ingredient[]
+  recipeIngredients RecipeIngredient[]
 }
 
-model Ingredient {
-  id        String   @id @default(uuid())
-  name      String
-  quantity  String
-  group     String?
-  recipeId  String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+model GlobalFoodItem {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  category        String?
+  source          String   @default("CUSTOM") // TACO, USDA, CUSTOM
+  externalId      String?
+  calories        Float    @default(0)
+  protein         Float    @default(0)
+  carbohydrates   Float    @default(0)
+  lipids          Float    @default(0)
+  baseUnit        String   @default("g")
+  baseQuantity    Float    @default(100)
+  
+  recipeIngredients RecipeIngredient[]
+}
+
+model RecipeIngredient {
+  id              String   @id @default(uuid())
+  recipeId        String
+  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  
+  foodItemId      String
+  foodItem        GlobalFoodItem @relation(fields: [foodItemId], references: [id])
+  
+  quantity        Float
+  unit            String
+  preparationMode String?  // cru, cozido, assado, frito
 }
 
 // Modelos de Gamificação (adicionados conforme pedido original)
