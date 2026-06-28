@@ -1,55 +1,34 @@
 import { Router } from 'express';
 import { prisma } from '../prisma/client';
 import { authenticateFirebase } from '../auth/firebaseAuthMiddleware';
-import fetch from 'node-fetch'; // O Node v24 suporta fetch globalmente, mas para garantir podemos usar global fetch.
+import { formatRecipeResponse } from './formatRecipeResponse';
 import { NutritionalEngineService } from '../services/NutritionalEngineService';
 
 export const dishAlchemistsRouter = Router();
 
+// Include padrão para consultas de receitas com ingredientes e owner
+const recipeInclude = {
+  recipeIngredients: {
+    include: { foodItem: true }
+  },
+  owner: {
+    select: { displayName: true, photoURL: true }
+  }
+};
+
 // Endpoint para buscar receitas (PostgreSQL/Prisma)
+// Agora usa o formato padronizado via formatRecipeResponse (mesmo do publicRecipesRouter)
 dishAlchemistsRouter.get('/recipes', authenticateFirebase, async (req, res) => {
   try {
     const recipes = await prisma.recipe.findMany({
-      include: {
-        recipeIngredients: {
-          include: {
-            foodItem: true
-          }
-        }
-      },
-      take: 50 // Limite para não sobrecarregar
+      include: recipeInclude,
+      take: 50
     });
 
-    // Mapeando para o formato esperado pelo frontend (DishRecipe)
-    const formattedRecipes = recipes.map(r => ({
-      id: r.id,
-      title: r.title,
-      description: r.description || '',
-      category: (r.tipo_prato && r.tipo_prato[0]) || 'Geral',
-      prep_time_minutes: parseInt(r.prepTime || '0', 10),
-      image_url: r.image || '',
-      instructions: r.instructions,
-      ingredients: r.recipeIngredients.map(ri => ({
-        ingredient: {
-          id: ri.foodItem.id,
-          name: ri.foodItem.name,
-          category: ri.foodItem.category || 'Geral',
-          default_unit: ri.foodItem.baseUnit
-        },
-        quantity: ri.quantity,
-        unit: ri.unit
-      })),
-      total_nutrition: r.recipeIngredients.reduce((acc, ri) => {
-        const factor = (Number(ri.quantity) || 0) / 100;
-        acc.calories += (ri.foodItem.calories || 0) * factor;
-        acc.protein += (ri.foodItem.protein || 0) * factor;
-        acc.carbs += (ri.foodItem.carbohydrates || 0) * factor;
-        acc.fat += (ri.foodItem.lipids || 0) * factor;
-        return acc;
-      }, { calories: 0, protein: 0, carbs: 0, fat: 0 })
-    }));
+    // Formato padronizado — idêntico ao publicRecipesRouter
+    const formattedRecipes = recipes.map(formatRecipeResponse);
 
-    res.json(formattedRecipes);
+    res.json({ data: formattedRecipes });
   } catch (error: any) {
     console.error('[DishAlchemists API] Erro ao buscar receitas:', error);
     res.status(500).json({ error: 'Erro interno ao buscar receitas' });
@@ -61,48 +40,15 @@ dishAlchemistsRouter.get('/recipes/:id', authenticateFirebase, async (req, res) 
   try {
     const recipe = await prisma.recipe.findUnique({
       where: { id: req.params.id },
-      include: {
-        recipeIngredients: {
-          include: {
-            foodItem: true
-          }
-        }
-      }
+      include: recipeInclude
     });
 
     if (!recipe) {
       return res.status(404).json({ error: 'Receita não encontrada' });
     }
 
-    const formattedRecipe = {
-      id: recipe.id,
-      title: recipe.title,
-      description: recipe.description || '',
-      category: (recipe.tipo_prato && recipe.tipo_prato[0]) || 'Geral',
-      prep_time_minutes: parseInt(recipe.prepTime || '0', 10),
-      image_url: recipe.image || '',
-      instructions: recipe.instructions,
-      ingredients: recipe.recipeIngredients.map(ri => ({
-        ingredient: {
-          id: ri.foodItem.id,
-          name: ri.foodItem.name,
-          category: ri.foodItem.category || 'Geral',
-          default_unit: ri.foodItem.baseUnit
-        },
-        quantity: ri.quantity,
-        unit: ri.unit
-      })),
-      total_nutrition: recipe.recipeIngredients.reduce((acc, ri) => {
-        const factor = (Number(ri.quantity) || 0) / 100;
-        acc.calories += (ri.foodItem.calories || 0) * factor;
-        acc.protein += (ri.foodItem.protein || 0) * factor;
-        acc.carbs += (ri.foodItem.carbohydrates || 0) * factor;
-        acc.fat += (ri.foodItem.lipids || 0) * factor;
-        return acc;
-      }, { calories: 0, protein: 0, carbs: 0, fat: 0 })
-    };
-
-    res.json(formattedRecipe);
+    // Formato padronizado — idêntico ao publicRecipesRouter
+    res.json({ data: formatRecipeResponse(recipe) });
   } catch (error: any) {
     console.error('[DishAlchemists API] Erro ao buscar receita:', error);
     res.status(500).json({ error: 'Erro interno ao buscar receita' });
@@ -112,10 +58,8 @@ dishAlchemistsRouter.get('/recipes/:id', authenticateFirebase, async (req, res) 
 // Endpoint para buscar ingredientes da TACO via API externa
 dishAlchemistsRouter.get('/ingredients', authenticateFirebase, async (req, res) => {
   try {
-    // Busca ingredientes da API TACO
     const TACO_API_BASE = process.env.TACO_API_BASE || 'https://taco-api.netlify.app/api/v1';
     
-    // Podemos fazer proxy para a busca de alimentos da TACO
     const response = await globalThis.fetch(`${TACO_API_BASE}/food`);
     
     if (!response.ok) {
@@ -124,8 +68,6 @@ dishAlchemistsRouter.get('/ingredients', authenticateFirebase, async (req, res) 
     
     const foods = await response.json();
     
-    // Mapear o formato do TACO para o formato esperado (Ingredient)
-    // O TacoFoodBasic retorna { id, description, category_id }
     const ingredients = foods.map((food: any) => ({
       id: `taco_${food.id}`,
       name: food.description,
@@ -149,7 +91,6 @@ dishAlchemistsRouter.post('/nutrition/calculate', authenticateFirebase, async (r
       return res.status(400).json({ error: 'Array de ingredients obrigatório' });
     }
     
-    // Chama o serviço do Motor Nutricional
     const result = await NutritionalEngineService.calculateRecipeNutrition(ingredients);
     res.json({ success: true, ...result });
   } catch (error: any) {
