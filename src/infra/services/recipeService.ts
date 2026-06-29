@@ -166,8 +166,11 @@ const getAuthHeaders = async () => {
 
 const mapRecipeResponse = (recipe: any): any => {
   if (!recipe) return null;
+  const tipo_prato = recipe.tipo_prato || recipe.category || [];
   return {
     ...recipe,
+    tipo_prato,
+    category: tipo_prato,
     // Garante que o ownerId esteja preenchido para compatibilidade com verificações de propriedade
     ownerId: recipe.author ? recipe.author.uid : recipe.ownerId,
     ingredients: Array.isArray(recipe.ingredients)
