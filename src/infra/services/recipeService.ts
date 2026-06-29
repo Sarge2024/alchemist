@@ -19,6 +19,7 @@ import {
   limit
 } from 'firebase/firestore';
 import { db, auth } from '../../lib/firebase';
+import { supabase } from '../../lib/supabase';
 import { geminiService } from './geminiService';
 import { ASSETS } from '../../lib/assets';
 
@@ -140,7 +141,23 @@ const getAuthHeaders = async () => {
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   };
-  const token = await auth.currentUser?.getIdToken();
+  
+  let token: string | undefined;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    token = session?.access_token;
+  } catch (err) {
+    console.warn('Erro ao obter token do Supabase em recipeService:', err);
+  }
+
+  if (!token) {
+    try {
+      token = await auth.currentUser?.getIdToken();
+    } catch (err) {
+      console.warn('Erro ao obter token do Firebase em recipeService:', err);
+    }
+  }
+
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { getAuth } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
 import { Loader2, Info, Activity, Flame, Beef, Wheat } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Recipe } from '../infra/services/recipeService';
@@ -40,8 +41,22 @@ export const NutritionalData: React.FC<NutritionalDataProps> = ({ recipe }) => {
       setLoading(true);
       setError('');
       try {
-        const auth = getAuth();
-        const token = await auth.currentUser?.getIdToken();
+        let token: string | undefined;
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          token = session?.access_token;
+        } catch (err) {
+          console.warn('Erro ao obter token do Supabase em NutritionalData:', err);
+        }
+
+        if (!token) {
+          try {
+            const auth = getAuth();
+            token = await auth.currentUser?.getIdToken();
+          } catch (err) {
+            console.warn('Erro ao obter token do Firebase em NutritionalData:', err);
+          }
+        }
         
         // Parse frontend ingredients to match backend format
         const parsedIngredients = recipe.ingredients.map(ing => {
