@@ -211,3 +211,8 @@ model UnansweredQuery {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../specs/ERD.md"
+}

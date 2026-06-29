@@ -59,6 +59,7 @@
   },
   "devDependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
+    "@mermaid-js/mermaid-cli": "^11.15.0",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/cheerio": "^0.22.35",
@@ -73,6 +74,7 @@
     "esbuild": "^0.28.0",
     "firebase-tools": "^15.17.0",
     "prisma": "^7.8.0",
+    "prisma-erd-generator": "^2.4.3",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
