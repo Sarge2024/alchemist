@@ -2,7 +2,7 @@
 
 ## Stack
 
-React 19 + TypeScript + Vite 6 + Tailwind CSS v4 + Express + Firebase Firestore/Auth + Google Gemini.
+React 19 + TypeScript + Vite 6 + Tailwind CSS v4 + Express + Firebase Firestore + Supabase Auth / Firebase Auth + Google Gemini.
 
 ## Commands
 
@@ -12,19 +12,21 @@ React 19 + TypeScript + Vite 6 + Tailwind CSS v4 + Express + Firebase Firestore/
 | `npm run build` | `rm -rf dist && vite build` |
 | `npm run lint` | `tsc --noEmit` (type-check only — no runtime linter) |
 | `npm run start` | `node server.ts` (production) |
+| `npm run dev:repair` | Liberar portas de rede ocupadas (4005 e 24680) e reiniciar dev server |
 
 No test framework is configured.
 
 ## Env
 
-Copy `.env` (committed with dev keys), not `.env.local` as README says. Required vars: `GEMINI_API_KEY`, `FIRECRAWL_API_KEY`, `APP_API_KEY`, `VITE_APP_API_KEY`.
+Copy `.env` (committed with dev keys), not `.env.local` as README says. Required vars: `GEMINI_API_KEY`, `FIRECRAWL_API_KEY`, `APP_API_KEY`, `VITE_APP_API_KEY`, `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
 
 ## Architecture
 
 - SPA (React Router v7) served by an Express backend.
 - Dev: Vite in middleware mode (`server.ts` line 202-207). Prod: static `dist/` with SPA fallback.
 - Entry: `src/main.tsx` → `src/App.tsx`.
-- Auth: Firebase Google Sign-In with `browserPopupRedirectResolver`.
+- Auth: Supabase Auth (primary) / Firebase Auth (legacy) with `browserPopupRedirectResolver`.
+- Authenticated requests are processed by a hybrid backend middleware (`firebaseAuthMiddleware.ts`) which validates Supabase JWTs first, mapping users to `req.user.uid` for DB operations, falling back to Firebase Auth validation.
 - Admin email hardcoded: `sagacitas.sistemas@gmail.com`.
 - Path alias `@/*` → project root (not `src/`).
 
@@ -110,4 +112,5 @@ API key check is bypassed in dev when `APP_API_KEY` is not a placeholder.
 - No postcss config needed (Tailwind v4 Vite plugin handles it).
 - `tsconfig.json` has `noEmit: true`; Vite does the actual bundling.
 - `.gitignore` excludes `public/uploads/` (user-uploaded images).
-- Changes to server-side code (Express endpoints) require a manual process restart as file watching is disabled.
+- Changes to server-side code (Express endpoints) require a manual process restart as file watching is disabled (unless using `npm run dev:repair` to clean and start).
+- The backend standardizes `tipo_prato` inside the `category` field JSON response. `recipeService.ts` automatically maps it back to `tipo_prato` for frontend pages (`Explore.tsx`/`Categories.tsx`) consistency.

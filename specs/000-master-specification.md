@@ -12,7 +12,7 @@ O Alquimia do Prato é uma plataforma culinária inteligente, oferecendo um Acer
 - **Bancos de Dados:**
   - **Firebase Firestore:** Dados de usuários, receitas, presence (online/offline), controle de estado de tempo real.
   - **PostgreSQL (pgvector):** Banco vetorial para embeddings e estatísticas de gamificação via Prisma.
-- **Cloud e IA:** Google Gemini API (`gemini-3-flash-preview` / `gemini-1.5-flash`), Firebase Auth, Firebase Storage.
+- **Cloud e IA:** Google Gemini API (`gemini-3-flash-preview` / `gemini-1.5-flash`), Supabase Auth (Autenticação Principal), Firebase Auth (Fallback), Firebase Storage.
 
 ## 3. Arquitetura do Sistema
 O projeto é construído como uma Single Page Application (SPA) servida através do backend Express.
@@ -28,7 +28,7 @@ O projeto é construído como uma Single Page Application (SPA) servida através
 
 ## 5. Módulos Core
 ### 5.1 Autenticação e Presença
-Login exclusivo via Firebase Google Sign-In usando `browserPopupRedirectResolver`. O módulo de "Lounge Presence" utiliza indicadores estilo semáforo, monitorados por *heartbeats* regulares do cliente para o Firestore. Na saída (logout ou encerramento), funções de cleanup previnem conexões zumbis (isOnline: false).
+Transicionado para login principal via Supabase Auth (com fallback retroativo para Firebase Auth) usando Google Sign-In. O módulo de "Lounge Presence" utiliza indicadores estilo semáforo, monitorados por *heartbeats* regulares do cliente para o Firestore. Na saída (logout ou encerramento), funções de cleanup previnem conexões zumbis (isOnline: false). O backend possui um middleware de autenticação híbrido (`firebaseAuthMiddleware.ts`) que decodifica tokens Supabase ou Firebase sequencialmente.
 
 ### 5.2 Scraping Engine
 Uma rota de API (`POST /api/fetch-html`) baseada em proxy que extrai receitas de URLs:
@@ -50,6 +50,10 @@ O portal conta com o **Chef IA**, um copilot persistente e flutuante acessível 
 
 ### 5.5 Fast Routing (Lounge)
 Para contornar o peso da busca vetorial, o painel do Lounge consome um **Índice Compilado em Memória**. Este módulo (detalhado nos documentos indexados) entrega sugestões instantâneas utilizando failover multichaves e fallbacks heurísticos independentes da API da LLM.
+
+### 5.6 Mapeamento de Payload e Reparação de Portas
+- **Sincronização de Campos:** O backend padroniza a resposta JSON das receitas mapeando a técnica culinária (`tipo_prato`) para o campo `category`. O frontend resolve isso na camada de serviço (`recipeService.ts`), mapeando os valores de volta para garantir funcionamento consistente nas páginas de Categoria e Exploração.
+- **Utilitário de Recuperação:** O comando `npm run dev:repair` atua como salvaguarda local, liberando as portas ocupadas e matando processos órfãos que impedem o reinício do servidor de desenvolvimento.
 
 ## 6. Padrões de Código
 - Padrão **Clean Code**: Funções curtas, variáveis explícitas e em inglês.
