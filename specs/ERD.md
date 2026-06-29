@@ -173,6 +173,14 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     DateTime updatedAt 
     }
   
+
+  "CulinaryMeasure" {
+    String id "🗝️"
+    String ingredientName 
+    String measureName 
+    Float weightInGrams 
+    }
+  
     "User" |o--|| "Role" : "enum:role"
     "Recipe" }o--|| "User" : "owner"
     "RecipeIngredient" }o--|| "Recipe" : "recipe"

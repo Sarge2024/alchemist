@@ -56,8 +56,44 @@ export class NutritionalEngineService {
       }
 
       if (data && data.source !== 'NOT_FOUND') {
-        // Regra de três: (quantidade_inserida / base_100g) * valor_do_nutriente
-        const factor = item.quantity / 100;
+        let normalizedQuantity = item.quantity;
+        let normalizedUnit = item.unit.toLowerCase().trim();
+
+        // Conversão de medidas caseiras
+        if (normalizedUnit !== 'g' && normalizedUnit !== 'ml') {
+           if (normalizedUnit === 'kg') {
+               normalizedQuantity *= 1000;
+           } else if (normalizedUnit === 'mg') {
+               normalizedQuantity /= 1000;
+           } else {
+               const standardUnit = this.normalizeMeasureName(item.unit);
+               
+               // Busca fator de conversão na tabela CulinaryMeasure
+               const measure = await prisma.culinaryMeasure.findFirst({
+                 where: {
+                   ingredientName: {
+                     contains: item.name,
+                     mode: 'insensitive'
+                   },
+                   measureName: standardUnit
+                 }
+               });
+               
+               if (measure) {
+                 normalizedQuantity = item.quantity * measure.weightInGrams;
+               } else {
+                 // Fallback genérico caso a medida não exista para este ingrediente específico
+                 if (standardUnit === 'COLHER_SOPA') normalizedQuantity = item.quantity * 15;
+                 else if (standardUnit === 'XICARA') normalizedQuantity = item.quantity * 150;
+                 else if (standardUnit === 'COLHER_CHA') normalizedQuantity = item.quantity * 5;
+                 // Evita que 1 unidade = 1g
+                 else if (standardUnit === 'UNIDADE') normalizedQuantity = item.quantity * 100;
+               }
+           }
+        }
+
+        // Regra de três: (quantidade_normalizada / base_100g) * valor_do_nutriente
+        const factor = normalizedQuantity / 100;
         
         const calcCals = data.calories * factor;
         const calcProt = data.protein * factor;
@@ -105,6 +141,33 @@ export class NutritionalEngineService {
       },
       details
     };
+  }
+
+  /**
+   * Normaliza o nome da unidade para padronização Enum
+   */
+  private static normalizeMeasureName(rawMeasure: string): string {
+    const upper = rawMeasure.toUpperCase();
+    const MEASURE_ALIASES: Record<string, string[]> = {
+      'XICARA': ['XICARA', 'XÍCARA'],
+      'COLHER_SOPA': ['COLHER DE SOPA', 'COLHER SOPA', 'C.S.', 'SOPA'],
+      'COLHER_CHA': ['COLHER DE CHÁ', 'COLHER DE CHA', 'C.CHÁ', 'C.CHA', 'CHÁ', 'CHA'],
+      'COLHER_SOBREMESA': ['COLHER DE SOBREMESA', 'C.SOBREMESA'],
+      'COLHER_CAFE': ['COLHER DE CAFÉ', 'COLHER DE CAFE', 'C.CAFÉ', 'C.CAFE'],
+      'UNIDADE': ['UNIDADE', 'UNID', 'UND', 'INTEIRO'],
+      'COPO': ['COPO'],
+      'POTE': ['POTE'],
+      'PRATO': ['PRATO'],
+      'FATIA': ['FATIA'],
+      'CONCHA': ['CONCHA'],
+      'RAMO': ['RAMO', 'FOLHA']
+    };
+    for (const [standard, aliases] of Object.entries(MEASURE_ALIASES)) {
+      for (const alias of aliases) {
+        if (upper.includes(alias)) return standard;
+      }
+    }
+    return rawMeasure.trim().toUpperCase();
   }
 
   /**
