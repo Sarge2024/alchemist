@@ -136,47 +136,50 @@ export interface Recipe {
 
 const RECIPES_COLLECTION = 'recipes';
 
+const getAuthHeaders = async () => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  const token = await auth.currentUser?.getIdToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+const mapRecipeResponse = (recipe: any): any => {
+  if (!recipe) return null;
+  return {
+    ...recipe,
+    // Garante que o ownerId esteja preenchido para compatibilidade com verificações de propriedade
+    ownerId: recipe.author ? recipe.author.uid : recipe.ownerId,
+    ingredients: Array.isArray(recipe.ingredients)
+      ? recipe.ingredients.map((ing: any) => ({
+          name: ing.name,
+          quantity: ing.quantity ? `${ing.quantity} ${ing.unit || ''}`.trim() : '',
+          group: ing.preparationMode || ing.category || 'Geral'
+        }))
+      : []
+  };
+};
+
 export const recipeService = {
   async createRecipe(recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>, options: { notifyEmail: boolean } = { notifyEmail: true }) {
     try {
-      const sanitizedRecipe = deepSanitize(recipe);
-      
-      // Gera o slug baseado no título
-      let slug = generateSlug(sanitizedRecipe.title);
-      // Opcional: checar se já existe e adicionar hash, mas para simplificar:
-      slug = `${slug}-${Math.random().toString(36).substring(2, 8)}`;
-      
-      const docRef = await addDoc(collection(db, RECIPES_COLLECTION), {
-        ...sanitizedRecipe,
-        slug,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        rating: 0, // Initial rating
-        reviewsCount: 0
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/recipes', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(recipe)
       });
-
-      // Promoção automática para Colaborador
-      if (recipe.ownerId) {
-        const userRef = doc(db, 'users', recipe.ownerId);
-        const userSnap = await getDoc(userRef);
-        if (userSnap.exists()) {
-          const userData = userSnap.data();
-          if (userData.role === 'member' || !userData.role) {
-            await updateDoc(userRef, { 
-              role: 'collaborator',
-              updatedAt: serverTimestamp() 
-            });
-          }
-        }
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao criar receita');
       }
-
-      // Notificação de Nova Receita (Post no Lounge e E-mail para membros)
+      const data = await response.json();
+      
+      // Notificação opcional no Lounge local (Firestore)
       try {
-        const usersSnapshot = await getDocs(collection(db, 'users'));
-        const memberEmails = usersSnapshot.docs
-          .map(userDoc => userDoc.data().email)
-          .filter(email => !!email);
-          
         let authorName = 'Um Alquimista';
         if (recipe.ownerId) {
           const userSnap = await getDoc(doc(db, 'users', recipe.ownerId));
@@ -184,10 +187,8 @@ export const recipeService = {
             authorName = userSnap.data().displayName || userSnap.data().name || authorName;
           }
         }
-
-        // Post no Lounge (Sempre envia ao publicar)
         await addDoc(collection(db, 'lounge_messages'), {
-          text: `${authorName}, publicou nova receita ${sanitizedRecipe.title}.`,
+          text: `${authorName}, publicou nova receita ${recipe.title}.`,
           senderId: 'system',
           senderName: 'Alquimia do Prato',
           senderRole: 'admin',
@@ -196,160 +197,130 @@ export const recipeService = {
           reactions: {},
           metadata: {
             type: 'new_recipe',
-            recipeId: docRef.id
+            recipeId: data.id
           }
         });
-
-        // Email via Trigger Email Extension (collection 'mail') - OPCIONAL
-        if (options.notifyEmail && memberEmails.length > 0) {
-          await addDoc(collection(db, 'mail'), {
-            to: memberEmails,
-            message: {
-              from: '"Mestre Alquemista" <alchemist.master1998@gmail.com>',
-              subject: `Nova Receita no Alquimia: ${sanitizedRecipe.title}`,
-              html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #333;">
-                  <h2 style="color: #d97706;">Olá Alquimista!</h2>
-                  <p>Uma nova receita acabou de ser publicada em nossa comunidade pelo alquimista <strong>${authorName}</strong>:</p>
-                  <div style="background-color: #fff7ed; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                    <h3 style="margin-top: 0; color: #9a3412;">${sanitizedRecipe.title}</h3>
-                    <p>${sanitizedRecipe.description || 'Uma deliciosa nova criação culinária aguarda por você.'}</p>
-                  </div>
-                  <p>Acesse o <strong>Alquimia do Prato</strong> para conferir os detalhes, ingredientes e modo de preparo.</p>
-                  <br/>
-                  <p>Abraços,<br/><strong>Equipe Alquimia do Prato</strong></p>
-                </div>
-              `
-            }
-          });
-        }
-      } catch (notifyError) {
-        console.error('Falha ao enviar notificações de nova receita:', notifyError);
+      } catch (notifyErr) {
+        console.warn('Erro ao notificar no Lounge do site:', notifyErr);
       }
 
-      return docRef.id;
+      return data.id;
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, RECIPES_COLLECTION);
+      console.error('Erro no createRecipe:', error);
+      throw error;
     }
   },
 
   async updateRecipe(id: string, recipe: Partial<Recipe>) {
     try {
-      const sanitizedRecipe = deepSanitize(recipe);
-      // Remove id from payload to avoid overwriting doc.id or storing it as a field
-      const { id: _, ...dataToUpdate } = sanitizedRecipe as any;
-      
-      if (dataToUpdate.title && !dataToUpdate.slug) {
-        // Only update slug if title changes and no specific slug was provided
-        dataToUpdate.slug = `${generateSlug(dataToUpdate.title)}-${Math.random().toString(36).substring(2, 8)}`;
-      }
-      
-      const docRef = doc(db, RECIPES_COLLECTION, id);
-      await updateDoc(docRef, {
-        ...dataToUpdate,
-        updatedAt: serverTimestamp()
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/recipes/${id}`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify(recipe)
       });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao atualizar receita');
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `${RECIPES_COLLECTION}/${id}`);
+      console.error('Erro no updateRecipe:', error);
+      throw error;
     }
   },
 
   async deleteRecipe(id: string) {
     try {
-      const docRef = doc(db, RECIPES_COLLECTION, id);
-      await deleteDoc(docRef);
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/recipes/${id}`, {
+        method: 'DELETE',
+        headers
+      });
+      if (!response.ok) {
+        const errData = await response.json();
+        throw new Error(errData.error || 'Erro ao deletar receita');
+      }
     } catch (error) {
-      handleFirestoreError(error, OperationType.DELETE, `${RECIPES_COLLECTION}/${id}`);
+      console.error('Erro no deleteRecipe:', error);
+      throw error;
     }
   },
 
   async getRecipe(id: string): Promise<Recipe | null> {
     try {
-      const docRef = doc(db, RECIPES_COLLECTION, id);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
-        return { ...docSnap.data(), id: docSnap.id } as Recipe;
-      }
-      return null;
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/recipes/${id}`, {
+        headers
+      });
+      if (!response.ok) return null;
+      const resData = await response.json();
+      return mapRecipeResponse(resData.data);
     } catch (error) {
-      handleFirestoreError(error, OperationType.GET, `${RECIPES_COLLECTION}/${id}`);
+      console.error('Erro no getRecipe:', error);
       return null;
     }
   },
 
   async getRecipeBySlug(slug: string): Promise<Recipe | null> {
     try {
-      const q = query(collection(db, RECIPES_COLLECTION), where('slug', '==', slug), limit(1));
-      const snapshot = await getDocs(q);
-      
-      if (!snapshot.empty) {
-        const doc = snapshot.docs[0];
-        return { ...doc.data(), id: doc.id } as Recipe;
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/recipes?slug=${encodeURIComponent(slug)}`, {
+        headers
+      });
+      if (!response.ok) return null;
+      const resData = await response.json();
+      if (Array.isArray(resData.data) && resData.data.length > 0) {
+        return mapRecipeResponse(resData.data[0]);
       }
       return null;
     } catch (error) {
-      console.error('Erro ao buscar receita por slug:', error);
+      console.error('Erro no getRecipeBySlug:', error);
       return null;
     }
   },
 
   async getAllRecipes(): Promise<Recipe[]> {
     try {
-      // Fetch everything without ordering to avoid index/permission issues
-      const querySnapshot = await getDocs(collection(db, RECIPES_COLLECTION));
-      const recipes = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Recipe));
-      
-      // Sort in memory by createdAt desc
-      return recipes.sort((a, b) => {
-        const dateA = a.createdAt?.toDate?.() ? a.createdAt.toDate() : new Date(a.createdAt || 0);
-        const dateB = b.createdAt?.toDate?.() ? b.createdAt.toDate() : new Date(b.createdAt || 0);
-        return dateB.getTime() - dateA.getTime();
+      const headers = await getAuthHeaders();
+      const response = await fetch('/api/recipes', {
+        headers
       });
+      if (!response.ok) return [];
+      const resData = await response.json();
+      return (resData.data || []).map(mapRecipeResponse);
     } catch (error) {
-      handleFirestoreError(error, OperationType.LIST, RECIPES_COLLECTION);
+      console.error('Erro no getAllRecipes:', error);
       return [];
     }
   },
 
   async getRecipesByMomento(momento: string): Promise<Recipe[]> {
     try {
-      const q = query(
-        collection(db, RECIPES_COLLECTION), 
-        where('momento', 'array-contains', momento),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Recipe));
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/recipes?momento=${encodeURIComponent(momento)}`, {
+        headers
+      });
+      if (!response.ok) return [];
+      const resData = await response.json();
+      return (resData.data || []).map(mapRecipeResponse);
     } catch (error) {
-      console.warn('Momento query with orderBy failed, falling back to client-side filter:', error);
-      try {
-        const recipes = await this.getAllRecipes();
-        return recipes.filter(r => r.momento && r.momento.includes(momento));
-      } catch (innerError) {
-        handleFirestoreError(innerError, OperationType.LIST, RECIPES_COLLECTION);
-        return [];
-      }
+      console.error('Erro no getRecipesByMomento:', error);
+      return [];
     }
   },
 
   async getUserRecipes(userId: string): Promise<Recipe[]> {
     try {
-      const q = query(
-        collection(db, RECIPES_COLLECTION), 
-        where('ownerId', '==', userId),
-        orderBy('createdAt', 'desc')
-      );
-      const querySnapshot = await getDocs(q);
-      return querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Recipe));
+      const headers = await getAuthHeaders();
+      const response = await fetch(`/api/recipes?ownerId=${encodeURIComponent(userId)}`, {
+        headers
+      });
+      if (!response.ok) return [];
+      const resData = await response.json();
+      return (resData.data || []).map(mapRecipeResponse);
     } catch (error) {
-      console.warn('User query with orderBy failed, falling back to client-side filter:', error);
-      try {
-        const recipes = await this.getAllRecipes();
-        return recipes.filter(r => r.ownerId === userId);
-      } catch (innerError) {
-        handleFirestoreError(innerError, OperationType.LIST, RECIPES_COLLECTION);
-        return [];
-      }
+      console.error('Erro no getUserRecipes:', error);
+      return [];
     }
   },
 

@@ -1,13 +1,14 @@
 // server.ts
 import "dotenv/config";
 import express from "express";
+import cors from "cors";
 import path from "path";
 import { JSDOM } from "jsdom";
 import multer from "multer";
 import fs from "fs";
 import FirecrawlApp from "@mendable/firecrawl-js";
 import { initializeApp as initializeAdminApp, cert } from "firebase-admin/app";
-import { getFirestore as getFirestore4, FieldValue as FieldValue2 } from "firebase-admin/firestore";
+import { getFirestore as getFirestore5, FieldValue as FieldValue2 } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
 // src/infra/auth/IdentityAccessService.ts
@@ -188,7 +189,7 @@ var RagBackendService = class {
    * Realiza busca semântica via RAG combinando Embeddings e busca vetorial no Postgres.
    * Suporta histórico de conversa para manter contexto multi-turno.
    */
-  static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5, userId) {
+  static async askGeminiWithContext(userQuestion, conversationHistory = [], limit = 5, userId, userName) {
     try {
       const lowerQ = userQuestion.toLowerCase();
       const isSalesQuery = (lowerQ.includes("venda") || lowerQ.includes("comprar") || lowerQ.includes("loja") || lowerQ.includes("shop") || lowerQ.includes("pre\xE7o") || lowerQ.includes("custo") || lowerQ.includes("comercializa\xE7\xE3o")) && (lowerQ.includes("produto") || lowerQ.includes("utens\xEDlio") || lowerQ.includes("faca") || lowerQ.includes("equipamento") || lowerQ.includes("panela") || lowerQ.includes("colher") || lowerQ.includes("prato") || lowerQ.includes("mesa"));
@@ -225,47 +226,75 @@ ${extraDocs}`;
         }
       }
       const historyBlock = conversationHistory.length > 0 ? conversationHistory.map((t) => `${t.role === "user" ? "USU\xC1RIO" : "ASSISTENTE"}: ${t.text}`).join("\n") : "";
+      const userTurnCount = conversationHistory.filter((t) => t.role === "user").length;
+      const phase = userTurnCount === 0 ? 0 : userTurnCount <= 2 ? 1 : 2;
       const finalPrompt = `
-Voc\xEA \xE9 o **Chef IA Alchemist**, o assistente culin\xE1rio mestre do portal "Alquimia do Prato".
-Voc\xEA \xE9 apaixonado por culin\xE1ria, t\xE9cnicas de cozinha, hist\xF3ria dos alimentos e alquimia gastron\xF4mica.
+Voc\xEA \xE9 o **Chef IA Alchemist**, tutor gastron\xF4mico personalizado do portal "Alquimia do Prato".
+${userName ? `O nome do usu\xE1rio \xE9 **${userName}**.` : ""}
 
-## PERSONALIDADE
-- Acolhedor, curioso e entusiasmado. Trate o usu\xE1rio como um aprendiz de alquimista.
-- Use linguagem natural e quente em portugu\xEAs (pt-BR). Nunca soe rob\xF3tico.
-- Seja conciso: respostas devem ter no m\xE1ximo 10-15 linhas, a menos que o usu\xE1rio pe\xE7a mais detalhes.
+## FASE ATUAL DA CONVERSA: ${phase === 0 ? "PRIMEIRO CONTATO" : phase === 1 ? "EXPLORA\xC7\xC3O" : "APROFUNDAMENTO"}
+N\xFAmero de turnos do usu\xE1rio at\xE9 agora: ${userTurnCount}
 
-## COMPORTAMENTO SOCR\xC1TICO (OBRIGAT\xD3RIO)
-Voc\xEA deve GUIAR o usu\xE1rio passo a passo com perguntas de acompanhamento ao inv\xE9s de despejar toda a informa\xE7\xE3o de uma vez.
-1. Quando o usu\xE1rio faz uma pergunta ampla (ex: "quero fazer uma torta"), responda brevemente e fa\xE7a 1-2 perguntas para refinar:
-   - Tipo de torta? (doce, salgada)
-   - Para quantas pessoas?
-   - Tem algum ingrediente em m\xE3os ou restri\xE7\xE3o alimentar?
-2. A cada resposta do usu\xE1rio, refine sua sugest\xE3o e fa\xE7a novas perguntas at\xE9 chegar a uma receita ou solu\xE7\xE3o espec\xEDfica.
-3. Quando chegar a algo concreto, apresente a resposta final completa.
+## REGRA DE OURO: DI\xC1LOGO PROGRESSIVO E NATURALIDADE
+- Voc\xEA NUNCA despeja todo o conhecimento de uma vez. A conversa evolui em fases.
+- **A interface j\xE1 deu as boas-vindas personalizadas ao usu\xE1rio.** Portanto, NUNCA inicie mensagens com sauda\xE7\xF5es formais repetitivas ("Ol\xE1", "Oi", "Bem-vindo", "Tudo bem?").
+- V\xE1 direto ao assunto desde a primeira resposta, mantendo um tom fluido, natural e coloquial.
+- **Uso do Nome (Proximidade):** Use o primeiro nome do usu\xE1rio de forma espor\xE1dica e estrat\xE9gica (a cada 2 ou 3 perguntas) para direcionar questionamentos e criar proximidade, como faria um amigo. Exemplo: "${userName ? userName.split(" ")[0] : "Alquimista"}, o que voc\xEA acha sobre pontos de carne, qual a sua prefer\xEAncia?"
 
-## COMPOSI\xC7\xC3O DE RECEITAS (NOVO E OBRIGAT\xD3RIO)
-Ao receber receitas no contexto, SEMPRE analise se duas ou mais podem ser combinadas para formar um menu ou prato composto. Considere:
-1. Compatibilidade de "momento" (ex: Prato principal + Sobremesa).
-2. Complementaridade de ingredientes (ex: Carne + Farofa/Salada).
-3. Sinergia de sabores e texturas.
+### FASE 0 \u2014 PRIMEIRO CONTATO (turno atual do usu\xE1rio = primeiro da sess\xE3o)
+- Resposta CURTA (3-5 linhas no m\xE1ximo).
+- N\xC3O fa\xE7a nenhuma sauda\xE7\xE3o de boas-vindas.
+- Acolha o interesse com empatia (Efeito ELIZA): valide o desejo de forma empolgante usando as palavras do pr\xF3prio usu\xE1rio.
+- N\xC3O ensine nada ainda. N\xC3O liste receitas. N\xC3O fa\xE7a inje\xE7\xE3o cognitiva.
+- Termine com 1-2 perguntas direcionadoras para entender o que o usu\xE1rio realmente busca.
+  Exemplos de perguntas direcionadoras:
+  - "Voc\xEA quer explorar t\xE9cnicas de preparo, conhecer cortes espec\xEDficos ou descobrir receitas pr\xE1ticas?"
+  - "\xC9 para um evento especial ou para o dia a dia?"
+  - "Tem alguma prefer\xEAncia ou restri\xE7\xE3o alimentar que eu deva saber?"
 
-Quando identificar uma combina\xE7\xE3o vi\xE1vel e que responda \xE0 necessidade do usu\xE1rio:
-- Proponha a COMBINA\xC7\xC3O com um nome criativo (ex: "Combo Alquimia do Fogo").
-- Apresente CADA receita individual com link no formato: [Nome da Receita](/recipe/ID)
-- Mostre um breve resumo de como elas se complementam.
-- Pergunte se o usu\xE1rio deseja ver os detalhes de preparo de cada uma.
+### FASE 1 \u2014 EXPLORA\xC7\xC3O (turnos 2 e 3)
+- Resposta CURTA A MODERADA (m\xE1ximo 2 par\xE1grafos curtos).
+- Espelhamento emocional breve: reconhe\xE7a a resposta anterior do usu\xE1rio.
+- Introduza UM insight cognitivo curto (ci\xEAncia, t\xE9cnica ou curiosidade) relevante ao que o usu\xE1rio indicou.
+- Se houver receitas no acervo, mencione apenas 1 ou 2 brevemente com links [Nome](/recipe/ID).
+- **Ping-Pong de Engajamento**: N\xE3o d\xEA muitas op\xE7\xF5es de uma vez. Fa\xE7a uma pergunta de encaminhamento espec\xEDfica que gere curiosidade.
+  Exemplo: "Gostaria de saber que bebida iria bem com esta receita?" ou "Quer descobrir o segredo para deixar essa carne ainda mais suculenta?"
+
+### FASE 2 \u2014 APROFUNDAMENTO (turno 4 em diante)
+- Resposta DIRETA e FRACIONADA (evite blocos imensos de texto).
+- Espelhamento emocional + Inje\xE7\xE3o cognitiva focada.
+- Quando o usu\xE1rio responder a uma pergunta anterior (ex: aceitou saber sobre a bebida), d\xEA a resposta de forma empolgante e logo em seguida retorne ao tema central ou puxe um novo gancho.
+- Apresente receitas e conte\xFAdos do acervo com entusiasmo e links, mas dose a quantidade.
+- Proponha **iscas de intera\xE7\xE3o**:
+  Exemplo: "Agora que resolvemos a prote\xEDna, quer pensar em um acompanhamento r\xE1pido ou prefere focar na sobremesa?"
+- O fluxo de "vai e volta" (ping-pong) \xE9 ESSENCIAL para manter o usu\xE1rio raciocinando e interagindo, minimizando a leitura extensa.
+- Ocasionalmente, inclua um mini-desafio ou quiz r\xE1pido baseado no conceito explicado.
+
+## FERRAMENTAS MCP (Use quando apropriado, em qualquer fase)
+- \`get_user_culinary_profile\`: Use no in\xEDcio para entender quem \xE9 o usu\xE1rio (n\xEDvel, restri\xE7\xF5es, prefer\xEAncias).
+- \`update_user_culinary_profile\`: Se identificar restri\xE7\xE3o alimentar ou motiva\xE7\xE3o clara, salve imediatamente.
+- \`trigger_gamification_event\`: Se o usu\xE1rio acertar um quiz/desafio, conceda XP com eventType "QUIZ_ANSWERED_CORRECTLY".
+
+## COMPOSI\xC7\xC3O DE RECEITAS (apenas na Fase 2)
+Ao identificar combina\xE7\xF5es vi\xE1veis entre receitas do contexto:
+- Proponha com um nome criativo (ex: "Combo Alquimia do Fogo").
+- Apresente cada receita com link: [Nome da Receita](/recipe/ID)
+- Mostre brevemente como se complementam.
 
 ## REGRAS DE CONTEXTO DO ACERVO
-- O CONTEXTO RECUPERADO abaixo cont\xE9m receitas e artigos do nosso Acervo T\xE9cnico (banco de dados vetorial).
-- Se houver receitas relevantes no contexto, SEMPRE apresente-as com links clic\xE1veis no formato: [Nome da Receita](/recipe/ID)
-- Destaque que "temos isso no nosso acervo" ou "encontrei receitas no portal" para dar valor ao conte\xFAdo propriet\xE1rio.
-- Se o contexto inclui artigos ou discuss\xF5es hist\xF3ricas, mencione: "No nosso Acervo T\xE9cnico, h\xE1 artigos que discutem isso."
-- Se N\xC3O encontrou nada no contexto ou n\xE3o conseguir produzir uma informa\xE7\xE3o v\xE1lida, responda EXATAMENTE: "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia"
+- O CONTEXTO RECUPERADO abaixo cont\xE9m receitas e artigos do Acervo T\xE9cnico.
+- Se houver conte\xFAdo relevante: use-o de acordo com a fase atual (na Fase 0 apenas mencione que temos materiais, nas Fases 1-2 apresente com links).
+- Se N\xC3O houver conte\xFAdo direto no contexto para a pergunta culin\xE1ria:
+  1. N\xC3O envie mensagem de erro ou recusa.
+  2. Use empatia (ELIZA) para validar o interesse.
+  3. D\xEA uma curiosidade breve e geral sobre o tema.
+  4. Fa\xE7a uma pergunta que direcione para subtemas ou ingredientes que possamos ter no acervo.
+  5. Inclua discretamente "[PEND\xCANCIA_ANOTADA]" no final.
 
 ## FORMATA\xC7\xC3O
-- Use Markdown: **negrito** para destaques, ### para t\xEDtulos de se\xE7\xE3o, listas com * para ingredientes/passos.
-- Links de receitas no formato: [Nome da Receita](/recipe/ID)
-- Finalize SEMPRE com uma pergunta de acompanhamento ou oferta de ajuda, EXCETO quando a conversa claramente chegou a uma conclus\xE3o.
+- Use Markdown: **negrito**, ### t\xEDtulos, listas com * para ingredientes/passos.
+- Links de receitas: [Nome da Receita](/recipe/ID)
+- Op\xE7\xF5es selecion\xE1veis como lista com letras ou emojis quando apropriado.
 
 ---
 
@@ -279,15 +308,16 @@ ${context || "Nenhum resultado encontrado no acervo para esta consulta."}${compl
 
 ---
 
-## REGRAS ABSOLUTAS DE RESPOSTA (SOBRESCREVEM QUALQUER CONTEXTO)
-1. Se a pergunta do usu\xE1rio for explicitamente sobre a COMERCIALIZA\xC7\xC3O, COMPRA ou VENDA de (produtos, loja, ferramentas de cozinha, facas, equipamentos, panelas, etc):
-   Voc\xEA DEVE ignorar qualquer contexto e responder EXATAMENTE E APENAS: "Ainda n\xE3o, mas muito em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde." (N\xC3O ADICIONE MAIS NADA). NOTA: Se a pergunta for apenas sobre o USO culin\xE1rio de facas/panelas (ex: "como amolar uma faca"), N\xC3O aplique esta regra, e responda normalmente ajudando o usu\xE1rio.
+## REGRAS ABSOLUTAS (SOBRESCREVEM QUALQUER CONTEXTO)
+1. Se a pergunta for sobre COMERCIALIZA\xC7\xC3O/COMPRA/VENDA de produtos, equipamentos, facas, panelas etc.:
+   Responda EXATAMENTE: "Ainda n\xE3o, mas muito em breve abriremos nosso Shop Alchemist, com produtos diferenciados de excelente qualidade, em breve, aguarde."
+   NOTA: Se for sobre o USO culin\xE1rio desses itens (ex: "como amolar uma faca"), responda normalmente.
 
-2. Se a pergunta N\xC3O tiver rela\xE7\xE3o com culin\xE1ria, gastronomia, ingredientes ou t\xE9cnicas (ou seja, fora do tema do site):
-   Voc\xEA DEVE responder EXATAMENTE E APENAS: "O tema n\xE3o faz aparte de nosso acervo"
+2. Se a pergunta N\xC3O tiver rela\xE7\xE3o com culin\xE1ria/gastronomia:
+   Responda EXATAMENTE: "O tema n\xE3o faz parte de nosso acervo"
 
-3. Se a pergunta for de culin\xE1ria mas N\xC3O houver nenhuma informa\xE7\xE3o v\xE1lida no contexto recuperado:
-   Voc\xEA DEVE responder EXATAMENTE E APENAS: "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia"
+3. Se for culin\xE1ria sem informa\xE7\xE3o espec\xEDfica no contexto:
+   Use empatia, d\xEA vis\xE3o geral breve e fa\xE7a pergunta interativa sugerindo subtemas do acervo. Adicione "[PEND\xCANCIA_ANOTADA]".
 
 ---
 
@@ -298,8 +328,10 @@ ${userQuestion}
         model: "gemini-3-flash-preview",
         contents: finalPrompt
       });
-      const responseText = generation.text || "Ainda n\xE3o temos uma informa\xE7\xE3o para este termo, mas j\xE1 est\xE1 anotado para incluirmos logo que processada a pend\xEAncia";
-      if (responseText.includes("Ainda n\xE3o temos uma informa\xE7\xE3o para este termo") || responseText.includes("O tema n\xE3o faz aparte de nosso acervo")) {
+      const responseText = generation.text || "Ainda n\xE3o encontrei uma informa\xE7\xE3o sobre isso. O que voc\xEA gostaria de cozinhar hoje? [PEND\xCANCIA_ANOTADA]";
+      const isUnanswered = responseText.includes("[PEND\xCANCIA_ANOTADA]") || responseText.includes("O tema n\xE3o faz aparte de nosso acervo");
+      const cleanedResponse = responseText.replaceAll("[PEND\xCANCIA_ANOTADA]", "").trim();
+      if (isUnanswered) {
         try {
           let prismaUserId = null;
           if (userId) {
@@ -318,7 +350,7 @@ ${userQuestion}
           console.error("[RAG] Erro ao registrar termo n\xE3o respondido", e);
         }
       }
-      return responseText;
+      return cleanedResponse;
     } catch (error) {
       console.error("[RagBackendService] Resource or API Error:", error);
       try {
@@ -820,6 +852,8 @@ var GamificationService = class {
       // Cadastro Completo
       PROFILE_QUIZ: 5,
       // Quiz de perfil/preferências
+      QUIZ_ANSWERED_CORRECTLY: 5,
+      // Acertou o quiz do Chef IA
       ARTICLE_PUBLISHED: 50,
       // Publicação de Artigos em PDF
       RECIPE_PUBLISHED: 50,
@@ -1122,6 +1156,10 @@ var geminiService = {
           - "1/2 copo de \xE1gua" -> { quantity: "1/2 copo", name: "\xE1gua" }
           - "sal a gosto" -> { quantity: "a gosto", name: "sal" }
         - instructions (string[]).
+        - equipment (string[]): Liste TODOS os utens\xEDlios e equipamentos de cozinha necess\xE1rios para o preparo da receita.
+          Analise os ingredientes e instru\xE7\xF5es para inferir os equipamentos mesmo que n\xE3o estejam expl\xEDcitos no texto.
+          EXEMPLOS: "Frigideira antiaderente", "Panela de press\xE3o", "Liquidificador", "Forno", "Assadeira", "Batedeira", "Peneira", "T\xE1bua de corte", "Faca de chef", "Esp\xE1tula de silicone", "Forma de pudim", "Papel manteiga", "Term\xF4metro culin\xE1rio".
+          N\xC3O inclua utens\xEDlios gen\xE9ricos \xF3bvios como "prato" ou "copo". Foque nos itens espec\xEDficos necess\xE1rios para o preparo.
         - chefTips (string): Dicas adicionais, segredos do chef, varia\xE7\xF5es da receita ou conselhos t\xE9cnicos importantes. Procure por blocos de texto que contenham dicas, notas ou "Dica do Chef".
         - image, imageOptions (string[]).
     `;
@@ -1153,7 +1191,7 @@ var geminiService = {
         const apiKey = apiKeys[i];
         try {
           const client = new GoogleGenAI4({ apiKey });
-          const models = ["gemini-3-flash-preview", "gemini-1.0-pro"];
+          const models = ["gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"];
           for (const modelName of models) {
             try {
               const result = await client.models.generateContent({
@@ -1248,6 +1286,11 @@ var geminiService = {
         recipeData.instructions = recipeData.instructions.map((step) => String(step).substring(0, 1e3));
       } else {
         recipeData.instructions = [];
+      }
+      if (Array.isArray(recipeData.equipment)) {
+        recipeData.equipment = recipeData.equipment.map((item) => String(item).substring(0, 200).trim()).filter((item) => item.length > 0);
+      } else {
+        recipeData.equipment = [];
       }
       recipeData.chefTips = String(recipeData.chefTips || "").substring(0, 2e3);
       let finalOptions = Array.from(/* @__PURE__ */ new Set([
@@ -1571,6 +1614,7 @@ import {
   ListToolsRequestSchema,
   CallToolRequestSchema
 } from "@modelcontextprotocol/sdk/types.js";
+import { getFirestore as getFirestore4 } from "firebase-admin/firestore";
 var mcpServer = new Server(
   {
     name: "alchemist-mcp-server",
@@ -1594,6 +1638,44 @@ mcpServer.setRequestHandler(ListToolsRequestSchema, async () => {
             query: { type: "string", description: "O termo ou contexto gastron\xF4mico procurado" }
           },
           required: ["query"]
+        }
+      },
+      {
+        name: "get_user_culinary_profile",
+        description: "Recupera o perfil do usu\xE1rio para o Chef IA entender as prefer\xEAncias e restri\xE7\xF5es antes de responder.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            uid: { type: "string", description: "O UID (Firebase/Supabase) do usu\xE1rio autenticado." }
+          },
+          required: ["uid"]
+        }
+      },
+      {
+        name: "update_user_culinary_profile",
+        description: "Salva insights psicol\xF3gicos (Efeito ELIZA) ou restri\xE7\xF5es alimentares do usu\xE1rio para longo prazo.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            uid: { type: "string", description: "O UID do usu\xE1rio autenticado." },
+            motivation_root: { type: "string", description: "A motiva\xE7\xE3o subconsciente do usu\xE1rio ao cozinhar (ex: 'Aliviar estresse', 'Impressionar amigos')." },
+            preferred_style: { type: "string", description: "Estilo preferido de culin\xE1ria (ex: 'R\xFAstica', 'Sofisticada', 'R\xE1pida')." },
+            dietary_restrictions: { type: "array", items: { type: "string" }, description: "Restri\xE7\xF5es alimentares identificadas." }
+          },
+          required: ["uid"]
+        }
+      },
+      {
+        name: "trigger_gamification_event",
+        description: "Aciona um evento de gamifica\xE7\xE3o, como quando o usu\xE1rio responde corretamente a um quiz do Chef IA.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            uid: { type: "string", description: "O UID do usu\xE1rio autenticado." },
+            eventType: { type: "string", description: "Tipo de evento (ex: 'QUIZ_ANSWERED_CORRECTLY')." },
+            topic: { type: "string", description: "T\xF3pico relacionado ao evento (ex: 'Rea\xE7\xE3o de Maillard')." }
+          },
+          required: ["uid", "eventType"]
         }
       },
       {
@@ -1657,6 +1739,77 @@ ${interactions.length > 0 ? interactions.map((i) => `- Evento: ${i.eventType} | 
       };
     }
   }
+  if (request.params.name === "get_user_culinary_profile") {
+    const uid = request.params.arguments?.uid;
+    try {
+      const db = getFirestore4();
+      const userDoc = await db.collection("users").doc(uid).get();
+      const gamification = await GamificationService.getProfile(uid);
+      if (!userDoc.exists) {
+        return {
+          content: [{ type: "text", text: `Usu\xE1rio n\xE3o encontrado no Firestore (UID: ${uid}). Gamifica\xE7\xE3o N\xEDvel: ${gamification?.nivel || 1}` }]
+        };
+      }
+      const userData = userDoc.data() || {};
+      const profileData = {
+        displayName: userData.displayName || "Desconhecido",
+        motivation_root: userData.motivation_root || "N\xE3o mapeado ainda",
+        preferred_style: userData.preferred_style || "N\xE3o mapeado ainda",
+        dietary_restrictions: userData.dietary_restrictions || [],
+        gamification_level: gamification?.nivel || 1,
+        gamification_xp: gamification?.xp_total || 0
+      };
+      return {
+        content: [{ type: "text", text: JSON.stringify(profileData, null, 2) }]
+      };
+    } catch (error) {
+      console.error("[MCP] Erro na ferramenta get_user_culinary_profile:", error);
+      return {
+        content: [{ type: "text", text: `Erro ao buscar perfil culin\xE1rio: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+  if (request.params.name === "update_user_culinary_profile") {
+    const uid = request.params.arguments?.uid;
+    const motivation_root = request.params.arguments?.motivation_root;
+    const preferred_style = request.params.arguments?.preferred_style;
+    const dietary_restrictions = request.params.arguments?.dietary_restrictions;
+    try {
+      const db = getFirestore4();
+      const updateData = {};
+      if (motivation_root !== void 0) updateData.motivation_root = motivation_root;
+      if (preferred_style !== void 0) updateData.preferred_style = preferred_style;
+      if (dietary_restrictions !== void 0) updateData.dietary_restrictions = dietary_restrictions;
+      await db.collection("users").doc(uid).set(updateData, { merge: true });
+      return {
+        content: [{ type: "text", text: `Perfil do usu\xE1rio ${uid} atualizado com sucesso.` }]
+      };
+    } catch (error) {
+      console.error("[MCP] Erro na ferramenta update_user_culinary_profile:", error);
+      return {
+        content: [{ type: "text", text: `Erro ao atualizar perfil culin\xE1rio: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
+  if (request.params.name === "trigger_gamification_event") {
+    const uid = request.params.arguments?.uid;
+    const eventType = request.params.arguments?.eventType;
+    const topic = request.params.arguments?.topic;
+    try {
+      const gamificationResult = await GamificationService.processEvent(uid, eventType);
+      return {
+        content: [{ type: "text", text: `Evento '${eventType}' processado com sucesso. T\xF3pico: ${topic || "N/A"}. XP Ganho: ${gamificationResult.xpGained}. N\xEDvel Atual: ${gamificationResult.currentLevel}.` }]
+      };
+    } catch (error) {
+      console.error("[MCP] Erro na ferramenta trigger_gamification_event:", error);
+      return {
+        content: [{ type: "text", text: `Erro ao processar evento de gamifica\xE7\xE3o: ${error.message}` }],
+        isError: true
+      };
+    }
+  }
   throw new Error("Tool n\xE3o encontrada");
 });
 function registerMcpRoutes(app2) {
@@ -1676,6 +1829,780 @@ function registerMcpRoutes(app2) {
     }
   });
 }
+
+// src/infra/api/dishAlchemistsRouter.ts
+import { Router } from "express";
+
+// src/infra/auth/firebaseAuthMiddleware.ts
+import { getAuth as getAuth2 } from "firebase-admin/auth";
+var authenticateFirebase = async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "N\xE3o autorizado. Token n\xE3o fornecido." });
+  }
+  const idToken = authHeader.split("Bearer ")[1];
+  try {
+    const decodedToken = await getAuth2().verifyIdToken(idToken);
+    req.user = decodedToken;
+    next();
+  } catch (error) {
+    console.error("[FirebaseAuth] Erro ao verificar token:", error);
+    return res.status(401).json({ error: "N\xE3o autorizado. Token inv\xE1lido ou expirado." });
+  }
+};
+
+// src/infra/api/formatRecipeResponse.ts
+function formatRecipeResponse(recipe) {
+  const nutrition = recipe.recipeIngredients.reduce(
+    (acc, ri) => {
+      const factor = (Number(ri.quantity) || 0) / 100;
+      acc.calories += (ri.foodItem.calories || 0) * factor;
+      acc.protein += (ri.foodItem.protein || 0) * factor;
+      acc.carbs += (ri.foodItem.carbohydrates || 0) * factor;
+      acc.fat += (ri.foodItem.lipids || 0) * factor;
+      return acc;
+    },
+    { calories: 0, protein: 0, carbs: 0, fat: 0 }
+  );
+  Object.keys(nutrition).forEach((k) => {
+    nutrition[k] = Math.round(nutrition[k] * 10) / 10;
+  });
+  return {
+    id: recipe.id,
+    title: recipe.title,
+    description: recipe.description || "",
+    image: recipe.image || "",
+    category: recipe.tipo_prato,
+    base_alimento: recipe.base_alimento,
+    momento: recipe.momento,
+    origem: recipe.origem || "",
+    difficulty: recipe.difficulty || "",
+    prepTime: recipe.prepTime || "",
+    servings: recipe.servings || "",
+    dietType: recipe.dietType || "",
+    custo_estimado: recipe.custo_estimado || "",
+    instructions: recipe.instructions,
+    rating: recipe.rating,
+    reviewsCount: recipe.reviewsCount,
+    isClassic: recipe.isClassic,
+    createdAt: recipe.createdAt,
+    author: recipe.owner ? { name: recipe.owner.displayName, avatar: recipe.owner.photoURL } : null,
+    ingredients: recipe.recipeIngredients.map((ri) => ({
+      id: ri.foodItem.id,
+      name: ri.foodItem.name,
+      category: ri.foodItem.category || "",
+      quantity: ri.quantity,
+      unit: ri.unit,
+      preparationMode: ri.preparationMode || null
+    })),
+    nutrition
+  };
+}
+
+// src/infra/services/NutritionalEngineService.ts
+var NutritionalEngineService = class {
+  static {
+    // Controle de Rate Limit da USDA
+    this.usdaRateLimitReset = 0;
+  }
+  /**
+   * Ponto de entrada do Motor. Recebe uma lista de ingredientes e calcula.
+   */
+  static async calculateRecipeNutrition(ingredients) {
+    const details = [];
+    let totalCalories = 0;
+    let totalProtein = 0;
+    let totalCarbs = 0;
+    let totalFat = 0;
+    for (const item of ingredients) {
+      let data = await this.fetchLocalData(item.name);
+      if (!data) {
+        data = await this.fetchUsdaData(item.name);
+        if (data) {
+          await this.persistToLocalCache(data);
+        } else {
+          await this.persistNotFound(item.name);
+        }
+      }
+      if (data && data.source !== "NOT_FOUND") {
+        const factor = item.quantity / 100;
+        const calcCals = data.calories * factor;
+        const calcProt = data.protein * factor;
+        const calcCarbs = data.carbs * factor;
+        const calcFat = data.fat * factor;
+        details.push({
+          ingredient: item.name,
+          source: data.source,
+          quantity: item.quantity,
+          unit: item.unit,
+          calories: calcCals,
+          protein: calcProt,
+          carbs: calcCarbs,
+          fat: calcFat,
+          micronutrients: data.micronutrients,
+          base_data: data
+        });
+        totalCalories += calcCals;
+        totalProtein += calcProt;
+        totalCarbs += calcCarbs;
+        totalFat += calcFat;
+      } else {
+        details.push({
+          ingredient: item.name,
+          source: "NOT_FOUND",
+          quantity: item.quantity,
+          unit: item.unit,
+          calories: 0,
+          protein: 0,
+          carbs: 0,
+          fat: 0
+        });
+      }
+    }
+    return {
+      total_nutrition: {
+        calories: Math.round(totalCalories * 10) / 10,
+        protein: Math.round(totalProtein * 10) / 10,
+        carbs: Math.round(totalCarbs * 10) / 10,
+        fat: Math.round(totalFat * 10) / 10
+      },
+      details
+    };
+  }
+  /**
+   * Busca dados localmente usando Prisma e Busca Fuzzy (ILIKE)
+   */
+  static async fetchLocalData(name) {
+    try {
+      const item = await prisma.globalFoodItem.findFirst({
+        where: {
+          name: {
+            contains: name,
+            mode: "insensitive"
+          }
+        }
+      });
+      if (item) {
+        return {
+          source: item.source,
+          id: item.externalId,
+          name: item.name,
+          calories: item.calories,
+          protein: item.protein,
+          carbs: item.carbohydrates,
+          fat: item.lipids,
+          micronutrients: item.micronutrients
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error("[NutritionalEngine] Falha ao buscar no Prisma:", e);
+      return null;
+    }
+  }
+  /**
+   * Persiste resultado externo no banco local
+   */
+  static async persistToLocalCache(data) {
+    try {
+      await prisma.globalFoodItem.upsert({
+        where: { name: data.name },
+        update: {},
+        create: {
+          name: data.name,
+          source: data.source,
+          externalId: String(data.id),
+          calories: data.calories,
+          protein: data.protein,
+          carbohydrates: data.carbs,
+          lipids: data.fat,
+          baseQuantity: 100,
+          baseUnit: "g",
+          micronutrients: data.micronutrients
+        }
+      });
+    } catch (e) {
+      console.error("[NutritionalEngine] Falha ao persistir cache local:", e);
+    }
+  }
+  /**
+   * Salva como NOT_FOUND para evitar novas consultas desnecessárias
+   */
+  static async persistNotFound(name) {
+    try {
+      await prisma.globalFoodItem.upsert({
+        where: { name },
+        update: {},
+        create: {
+          name,
+          source: "NOT_FOUND",
+          calories: 0,
+          protein: 0,
+          carbohydrates: 0,
+          lipids: 0,
+          baseQuantity: 100,
+          baseUnit: "g"
+        }
+      });
+    } catch (e) {
+    }
+  }
+  /**
+   * Consulta a USDA FoodData Central (FDC)
+   */
+  static async fetchUsdaData(name) {
+    const apiKey = process.env.USDA_API_KEY;
+    if (!apiKey || apiKey.includes("placeholder")) {
+      console.warn("[NutritionalEngine] USDA_API_KEY n\xE3o configurada corretamente");
+      return null;
+    }
+    if (Date.now() < this.usdaRateLimitReset) {
+      console.warn("[NutritionalEngine] USDA Rate Limit ativo. Pausando buscas.");
+      return null;
+    }
+    try {
+      const url = `https://api.nal.usda.gov/fdc/v1/foods/search?api_key=${apiKey}&query=${encodeURIComponent(name)}&pageSize=1`;
+      const response = await globalThis.fetch(url);
+      if (response.status === 429) {
+        console.warn("[NutritionalEngine] Recebido 429 da USDA. Bloqueando por 10 minutos.");
+        this.usdaRateLimitReset = Date.now() + 10 * 60 * 1e3;
+        return null;
+      }
+      if (!response.ok) return null;
+      const data = await response.json();
+      if (data.foods && data.foods.length > 0) {
+        const food = data.foods[0];
+        let calories = 0, protein = 0, carbs = 0, fat = 0;
+        let micronutrients = {};
+        for (const nutrient of food.foodNutrients) {
+          const nameLower = nutrient.nutrientName.toLowerCase();
+          const unit = nutrient.unitName.toLowerCase();
+          const val = nutrient.value;
+          if (nameLower.includes("energy") && unit === "kcal") calories = val;
+          else if (nameLower.includes("protein")) protein = val;
+          else if (nameLower.includes("carbohydrate")) carbs = val;
+          else if (nameLower.includes("lipid") || nameLower.includes("fat")) fat = val;
+          else if (nameLower.includes("fiber")) micronutrients.fiber = val;
+          else if (nameLower.includes("calcium")) micronutrients.calcium = val;
+          else if (nameLower.includes("iron")) micronutrients.iron = val;
+          else if (nameLower.includes("sodium")) micronutrients.sodium = val;
+          else if (nameLower.includes("potassium")) micronutrients.potassium = val;
+          else if (nameLower.includes("vitamin c")) micronutrients.vitamin_c = val;
+        }
+        return {
+          source: "USDA",
+          id: food.fdcId,
+          name: food.description,
+          calories,
+          protein,
+          carbs,
+          fat,
+          micronutrients
+        };
+      }
+      return null;
+    } catch (err) {
+      console.error(`[NutritionalEngine] Falha na USDA API para ${name}:`, err);
+      return null;
+    }
+  }
+};
+
+// src/infra/api/dishAlchemistsRouter.ts
+var dishAlchemistsRouter = Router();
+var recipeInclude = {
+  recipeIngredients: {
+    include: { foodItem: true }
+  },
+  owner: {
+    select: { displayName: true, photoURL: true }
+  }
+};
+var generateSlug = (text) => {
+  if (!text) return "";
+  return text.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/\s+/g, "-").replace(/[^\w\-]+/g, "").replace(/\-\-+/g, "-").replace(/^-+/, "").replace(/-+$/, "");
+};
+function parseQuantityAndUnit(qtyStr) {
+  if (!qtyStr) return { quantity: 1, unit: "un" };
+  const numMatch = qtyStr.match(/^([\d\/\.\,\s]+)(.*)$/);
+  if (!numMatch) {
+    return { quantity: 1, unit: qtyStr.trim() || "un" };
+  }
+  let qtyVal = parseFloat(numMatch[1].replace(",", ".").trim());
+  if (isNaN(qtyVal)) {
+    if (numMatch[1].includes("/")) {
+      const parts = numMatch[1].split("/");
+      const num = parseFloat(parts[0]);
+      const den = parseFloat(parts[1]);
+      if (!isNaN(num) && !isNaN(den) && den !== 0) {
+        qtyVal = num / den;
+      } else {
+        qtyVal = 1;
+      }
+    } else {
+      qtyVal = 1;
+    }
+  }
+  const unitVal = numMatch[2].trim() || "un";
+  return { quantity: qtyVal, unit: unitVal };
+}
+dishAlchemistsRouter.get("/recipes", authenticateFirebase, async (req, res) => {
+  try {
+    const { slug, momento, ownerId } = req.query;
+    const where = {};
+    if (slug) {
+      where.slug = slug;
+    }
+    if (momento) {
+      where.momento = { has: momento };
+    }
+    if (ownerId) {
+      where.owner = { uid: ownerId };
+    }
+    const recipes = await prisma.recipe.findMany({
+      where,
+      include: recipeInclude,
+      orderBy: { createdAt: "desc" },
+      take: 100
+    });
+    const formattedRecipes = recipes.map(formatRecipeResponse);
+    res.json({ data: formattedRecipes });
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao listar receitas:", error);
+    res.status(500).json({ error: "Erro interno ao buscar receitas" });
+  }
+});
+dishAlchemistsRouter.get("/recipes/:id", authenticateFirebase, async (req, res) => {
+  try {
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: req.params.id },
+      include: recipeInclude
+    });
+    if (!recipe) {
+      return res.status(404).json({ error: "Receita n\xE3o encontrada" });
+    }
+    res.json({ data: formatRecipeResponse(recipe) });
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao buscar receita por ID:", error);
+    res.status(500).json({ error: "Erro interno ao buscar receita" });
+  }
+});
+dishAlchemistsRouter.post("/recipes", authenticateFirebase, async (req, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { uid: req.user.uid }
+    });
+    if (!user) {
+      return res.status(404).json({ error: "Usu\xE1rio n\xE3o cadastrado no PostgreSQL" });
+    }
+    const {
+      title,
+      description,
+      image,
+      momento,
+      tipo_prato,
+      base_alimento,
+      origem,
+      time,
+      prepTime,
+      dietType,
+      servings,
+      difficulty,
+      custo_estimado,
+      instructions,
+      ingredients,
+      isClassic
+    } = req.body;
+    const slug = `${generateSlug(title || "receita")}-${Math.random().toString(36).substring(2, 8)}`;
+    const recipe = await prisma.recipe.create({
+      data: {
+        title: title || "Sem t\xEDtulo",
+        description: description || null,
+        image: image || null,
+        momento: Array.isArray(momento) ? momento : [],
+        tipo_prato: Array.isArray(tipo_prato) ? tipo_prato : [],
+        base_alimento: Array.isArray(base_alimento) ? base_alimento : [],
+        origem: origem || null,
+        time: time || null,
+        prepTime: prepTime || null,
+        dietType: dietType || null,
+        servings: servings || null,
+        difficulty: difficulty || null,
+        custo_estimado: custo_estimado || null,
+        instructions: Array.isArray(instructions) ? instructions : [],
+        rating: 4.5,
+        reviewsCount: 0,
+        isClassic: typeof isClassic === "boolean" ? isClassic : false,
+        slug,
+        ownerId: user.id
+      }
+    });
+    if (Array.isArray(ingredients)) {
+      for (const ing of ingredients) {
+        let name = "";
+        let qtyStr = "";
+        let group = "Outros";
+        if (typeof ing === "string") {
+          name = ing.trim();
+        } else if (ing && typeof ing === "object") {
+          name = (ing.name || "").trim();
+          qtyStr = ing.quantity || "";
+          group = ing.group || "Outros";
+        }
+        if (!name) continue;
+        const foodItem = await prisma.globalFoodItem.upsert({
+          where: { name },
+          update: {},
+          create: {
+            name,
+            category: group,
+            source: "CUSTOM"
+          }
+        });
+        const { quantity, unit } = parseQuantityAndUnit(qtyStr);
+        await prisma.recipeIngredient.create({
+          data: {
+            recipeId: recipe.id,
+            foodItemId: foodItem.id,
+            quantity,
+            unit,
+            preparationMode: group !== "Outros" ? group : null
+          }
+        });
+      }
+    }
+    const fullRecipe = await prisma.recipe.findUnique({
+      where: { id: recipe.id },
+      include: recipeInclude
+    });
+    res.status(201).json(formatRecipeResponse(fullRecipe));
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao criar receita:", error);
+    res.status(500).json({ error: "Erro interno ao criar receita" });
+  }
+});
+dishAlchemistsRouter.put("/recipes/:id", authenticateFirebase, async (req, res) => {
+  try {
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: req.params.id },
+      include: { owner: true }
+    });
+    if (!recipe) {
+      return res.status(404).json({ error: "Receita n\xE3o encontrada" });
+    }
+    const user = await prisma.user.findUnique({
+      where: { uid: req.user.uid }
+    });
+    if (!user) {
+      return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado" });
+    }
+    if (recipe.ownerId !== user.id && user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Acesso negado para modificar esta receita" });
+    }
+    const {
+      title,
+      description,
+      image,
+      momento,
+      tipo_prato,
+      base_alimento,
+      origem,
+      time,
+      prepTime,
+      dietType,
+      servings,
+      difficulty,
+      custo_estimado,
+      instructions,
+      ingredients,
+      isClassic
+    } = req.body;
+    let slug = recipe.slug;
+    if (title && title !== recipe.title) {
+      slug = `${generateSlug(title)}-${Math.random().toString(36).substring(2, 8)}`;
+    }
+    await prisma.recipe.update({
+      where: { id: recipe.id },
+      data: {
+        title: title !== void 0 ? title : void 0,
+        description: description !== void 0 ? description : void 0,
+        image: image !== void 0 ? image : void 0,
+        momento: Array.isArray(momento) ? momento : void 0,
+        tipo_prato: Array.isArray(tipo_prato) ? tipo_prato : void 0,
+        base_alimento: Array.isArray(base_alimento) ? base_alimento : void 0,
+        origem: origem !== void 0 ? origem : void 0,
+        time: time !== void 0 ? time : void 0,
+        prepTime: prepTime !== void 0 ? prepTime : void 0,
+        dietType: dietType !== void 0 ? dietType : void 0,
+        servings: servings !== void 0 ? servings : void 0,
+        difficulty: difficulty !== void 0 ? difficulty : void 0,
+        custo_estimado: custo_estimado !== void 0 ? custo_estimado : void 0,
+        instructions: Array.isArray(instructions) ? instructions : void 0,
+        isClassic: typeof isClassic === "boolean" ? isClassic : void 0,
+        slug
+      }
+    });
+    if (ingredients !== void 0 && Array.isArray(ingredients)) {
+      await prisma.recipeIngredient.deleteMany({
+        where: { recipeId: recipe.id }
+      });
+      for (const ing of ingredients) {
+        let name = "";
+        let qtyStr = "";
+        let group = "Outros";
+        if (typeof ing === "string") {
+          name = ing.trim();
+        } else if (ing && typeof ing === "object") {
+          name = (ing.name || "").trim();
+          qtyStr = ing.quantity || "";
+          group = ing.group || "Outros";
+        }
+        if (!name) continue;
+        const foodItem = await prisma.globalFoodItem.upsert({
+          where: { name },
+          update: {},
+          create: {
+            name,
+            category: group,
+            source: "CUSTOM"
+          }
+        });
+        const { quantity, unit } = parseQuantityAndUnit(qtyStr);
+        await prisma.recipeIngredient.create({
+          data: {
+            recipeId: recipe.id,
+            foodItemId: foodItem.id,
+            quantity,
+            unit,
+            preparationMode: group !== "Outros" ? group : null
+          }
+        });
+      }
+    }
+    const updatedRecipe = await prisma.recipe.findUnique({
+      where: { id: recipe.id },
+      include: recipeInclude
+    });
+    res.json(formatRecipeResponse(updatedRecipe));
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao atualizar receita:", error);
+    res.status(500).json({ error: "Erro interno ao atualizar receita" });
+  }
+});
+dishAlchemistsRouter.delete("/recipes/:id", authenticateFirebase, async (req, res) => {
+  try {
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!recipe) {
+      return res.status(404).json({ error: "Receita n\xE3o encontrada" });
+    }
+    const user = await prisma.user.findUnique({
+      where: { uid: req.user.uid }
+    });
+    if (!user) {
+      return res.status(404).json({ error: "Usu\xE1rio n\xE3o encontrado" });
+    }
+    if (recipe.ownerId !== user.id && user.role !== "ADMIN") {
+      return res.status(403).json({ error: "Acesso negado para remover esta receita" });
+    }
+    await prisma.recipeIngredient.deleteMany({
+      where: { recipeId: recipe.id }
+    });
+    await prisma.recipe.delete({
+      where: { id: recipe.id }
+    });
+    res.json({ success: true, message: "Receita deletada com sucesso" });
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao deletar receita:", error);
+    res.status(500).json({ error: "Erro interno ao deletar receita" });
+  }
+});
+dishAlchemistsRouter.get("/ingredients", authenticateFirebase, async (req, res) => {
+  try {
+    const TACO_API_BASE = process.env.TACO_API_BASE || "https://taco-api.netlify.app/api/v1";
+    const response = await globalThis.fetch(`${TACO_API_BASE}/food`);
+    if (!response.ok) {
+      throw new Error(`Erro API TACO: ${response.status}`);
+    }
+    const foods = await response.json();
+    const ingredients = foods.map((food) => ({
+      id: `taco_${food.id}`,
+      name: food.description,
+      category: `Categoria ${food.category_id}`,
+      taco_id: food.id,
+      default_unit: "g"
+    }));
+    res.json(ingredients);
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao buscar ingredientes:", error);
+    res.status(500).json({ error: "Erro interno ao buscar ingredientes" });
+  }
+});
+dishAlchemistsRouter.post("/nutrition/calculate", authenticateFirebase, async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+    if (!ingredients || !Array.isArray(ingredients)) {
+      return res.status(400).json({ error: "Array de ingredients obrigat\xF3rio" });
+    }
+    const result = await NutritionalEngineService.calculateRecipeNutrition(ingredients);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error("[DishAlchemists API] Erro ao calcular nutri\xE7\xE3o:", error);
+    res.status(500).json({ success: false, error: "Erro interno no motor nutricional" });
+  }
+});
+
+// src/infra/api/publicRecipesRouter.ts
+import { Router as Router2 } from "express";
+var publicRecipesRouter = Router2();
+var authenticateApiKey = (req, res, next) => {
+  const apiKey = process.env.APP_API_KEY;
+  if (!apiKey || apiKey === "" || apiKey === "your_app_api_key_here") {
+    return next();
+  }
+  const clientKey = req.headers["x-api-key"];
+  if (clientKey === apiKey) {
+    return next();
+  }
+  res.status(401).json({ error: "Unauthorized: Invalid or missing API Key" });
+};
+publicRecipesRouter.use(authenticateApiKey);
+publicRecipesRouter.get("/recipes", async (req, res) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+    const page = Math.max(parseInt(req.query.page) || 1, 1);
+    const skip = (page - 1) * limit;
+    const search = req.query.search || "";
+    const category = req.query.category || "";
+    const difficulty = req.query.difficulty || "";
+    const where = {};
+    if (search) {
+      where.title = { contains: search, mode: "insensitive" };
+    }
+    if (category) {
+      where.OR = [
+        { tipo_prato: { has: category } },
+        { momento: { has: category } },
+        { base_alimento: { has: category } }
+      ];
+    }
+    if (difficulty) {
+      where.difficulty = difficulty;
+    }
+    const [recipes, total] = await Promise.all([
+      prisma.recipe.findMany({
+        where,
+        omit: { instructions: true },
+        include: {
+          recipeIngredients: {
+            include: { foodItem: true }
+          },
+          owner: {
+            select: { displayName: true, photoURL: true }
+          }
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit
+      }),
+      prisma.recipe.count({ where })
+    ]);
+    const formattedRecipes = recipes.map(formatRecipeResponse);
+    res.json({
+      data: formattedRecipes,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error("[Public API] Error listing recipes:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+publicRecipesRouter.get("/recipes/:id", async (req, res) => {
+  try {
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: req.params.id },
+      include: {
+        recipeIngredients: {
+          include: { foodItem: true }
+        },
+        owner: {
+          select: { displayName: true, photoURL: true }
+        }
+      }
+    });
+    if (!recipe) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+    res.json({ data: formatRecipeResponse(recipe) });
+  } catch (error) {
+    console.error("[Public API] Error fetching recipe:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+publicRecipesRouter.get("/search", async (req, res) => {
+  try {
+    const q = req.query.q || "";
+    const limit = Math.min(parseInt(req.query.limit) || 10, 50);
+    if (!q || q.length < 2) {
+      return res.status(400).json({ error: 'Query "q" must be at least 2 characters' });
+    }
+    const recipes = await prisma.recipe.findMany({
+      where: {
+        OR: [
+          { title: { contains: q, mode: "insensitive" } },
+          { description: { contains: q, mode: "insensitive" } }
+        ]
+      },
+      omit: { instructions: true },
+      include: {
+        recipeIngredients: {
+          include: { foodItem: true }
+        },
+        owner: {
+          select: { displayName: true, photoURL: true }
+        }
+      },
+      orderBy: { rating: "desc" },
+      take: limit
+    });
+    res.json({
+      data: recipes.map(formatRecipeResponse),
+      total: recipes.length
+    });
+  } catch (error) {
+    console.error("[Public API] Error searching recipes:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+publicRecipesRouter.get("/categories", async (_req, res) => {
+  try {
+    const recipes = await prisma.recipe.findMany({
+      select: { tipo_prato: true, base_alimento: true, momento: true }
+    });
+    const categories = /* @__PURE__ */ new Set();
+    const bases = /* @__PURE__ */ new Set();
+    const moments = /* @__PURE__ */ new Set();
+    recipes.forEach((r) => {
+      r.tipo_prato.forEach((c) => categories.add(c));
+      r.base_alimento.forEach((b) => bases.add(b));
+      r.momento.forEach((m) => moments.add(m));
+    });
+    res.json({
+      tipo_prato: Array.from(categories).sort(),
+      base_alimento: Array.from(bases).sort(),
+      momento: Array.from(moments).sort()
+    });
+  } catch (error) {
+    console.error("[Public API] Error fetching categories:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 // server.ts
 var firecrawlKey = process.env.FIRECRAWL_API_KEY;
@@ -1819,15 +2746,22 @@ var authenticateAPI = (req, res, next) => {
 };
 var app = express();
 var PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
+app.use(cors({
+  origin: "*",
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization", "x-api-key"]
+}));
 app.use(express.json());
 registerMcpRoutes(app);
+app.use("/api", dishAlchemistsRouter);
+app.use("/api/v1/public", publicRecipesRouter);
 app.post("/api/presence", async (req, res) => {
   try {
     const { uid, isOnline, displayName, email, photoURL } = req.body;
     if (!uid) {
       return res.status(400).json({ error: "uid is required" });
     }
-    const db = getFirestore4();
+    const db = getFirestore5();
     await db.collection("users").doc(uid).set({
       isOnline,
       lastSeen: FieldValue2.serverTimestamp(),
@@ -1909,7 +2843,7 @@ app.post("/api/admin/check-keys", authenticateAPI, async (req, res) => {
 });
 app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) => {
   try {
-    const db = getFirestore4();
+    const db = getFirestore5();
     const recipesRef = db.collection("recipes");
     const snapshot = await recipesRef.get();
     console.log(`[Migration] Iniciando migra\xE7\xE3o e sincroniza\xE7\xE3o em nuvem para ${snapshot.size} receitas...`);
@@ -2101,7 +3035,7 @@ app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
     return res.status(400).json({ error: "Texto e SenderId s\xE3o obrigat\xF3rios." });
   }
   try {
-    const db = getFirestore4();
+    const db = getFirestore5();
     console.log(`[Lounge API] Iniciando modera\xE7\xE3o para: "${text.substring(0, 30)}..."`);
     let status = await ModerationService.validateCulinaryRelevance(text);
     console.log(`[Lounge API] Resultado da modera\xE7\xE3o: ${status}`);
@@ -2214,7 +3148,7 @@ app.post("/api/lounge/generate-ata", authenticateAPI, async (req, res) => {
 });
 app.get("/api/admin/analytics", authenticateAPI, async (req, res) => {
   try {
-    const db = getFirestore4();
+    const db = getFirestore5();
     const now = /* @__PURE__ */ new Date();
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1e3);
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1e3);
@@ -2399,9 +3333,32 @@ app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res
     res.status(500).json({ error: error.message });
   }
 });
+app.get("/api/chat/history", authenticateAPI, async (req, res) => {
+  try {
+    const userId = req.query.userId;
+    if (!userId) {
+      return res.status(400).json({ error: "userId is required" });
+    }
+    const db = getFirestore5();
+    const snapshot = await db.collection("copilot_chat_history").where("userId", "==", userId).orderBy("timestamp", "desc").limit(6).get();
+    const history = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        sender: data.role === "user" ? "user" : "ai",
+        text: data.text,
+        timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : /* @__PURE__ */ new Date()
+      };
+    }).reverse();
+    res.json({ success: true, history });
+  } catch (error) {
+    console.error("[Chat History] Error fetching chat history:", error);
+    res.status(500).json({ error: "Failed to fetch history" });
+  }
+});
 app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
   try {
-    const { question, history, userId } = req.body;
+    const { question, history, userId, userName } = req.body;
     if (!question) {
       return res.status(400).json({ error: "question is required" });
     }
@@ -2409,7 +3366,22 @@ app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
       role: t.role === "user" ? "user" : "assistant",
       text: typeof t.text === "string" ? t.text.substring(0, 1e3) : ""
     })) : [];
-    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory, 5, userId);
+    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory, 5, userId, userName);
+    if (userId) {
+      const db = getFirestore5();
+      await db.collection("copilot_chat_history").add({
+        userId,
+        role: "user",
+        text: question.substring(0, 2e3),
+        timestamp: new Date(Date.now() - 10)
+      });
+      await db.collection("copilot_chat_history").add({
+        userId,
+        role: "assistant",
+        text: answer,
+        timestamp: /* @__PURE__ */ new Date()
+      });
+    }
     res.json({ success: true, answer });
   } catch (error) {
     console.error("[Chat RAG API] Erro:", error);
@@ -2446,7 +3418,7 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
     }
     let user = await prisma.user.findUnique({ where: { uid } });
     if (!user) {
-      const db = getFirestore4();
+      const db = getFirestore5();
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
@@ -2479,7 +3451,7 @@ app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
     const result = await GamificationService.processEvent(uid, eventType);
     if (result.xpGained > 0) {
       try {
-        const db = getFirestore4();
+        const db = getFirestore5();
         const FieldValue3 = (await import("firebase-admin/firestore")).FieldValue;
         const moedasGanhas = result.xpGained / 10;
         await db.collection("users").doc(uid).update({
@@ -2539,7 +3511,7 @@ app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
   try {
     let user = await prisma.user.findUnique({ where: { uid } });
     if (!user) {
-      const db = getFirestore4();
+      const db = getFirestore5();
       const userDoc = await db.collection("users").doc(uid).get();
       if (userDoc.exists) {
         const userData = userDoc.data();
@@ -2660,7 +3632,7 @@ app.delete("/api/admin/avatars/:id", authenticateAPI, async (req, res) => {
       return res.status(404).json({ error: "Avatar n\xE3o encontrado." });
     }
     await prisma.avatarOption.delete({ where: { id } });
-    const db = getFirestore4();
+    const db = getFirestore5();
     const snapshot = await db.collection("users").where("photoURL", "==", avatar.urlVercelBlob).get();
     if (!snapshot.empty) {
       const batch = db.batch();
@@ -2992,16 +3964,67 @@ async function startServer() {
   RagBackendService.syncRecipesToPostgreSQL().catch((err) => {
     console.error("[Startup] Falha na sincroniza\xE7\xE3o de receitas para RAG:", err);
   });
+  const serveRecipeHTML = async (req, res, next, vite) => {
+    try {
+      const { slug, id } = req.params;
+      const db = getFirestore5();
+      let recipeData = null;
+      if (slug) {
+        const snapshot = await db.collection("recipes").where("slug", "==", slug).limit(1).get();
+        if (!snapshot.empty) recipeData = snapshot.docs[0].data();
+      } else if (id) {
+        const doc = await db.collection("recipes").doc(id).get();
+        if (doc.exists) recipeData = doc.data();
+      }
+      let template = "";
+      if (process.env.NODE_ENV !== "production" && vite) {
+        template = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+      } else {
+        template = fs.readFileSync(path.join(process.cwd(), "dist", "index.html"), "utf-8");
+      }
+      if (recipeData) {
+        const title = `${recipeData.title} - Alquimia do Prato`;
+        const desc = recipeData.description || "Confira esta deliciosa receita no Alquimia do Prato!";
+        const img = recipeData.image ? recipeData.image.startsWith("http") ? recipeData.image : `https://alquimiadoprato.com${recipeData.image}` : "https://alquimiadoprato.com/pwa-icon-512.png";
+        const metaTags = `
+    <title>${title}</title>
+    <meta property="og:title" content="${title}" />
+    <meta property="og:description" content="${desc}" />
+    <meta property="og:image" content="${img}" />
+    <meta property="og:type" content="article" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="description" content="${desc}" />`;
+        template = template.replace(/<title>.*?<\/title>/, metaTags);
+      }
+      res.status(200).set({ "Content-Type": "text/html" }).end(template);
+    } catch (e) {
+      next(e);
+    }
+  };
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");
     const vite = await createViteServer({
       server: { middlewareMode: true },
-      appType: "spa"
+      appType: "custom"
+      // Changed from "spa" so Vite doesn't auto-handle index.html for us
     });
+    app.get(["/receita/:slug", "/recipe/:id"], (req, res, next) => serveRecipeHTML(req, res, next, vite));
     app.use(vite.middlewares);
+    app.use("*", async (req, res, next) => {
+      try {
+        let template = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        vite.ssrFixStacktrace(e);
+        next(e);
+      }
+    });
   } else {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
+    app.use(express.static(distPath, { index: false }));
+    app.get(["/receita/:slug", "/recipe/:id"], (req, res, next) => serveRecipeHTML(req, res, next));
     app.get("*", (req, res) => {
       res.sendFile(path.join(distPath, "index.html"));
     });

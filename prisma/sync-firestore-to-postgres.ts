@@ -202,6 +202,7 @@ async function sync() {
             rating: typeof rData.rating === 'number' ? rData.rating : 4.5,
             reviewsCount: typeof rData.reviewsCount === 'number' ? rData.reviewsCount : 0,
             isClassic: typeof rData.isClassic === 'boolean' ? rData.isClassic : false,
+            slug: rData.slug || null,
             ownerId: pgOwnerId,
             createdAt,
             updatedAt
