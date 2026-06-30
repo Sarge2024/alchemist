@@ -67,5 +67,6 @@ Para contornar o peso da busca vetorial, o painel do Lounge consome um **Índice
 Abaixo estão os guias detalhados salvos na pasta `specs/` que expandem a documentação técnica de partes específicas do projeto:
 
 - 📄 [001 - Especificação: Fast Routing Service](001-fast-routing-service.md)
+- 📄 [002 - Especificação: API Pública de Receitas (Conexão Receitas DB)](002-api-recipes-specification.md)
 
 *(Novas implementações complexas deverão ser documentadas nesta pasta e referenciadas no índice acima).*
