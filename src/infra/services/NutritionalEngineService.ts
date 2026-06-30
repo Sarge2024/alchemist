@@ -68,6 +68,8 @@ export class NutritionalEngineService {
            } else {
                const standardUnit = this.normalizeMeasureName(item.unit);
                
+               const searchUnits = standardUnit === 'UNIDADE' ? ['UNIDADE', 'INTEIRO'] : [standardUnit];
+               
                // Busca fator de conversão na tabela CulinaryMeasure
                const measure = await prisma.culinaryMeasure.findFirst({
                  where: {
@@ -75,7 +77,7 @@ export class NutritionalEngineService {
                      contains: item.name,
                      mode: 'insensitive'
                    },
-                   measureName: standardUnit
+                   measureName: { in: searchUnits }
                  }
                });
                
@@ -175,26 +177,65 @@ export class NutritionalEngineService {
    */
   private static async fetchLocalData(name: string): Promise<any | null> {
     try {
-      // Tenta busca exata (case insensitive) ou que contenha o termo
-      const item = await prisma.globalFoodItem.findFirst({
+      const items = await prisma.globalFoodItem.findMany({
         where: {
           name: {
             contains: name,
             mode: 'insensitive'
           }
-        }
+        },
+        take: 20
       });
       
-      if (item) {
+      if (items.length > 0) {
+        const nameLower = name.toLowerCase();
+        
+        items.sort((a, b) => {
+          // Prioriza fontes confiáveis PRIMEIRO
+          const getSourcePriority = (item: any) => {
+            if (item.source === 'TACO') return 4;
+            if (item.source === 'USDA') return 3;
+            // Se for CUSTOM, mas tiver dados válidos, damos prioridade média
+            if (item.source === 'CUSTOM' && (item.calories > 0 || item.protein > 0)) return 2;
+            return 1; // NOT_FOUND ou CUSTOM zerado
+          };
+          
+          const aPriority = getSourcePriority(a);
+          const bPriority = getSourcePriority(b);
+          
+          // NOT_FOUND e zerados nunca devem ganhar de TACO/USDA, mesmo se o nome for exato
+          if (aPriority !== bPriority && (aPriority === 1 || bPriority === 1)) {
+             return bPriority - aPriority;
+          }
+
+          // Prioriza correspondência exata depois de garantir fontes viáveis
+          const aExact = a.name.toLowerCase() === nameLower;
+          const bExact = b.name.toLowerCase() === nameLower;
+          if (aExact && !bExact) return -1;
+          if (!aExact && bExact) return 1;
+
+          if (aPriority !== bPriority) return bPriority - aPriority;
+          
+          // Como critério de desempate, escolhe o nome mais curto (ex: "ovo" vs "ovo de codorna") se a busca foi por "ovo"
+          return a.name.length - b.name.length;
+        });
+
+        const bestMatch = items[0];
+
+        // Se o melhor match for um item zerado/NOT_FOUND, retornamos null para tentar buscar na USDA API
+        if (bestMatch.source === 'NOT_FOUND' || (bestMatch.source === 'CUSTOM' && bestMatch.calories === 0 && bestMatch.protein === 0)) {
+          return null;
+        }
+
         return {
-          source: item.source,
-          id: item.externalId,
-          name: item.name,
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbohydrates,
-          fat: item.lipids,
-          micronutrients: item.micronutrients
+          source: bestMatch.source,
+          id: bestMatch.externalId,
+          name: bestMatch.name,
+          calories: bestMatch.calories,
+          protein: bestMatch.protein,
+          carbs: bestMatch.carbohydrates,
+          fat: bestMatch.lipids,
+          micronutrients: bestMatch.micronutrients
         };
       }
       return null;

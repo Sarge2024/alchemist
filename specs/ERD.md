@@ -51,9 +51,9 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     Float rating 
     Int reviewsCount 
     Boolean isClassic 
-    String slug "❓"
     DateTime createdAt 
     DateTime updatedAt 
+    String slug "❓"
     }
   
 
@@ -70,6 +70,12 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String baseUnit 
     Float baseQuantity 
     Json micronutrients "❓"
+    String brand "❓"
+    String barcode "❓"
+    Float portionSize "❓"
+    String portionUnit "❓"
+    String imageUrl "❓"
+    String allergens 
     }
   
 
@@ -127,10 +133,10 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String id "🗝️"
     String title 
     String content 
-    String url "❓"
     String type 
     DateTime createdAt 
     DateTime updatedAt 
+    String url "❓"
     }
   
 
@@ -183,13 +189,13 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
   
     "User" |o--|| "Role" : "enum:role"
     "Recipe" }o--|| "User" : "owner"
-    "RecipeIngredient" }o--|| "Recipe" : "recipe"
     "RecipeIngredient" }o--|| "GlobalFoodItem" : "foodItem"
+    "RecipeIngredient" }o--|| "Recipe" : "recipe"
     "UserGamificationProfile" |o--|| "Grau" : "enum:grau"
     "UserGamificationProfile" |o--|| "User" : "user"
     "UserInteraction" }o--|| "User" : "user"
-    "UserBadge" }o--|| "User" : "user"
     "UserBadge" }o--|| "Badge" : "badge"
+    "UserBadge" }o--|| "User" : "user"
     "UserSession" }o--|| "User" : "user"
     "PageAccess" }o--|| "User" : "user"
     "UnansweredQuery" }o--|o "User" : "user"

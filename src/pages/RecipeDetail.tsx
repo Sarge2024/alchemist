@@ -958,28 +958,33 @@ export default function RecipeDetail() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
-        {/* Gallery/Image */}
-        <motion.div 
-          initial={{ x: -20, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          className="rounded-3xl overflow-hidden shadow-2xl h-[500px] bg-surface-container-low"
-        >
-          {recipe.image ? (
-            <img 
-              src={getAssetUrl(recipe.image)} 
-              alt={recipe.title} 
-              className="w-full h-full object-cover" 
-              referrerPolicy="no-referrer" 
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = ASSETS.DEFAULT_RECIPE;
-              }}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center text-stone-300 font-bold uppercase tracking-widest text-4xl">
-              Alquimia
-            </div>
-          )}
-        </motion.div>
+        {/* Gallery/Image and Nutritional Data */}
+        <div className="flex flex-col gap-6">
+          <motion.div 
+            initial={{ x: -20, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            className="rounded-3xl overflow-hidden shadow-2xl h-[500px] bg-surface-container-low flex-shrink-0"
+          >
+            {recipe.image ? (
+              <img 
+                src={getAssetUrl(recipe.image)} 
+                alt={recipe.title} 
+                className="w-full h-full object-cover" 
+                referrerPolicy="no-referrer" 
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = ASSETS.DEFAULT_RECIPE;
+                }}
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-stone-300 font-bold uppercase tracking-widest text-4xl">
+                Alquimia
+              </div>
+            )}
+          </motion.div>
+
+          {/* Tabela Nutricional IA + TACO Compacta */}
+          <NutritionalData recipe={recipe} />
+        </div>
 
         {/* Content Header */}
         <div className="flex flex-col justify-center space-y-6">
@@ -1141,8 +1146,7 @@ export default function RecipeDetail() {
         </div>
       </div>
 
-      {/* Tabela Nutricional IA + TACO */}
-      <NutritionalData recipe={recipe} />
+      {/* Removed separate NutritionalData since it is now below the image */}
 
       {/* Alchemist Sauce Pointer */}
       {mentionsSauce && (

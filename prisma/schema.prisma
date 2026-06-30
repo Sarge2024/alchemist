@@ -1,133 +1,124 @@
-datasource db {
-  provider   = "postgresql"
-  extensions = [pgvector(map: "vector"), pgcrypto, uuid_ossp(map: "uuid-ossp"), pg_stat_statements]
-}
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
-model User {
-  id                   String                  @id @default(uuid())
-  uid                  String                  @unique // Firebase Auth UID (legacy) ou Supabase Auth ID
-  displayName          String
-  email                String                  @unique
-  photoURL             String?
-  whatsapp             String?
-  state                String
-  country              String
-  role                 Role                    @default(USER)
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-  
-  recipes              Recipe[]
-  gamificationProfile  UserGamificationProfile?
-  badges               UserBadge[]
-  interactions         UserInteraction[]
-  sessions             UserSession[]
-  pageAccesses         PageAccess[]
-  unansweredQueries    UnansweredQuery[]
+generator erd {
+  provider = "prisma-erd-generator"
+  output   = "../specs/ERD.md"
 }
 
-enum Role {
-  USER
-  COLLABORATOR
-  ADMIN
+datasource db {
+  provider   = "postgresql"
+  extensions = [pg_stat_statements, pgcrypto, uuid_ossp(map: "uuid-ossp"), vector]
+}
+
+model User {
+  id                  String                   @id @default(uuid())
+  uid                 String                   @unique
+  displayName         String
+  email               String                   @unique
+  photoURL            String?
+  whatsapp            String?
+  state               String
+  country             String
+  role                Role                     @default(USER)
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
+  pageAccesses        PageAccess[]
+  recipes             Recipe[]
+  unansweredQueries   UnansweredQuery[]
+  badges              UserBadge[]
+  gamificationProfile UserGamificationProfile?
+  interactions        UserInteraction[]
+  sessions            UserSession[]
 }
 
 model Recipe {
-  id              String         @id @default(uuid())
-  title           String
-  description     String?
-  image           String?
-  momento         String[]
-  tipo_prato      String[]
-  base_alimento   String[]
-  origem          String?
-  time            String?
-  prepTime        String?
-  dietType        String?
-  servings        String?
-  difficulty      String?
-  custo_estimado  String?
-  instructions    String[]
-  rating          Float          @default(4.5)
-  reviewsCount    Int            @default(0)
-  isClassic       Boolean        @default(false)
-  slug            String?        @unique
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
-
-  ownerId         String
-  owner           User           @relation(fields: [ownerId], references: [id])
+  id                String             @id @default(uuid())
+  title             String
+  description       String?
+  image             String?
+  momento           String[]
+  tipo_prato        String[]
+  base_alimento     String[]
+  origem            String?
+  time              String?
+  prepTime          String?
+  dietType          String?
+  servings          String?
+  difficulty        String?
+  custo_estimado    String?
+  instructions      String[]
+  rating            Float              @default(4.5)
+  reviewsCount      Int                @default(0)
+  isClassic         Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  ownerId           String
+  slug              String?            @unique
+  owner             User               @relation(fields: [ownerId], references: [id])
   recipeIngredients RecipeIngredient[]
 }
 
 model GlobalFoodItem {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  category        String?
-  source          String   @default("CUSTOM") // TACO, USDA, CUSTOM
-  externalId      String?
-  calories        Float    @default(0)
-  protein         Float    @default(0)
-  carbohydrates   Float    @default(0)
-  lipids          Float    @default(0)
-  baseUnit        String   @default("g")
-  baseQuantity    Float    @default(100)
-  micronutrients  Json?    // Optional JSON for vitamins, minerals, etc.
-  
+  id                String             @id @default(uuid())
+  name              String             @unique
+  category          String?
+  source            String             @default("CUSTOM")
+  externalId        String?
+  calories          Float              @default(0)
+  protein           Float              @default(0)
+  carbohydrates     Float              @default(0)
+  lipids            Float              @default(0)
+  baseUnit          String             @default("g")
+  baseQuantity      Float              @default(100)
+  micronutrients    Json?
+  brand             String?
+  barcode           String?            @unique
+  portionSize       Float?
+  portionUnit       String?
+  imageUrl          String?
+  allergens         String[]
   recipeIngredients RecipeIngredient[]
 }
 
 model RecipeIngredient {
-  id              String   @id @default(uuid())
+  id              String         @id @default(uuid())
   recipeId        String
-  recipe          Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
-  
   foodItemId      String
-  foodItem        GlobalFoodItem @relation(fields: [foodItemId], references: [id])
-  
   quantity        Float
   unit            String
-  preparationMode String?  // cru, cozido, assado, frito
-  preparationTime Float?   // Tempo de permanência no método de preparo (em minutos)
+  preparationMode String?
+  preparationTime Float?
+  foodItem        GlobalFoodItem @relation(fields: [foodItemId], references: [id])
+  recipe          Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 }
 
-// Modelos de Gamificação (adicionados conforme pedido original)
 model UserGamificationProfile {
-  id         String   @id @default(uuid())
-  nivel      Int      @default(1)
-  grau       Grau     @default(APRENDIZ)
-  xp_total   Int      @default(0)
-  meta_nivel Int      @default(100) // Campo próprio para determinar a pontuação necessária para subir de nível
-  userId     String   @unique
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String @id @default(uuid())
+  nivel      Int    @default(1)
+  grau       Grau   @default(APRENDIZ)
+  xp_total   Int    @default(0)
+  userId     String @unique
+  meta_nivel Int    @default(100)
+  user       User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model UserInteraction {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  eventType String   // e.g., 'COLLABORATION_MESSAGE', 'RECIPE_PUBLISHED_PHOTO'
+  eventType String
   count     Int      @default(0)
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, eventType])
 }
 
-enum Grau {
-  APRENDIZ
-  ASSISTENTE
-  ALQUIMISTA
-  PERITO
-  MESTRE_ALQUIMISTA
-}
-
 model Badge {
   id              String      @id @default(uuid())
-  codigo_evento   String      @unique // Ex: 'lounge_mensagens_prata'
+  codigo_evento   String      @unique
   nome            String
   descricao       String?
   url_vercel_blob String?
@@ -137,31 +128,31 @@ model Badge {
 model UserBadge {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   badgeId   String
-  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
   timestamp DateTime @default(now())
+  badge     Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, badgeId]) // Previne duplicidade da mesma medalha pro mesmo usuário (Idempotência)
+  @@unique([userId, badgeId])
 }
 
 model AvatarOption {
-  id             String   @id @default(uuid())
-  codigoAvatar   String   @unique // Ex: "TIER2_8A2BD"
-  tierMinimo     String   // "1", "2", "3", "4", "5"
-  urlVercelBlob  String   // URL real gerada pelo storage da Vercel
-  criadoEm       DateTime @default(now())
+  id            String   @id @default(uuid())
+  codigoAvatar  String   @unique
+  tierMinimo    String
+  urlVercelBlob String
+  criadoEm      DateTime @default(now())
 }
 
 model SemanticDocument {
-  id        String                      @id @default(uuid())
+  id        String                 @id @default(uuid())
   title     String
-  content   String                      // Text content of the chunk/chat/article
-  url       String?                     // Optional URL link to the original resource
-  type      String                      // 'article' | 'presentation' | 'chat_summary'
-  embedding Unsupported("vector(768)")? // Vector output from text-embedding-004
-  createdAt DateTime                    @default(now())
-  updatedAt DateTime                    @updatedAt
+  content   String
+  type      String
+  embedding Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+  url       String?
 
   @@index([type])
 }
@@ -183,20 +174,20 @@ model LibraryItem {
 model UserSession {
   id              String   @id @default(uuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   startTime       DateTime @default(now())
   lastPing        DateTime @default(now())
   durationSeconds Int      @default(0)
-  
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   @@index([userId])
 }
 
 model PageAccess {
   id        String   @id @default(uuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   path      String
   timestamp DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
@@ -204,24 +195,33 @@ model PageAccess {
 model UnansweredQuery {
   id        String   @id @default(uuid())
   userId    String?
-  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   queryText String
   context   String?
-  status    String   @default("PENDING") // PENDING, RESOLVED
+  status    String   @default("PENDING")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User?    @relation(fields: [userId], references: [id])
 }
 
 model CulinaryMeasure {
-  id              String   @id @default(uuid())
-  ingredientName  String
-  measureName     String
-  weightInGrams   Float
-  
+  id             String @id @default(uuid())
+  ingredientName String
+  measureName    String
+  weightInGrams  Float
+
   @@unique([ingredientName, measureName])
 }
 
-generator erd {
-  provider = "prisma-erd-generator"
-  output   = "../specs/ERD.md"
+enum Role {
+  USER
+  COLLABORATOR
+  ADMIN
+}
+
+enum Grau {
+  APRENDIZ
+  ASSISTENTE
+  ALQUIMISTA
+  PERITO
+  MESTRE_ALQUIMISTA
 }
