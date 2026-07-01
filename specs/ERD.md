@@ -24,6 +24,16 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String email 
     String photoURL "❓"
     String whatsapp "❓"
+    String birthDate "❓"
+    String gender "❓"
+    String gastronomyRelation 
+    String primaryGoals 
+    String mainMotivation "❓"
+    String dietaryRestrictions 
+    String dietaryPreference "❓"
+    String rejectedIngredients 
+    String infrastructureLevel "❓"
+    String kitchenRoutine "❓"
     String state 
     String country 
     Role role 

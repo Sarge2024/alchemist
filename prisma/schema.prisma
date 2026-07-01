@@ -20,6 +20,16 @@ model User {
   email               String                   @unique
   photoURL            String?
   whatsapp            String?
+  birthDate           String?
+  gender              String?
+  gastronomyRelation  String[]
+  primaryGoals        String[]
+  mainMotivation      String?
+  dietaryRestrictions String[]
+  dietaryPreference   String?
+  rejectedIngredients String[]
+  infrastructureLevel String?
+  kitchenRoutine      String?
   state               String
   country             String
   role                Role                     @default(USER)
