@@ -17,6 +17,9 @@ export default function RegisterCollaborator() {
   
   const [authMethod, setAuthMethod] = useState<AuthMethod>('select');
   const [emailData, setEmailData] = useState({ email: '', password: '' });
+  const [currentStep, setCurrentStep] = useState(1);
+  const [rejectedIngredientsInput, setRejectedIngredientsInput] = useState('');
+  
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -24,7 +27,49 @@ export default function RegisterCollaborator() {
     state: '',
     country: 'Brasil',
     photoURL: '',
+    birthDate: '',
+    gender: '',
+    gastronomyRelation: [] as string[],
+    primaryGoals: [] as string[],
+    mainMotivation: '',
+    dietaryRestrictions: [] as string[],
+    dietaryPreference: '',
+    rejectedIngredients: [] as string[],
+    infrastructureLevel: '',
+    kitchenRoutine: ''
   });
+
+  const toggleArrayItem = (field: 'gastronomyRelation' | 'primaryGoals' | 'dietaryRestrictions', value: string, max?: number) => {
+    setFormData(prev => {
+      const current = prev[field] || [];
+      if (current.includes(value)) {
+        return { ...prev, [field]: current.filter(item => item !== value) };
+      }
+      if (max && current.length >= max) return prev;
+      return { ...prev, [field]: [...current, value] };
+    });
+  };
+
+  const handleAddRejectedIngredient = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && rejectedIngredientsInput.trim()) {
+      e.preventDefault();
+      const newTag = rejectedIngredientsInput.trim().toLowerCase();
+      if (!formData.rejectedIngredients.includes(newTag)) {
+        setFormData(prev => ({
+          ...prev,
+          rejectedIngredients: [...prev.rejectedIngredients, newTag]
+        }));
+      }
+      setRejectedIngredientsInput('');
+    }
+  };
+
+  const removeRejectedIngredient = (tag: string) => {
+    setFormData(prev => ({
+      ...prev,
+      rejectedIngredients: prev.rejectedIngredients.filter(t => t !== tag)
+    }));
+  };
   
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -175,6 +220,11 @@ export default function RegisterCollaborator() {
 
   const handleSubmitProfile = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (currentStep < 4) {
+      setCurrentStep(prev => prev + 1);
+      return;
+    }
+    
     if (!user) {
       setError('Você precisa estar logado para completar seu cadastro.');
       return;
@@ -193,6 +243,16 @@ export default function RegisterCollaborator() {
         state: formData.state,
         country: formData.country,
         role: 'collaborator',
+        birthDate: formData.birthDate,
+        gender: formData.gender,
+        gastronomyRelation: formData.gastronomyRelation,
+        primaryGoals: formData.primaryGoals,
+        mainMotivation: formData.mainMotivation,
+        dietaryRestrictions: formData.dietaryRestrictions,
+        dietaryPreference: formData.dietaryPreference,
+        rejectedIngredients: formData.rejectedIngredients,
+        infrastructureLevel: formData.infrastructureLevel,
+        kitchenRoutine: formData.kitchenRoutine,
       };
 
       await userService.createUserProfile(profile);
@@ -462,139 +522,257 @@ export default function RegisterCollaborator() {
                     </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-6">
-                    {/* Name */}
-                    <div className="relative group">
-                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Nome Completo</label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
-                        <input
-                          type="text"
-                          name="displayName"
-                          value={formData.displayName}
-                          onChange={handleChange}
-                          className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300"
-                          placeholder="Como deseja ser chamado?"
-                          required
-                        />
-                      </div>
+                  {/* HEADER DO WIZARD */}
+                  <div className="flex items-center justify-between mb-8">
+                    <div className="flex gap-2">
+                      {[1, 2, 3, 4].map(step => (
+                        <div key={step} className={`h-2 rounded-full transition-all duration-300 ${currentStep === step ? 'w-8 bg-primary' : currentStep > step ? 'w-4 bg-primary/40' : 'w-4 bg-stone-200'}`} />
+                      ))}
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {/* Email (Read Only after Auth) */}
-                      <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">E-mail</label>
-                        <div className="relative">
-                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
-                          <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            disabled
-                            className="w-full pl-12 pr-4 py-4 bg-stone-100 border border-stone-200 rounded-2xl text-stone-500 cursor-not-allowed outline-none"
-                          />
-                        </div>
-                      </div>
-
-                      {/* WhatsApp */}
-                      <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">WhatsApp (Opcional)</label>
-                        <div className="relative">
-                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
-                          <input
-                            type="tel"
-                            name="whatsapp"
-                            value={formData.whatsapp}
-                            onChange={handleChange}
-                            className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300"
-                            placeholder="+55 00 00000-0000"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* State */}
-                      <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Estado</label>
-                        <div className="relative">
-                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
-                          <input
-                            type="text"
-                            name="state"
-                            value={formData.state}
-                            onChange={handleChange}
-                            className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300"
-                            placeholder="Ex: SP"
-                            required
-                          />
-                        </div>
-                      </div>
-
-                      {/* Country */}
-                      <div className="relative group">
-                        <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">País</label>
-                        <div className="relative">
-                          <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
-                          <input
-                            type="text"
-                            name="country"
-                            value={formData.country}
-                            onChange={handleChange}
-                            className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300"
-                            placeholder="Ex: Brasil"
-                            required
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Avatar Selection */}
-                    <div className="relative group">
-                      <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Avatar de Perfil</label>
-                      <div className="flex items-center gap-6 p-6 bg-stone-50 border border-stone-200 rounded-[2rem]">
-                        <div className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden bg-white border-4 border-stone-100 shadow-sm shrink-0 transition-transform duration-300 group-hover:scale-105">
-                          <Avatar 
-                            src={formData.photoURL} 
-                            alt={formData.displayName || "Avatar"} 
-                            size="lg"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        
-                        <div className="flex-1">
-                          <p className="text-sm text-stone-500 mb-4 leading-relaxed">
-                            {formData.photoURL 
-                              ? "Avatar selecionado! Deseja trocar?" 
-                              : "Escolha um avatar que represente sua identidade como alquimista."}
-                          </p>
-                          <button 
-                            type="button"
-                            onClick={() => setShowAvatarSelector(true)}
-                            className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-stone-200 rounded-xl text-xs font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50 hover:border-stone-300 transition-all cursor-pointer shadow-sm active:scale-95"
-                          >
-                            <User className="w-4 h-4 text-primary" />
-                            {formData.photoURL ? "Alterar Avatar" : "Selecionar Avatar"}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
+                    <span className="text-xs font-bold text-stone-400 uppercase tracking-widest">
+                      Passo {currentStep} de 4
+                    </span>
                   </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-5 bg-primary text-white rounded-2xl font-bold text-lg shadow-xl shadow-primary/20 hover:bg-primary-hover hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:scale-100"
-                  >
-                    {loading ? (
-                      <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    ) : (
-                      <>
-                        Confirmar Cadastro
-                        <ArrowRight className="w-5 h-5" />
-                      </>
+                  <div className="grid grid-cols-1 gap-6">
+                    {/* PASSO 1: IDENTIFICAÇÃO E PERFIL */}
+                    {currentStep === 1 && (
+                      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Nome Completo</label>
+                          <div className="relative">
+                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
+                            <input type="text" name="displayName" value={formData.displayName} onChange={handleChange} className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300" placeholder="Como deseja ser chamado?" required />
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="relative group">
+                            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">E-mail</label>
+                            <div className="relative">
+                              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400" />
+                              <input type="email" value={formData.email} disabled className="w-full pl-12 pr-4 py-4 bg-stone-100 border border-stone-200 rounded-2xl text-stone-500 cursor-not-allowed outline-none" />
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">WhatsApp</label>
+                            <div className="relative">
+                              <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
+                              <input type="tel" name="whatsapp" value={formData.whatsapp} onChange={handleChange} className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300" placeholder="+55 00 00000-0000" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="relative group">
+                            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Data de Nascimento</label>
+                            <input type="date" name="birthDate" value={formData.birthDate} onChange={handleChange} className="w-full px-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-stone-600" required />
+                          </div>
+                          <div className="relative group">
+                            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Gênero</label>
+                            <select name="gender" value={formData.gender} onChange={handleChange} className="w-full px-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-stone-600" required>
+                              <option value="">Selecione...</option>
+                              <option value="masculino">Masculino</option>
+                              <option value="feminino">Feminino</option>
+                              <option value="nao_binario">Não binário</option>
+                              <option value="nao_informar">Prefiro não informar</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="relative group">
+                            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Estado</label>
+                            <div className="relative">
+                              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
+                              <select name="state" value={formData.state} onChange={handleChange} className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all text-stone-600" required>
+                                <option value="">Selecione...</option>
+                                {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                                  <option key={uf} value={uf}>{uf}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                          <div className="relative group">
+                            <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">País</label>
+                            <div className="relative">
+                              <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-stone-400 group-focus-within:text-primary transition-colors" />
+                              <input type="text" name="country" value={formData.country} onChange={handleChange} className="w-full pl-12 pr-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300" required />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Sua Relação com a Gastronomia (Múltiplos)</label>
+                          <div className="space-y-3">
+                            {[
+                              { id: 'entusiasta', label: 'Entusiasta / Cozinho por hobby em casa' },
+                              { id: 'saude_rotina', label: 'Busco otimização de rotina, saúde e nutrição' },
+                              { id: 'proprietario', label: 'Proprietário / Gestor de negócio de alimentação' },
+                              { id: 'profissional', label: 'Profissional técnico (Chef, Consultor, Nutricionista)' },
+                              { id: 'estudante', label: 'Estudante da área gastronômica ou hoteleira' },
+                            ].map(opt => (
+                              <label key={opt.id} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${formData.gastronomyRelation.includes(opt.id) ? 'bg-primary/5 border-primary text-primary-hover font-medium' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}>
+                                <input type="checkbox" checked={formData.gastronomyRelation.includes(opt.id)} onChange={() => toggleArrayItem('gastronomyRelation', opt.id)} className="w-5 h-5 rounded text-primary focus:ring-primary" />
+                                <span className="text-sm">{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Avatar de Perfil</label>
+                          <div className="flex items-center gap-6 p-6 bg-stone-50 border border-stone-200 rounded-[2rem]">
+                            <div className="relative w-24 h-24 rounded-[1.5rem] overflow-hidden bg-white border-4 border-stone-100 shadow-sm shrink-0 transition-transform duration-300 group-hover:scale-105">
+                              <Avatar src={formData.photoURL} alt={formData.displayName || "Avatar"} size="lg" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-stone-500 mb-4 leading-relaxed">{formData.photoURL ? "Avatar selecionado! Deseja trocar?" : "Escolha um avatar que represente sua identidade como alquimista."}</p>
+                              <button type="button" onClick={() => setShowAvatarSelector(true)} className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-stone-200 rounded-xl text-xs font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50 hover:border-stone-300 transition-all cursor-pointer shadow-sm active:scale-95"><User className="w-4 h-4 text-primary" />{formData.photoURL ? "Alterar Avatar" : "Selecionar Avatar"}</button>
+                            </div>
+                          </div>
+                        </div>
+                      </motion.div>
                     )}
-                  </button>
+
+                    {/* PASSO 2: OBJETIVOS E HOOKS */}
+                    {currentStep === 2 && (
+                      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Principal Objetivo na Plataforma (Até 2)</label>
+                          <div className="space-y-3">
+                            {[
+                              { id: 'inovacao_tecnica', label: 'Criar pratos com alta precisão técnica e inovação' },
+                              { id: 'planejamento_nutricao', label: 'Planejar rotinas alimentares ou nutrição clínica' },
+                              { id: 'otimizacao_custos', label: 'Reduzir desperdício e otimizar custos' },
+                              { id: 'cultura_harmonizacao', label: 'Descobrir novas culturas, técnicas e harmonizações' },
+                              { id: 'catalogar_fichas', label: 'Organizar e catalogar minhas preparações e fichas técnicas' },
+                            ].map(opt => (
+                              <label key={opt.id} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${formData.primaryGoals.includes(opt.id) ? 'bg-primary/5 border-primary text-primary-hover font-medium' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'} ${!formData.primaryGoals.includes(opt.id) && formData.primaryGoals.length >= 2 ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                <input type="checkbox" checked={formData.primaryGoals.includes(opt.id)} onChange={() => toggleArrayItem('primaryGoals', opt.id, 2)} disabled={!formData.primaryGoals.includes(opt.id) && formData.primaryGoals.length >= 2} className="w-5 h-5 rounded text-primary focus:ring-primary" />
+                                <span className="text-sm">{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">O que mais te motiva em uma receita?</label>
+                          <div className="space-y-3">
+                            {[
+                              { id: 'praticidade', label: 'Praticidade Extrema: Pouco tempo, uma panela só' },
+                              { id: 'precisao', label: 'Precisão e Técnica: Entender processos físico-químicos' },
+                              { id: 'estetica', label: 'Estética e Apresentação: Visual e sensorial' },
+                              { id: 'custo_beneficio', label: 'Custo-Benefício: Aproveitamento integral' },
+                            ].map(opt => (
+                              <label key={opt.id} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${formData.mainMotivation === opt.id ? 'bg-primary/5 border-primary text-primary-hover font-medium' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}>
+                                <input type="radio" name="mainMotivation" value={opt.id} checked={formData.mainMotivation === opt.id} onChange={handleChange} className="w-5 h-5 text-primary focus:ring-primary" />
+                                <span className="text-sm">{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* PASSO 3: RESTRIÇÕES E CULTURA */}
+                    {currentStep === 3 && (
+                      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Restrição Alimentar ou Alergia</label>
+                          <div className="space-y-3">
+                            {[
+                              { id: 'nenhuma', label: 'Nenhuma' },
+                              { id: 'celiaco', label: 'Celíaco / Intolerante a Glúten' },
+                              { id: 'aplv', label: 'Intolerante à Lactose / APLV' },
+                              { id: 'frutos_do_mar', label: 'Alergia a Frutos do Mar / Peixes' },
+                              { id: 'oleaginosas', label: 'Alergia a Oleaginosas (Castanhas, Amendoim)' },
+                            ].map(opt => (
+                              <label key={opt.id} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${formData.dietaryRestrictions.includes(opt.id) ? 'bg-primary/5 border-primary text-primary-hover font-medium' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}>
+                                <input type="checkbox" checked={formData.dietaryRestrictions.includes(opt.id)} onChange={() => toggleArrayItem('dietaryRestrictions', opt.id)} className="w-5 h-5 rounded text-primary focus:ring-primary" />
+                                <span className="text-sm">{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Linha Culinária / Preferência</label>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {[
+                              { id: 'onivora', label: 'Onívora Tradicional' },
+                              { id: 'vegetariana', label: 'Vegetariana' },
+                              { id: 'vegana', label: 'Vegana / Plant-based' },
+                              { id: 'lowcarb', label: 'Low Carb / Cetogênica' },
+                              { id: 'funcional', label: 'Funcional / Esportiva' },
+                            ].map(opt => (
+                              <label key={opt.id} className={`flex items-center gap-3 p-4 rounded-xl border cursor-pointer transition-all ${formData.dietaryPreference === opt.id ? 'bg-primary/5 border-primary text-primary-hover font-medium' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}>
+                                <input type="radio" name="dietaryPreference" value={opt.id} checked={formData.dietaryPreference === opt.id} onChange={handleChange} className="w-5 h-5 text-primary focus:ring-primary" />
+                                <span className="text-sm">{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Ingredientes de Rejeição (O que NÃO quer?)</label>
+                          <input type="text" value={rejectedIngredientsInput} onChange={e => setRejectedIngredientsInput(e.target.value)} onKeyDown={handleAddRejectedIngredient} placeholder="Ex: coentro, pimentão (Pressione Enter para adicionar)" className="w-full px-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300" />
+                          <div className="flex flex-wrap gap-2 mt-3">
+                            {formData.rejectedIngredients.map(tag => (
+                              <span key={tag} className="px-3 py-1.5 bg-red-50 text-red-700 text-sm font-medium rounded-lg flex items-center gap-2 border border-red-100">
+                                {tag}
+                                <button type="button" onClick={() => removeRejectedIngredient(tag)} className="hover:text-red-900">&times;</button>
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+
+                    {/* PASSO 4: ESTRUTURA E ROTINA */}
+                    {currentStep === 4 && (
+                      <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Infraestrutura e Equipamentos Disponíveis</label>
+                          <div className="space-y-3">
+                            {[
+                              { id: 'basico', label: 'Básico: Fogão padrão, liquidificador, manuais' },
+                              { id: 'intermediario', label: 'Intermediário: Forno c/ controle, proc. alimentos, balança' },
+                              { id: 'avancado', label: 'Avançado/Profissional: Termocirculador, Forno Combinado, etc' },
+                            ].map(opt => (
+                              <label key={opt.id} className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-all ${formData.infrastructureLevel === opt.id ? 'bg-primary/5 border-primary text-primary-hover font-medium' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}>
+                                <input type="radio" name="infrastructureLevel" value={opt.id} checked={formData.infrastructureLevel === opt.id} onChange={handleChange} className="mt-1 w-5 h-5 text-primary focus:ring-primary" />
+                                <span className="text-sm leading-snug">{opt.label}</span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative group">
+                          <label className="block text-xs font-bold text-stone-400 uppercase tracking-widest mb-2 ml-1">Sua rotina na cozinha ou projeto atual</label>
+                          <textarea name="kitchenRoutine" value={formData.kitchenRoutine} onChange={(e: any) => handleChange(e)} className="w-full px-4 py-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-stone-300 min-h-[120px] resize-y" placeholder="Ex: Cozinho em lotes no final de semana para congelar..." />
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-4 pt-4 mt-6 border-t border-stone-100">
+                    {currentStep > 1 && (
+                      <button type="button" onClick={() => setCurrentStep(prev => prev - 1)} className="flex-1 py-4 bg-white border border-stone-200 text-stone-600 rounded-2xl font-bold hover:bg-stone-50 hover:border-stone-300 transition-all">
+                        Voltar
+                      </button>
+                    )}
+                    <button type="submit" disabled={loading} className={`${currentStep === 1 ? 'w-full' : 'flex-[2]'} py-4 bg-primary text-white rounded-2xl font-bold shadow-lg shadow-primary/20 hover:bg-primary-hover hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50 disabled:hover:scale-100`}>
+                      {loading ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <>
+                          {currentStep < 4 ? 'Avançar' : 'Confirmar Cadastro'}
+                          <ArrowRight className="w-5 h-5" />
+                        </>
+                      )}
+                    </button>
+                  </div>
                 </form>
               )}
             </motion.div>

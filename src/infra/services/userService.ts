@@ -23,6 +23,15 @@ export interface UserProfile {
   photoURL?: string;
   whatsapp?: string;
   birthDate?: string;
+  gender?: string;
+  gastronomyRelation?: string[];
+  primaryGoals?: string[];
+  mainMotivation?: string;
+  dietaryRestrictions?: string[];
+  dietaryPreference?: string;
+  rejectedIngredients?: string[];
+  infrastructureLevel?: string;
+  kitchenRoutine?: string;
   zipcode?: string;
   address?: string;
   addressNumber?: string;
@@ -34,7 +43,6 @@ export interface UserProfile {
   cookingExperienceLevel?: string;
   cookingFrequency?: string;
   gastronomicPreferences?: string[];
-  dietaryRestrictions?: string[];
   nutritionalFocus?: string;
   culturalInterests?: string[];
   role: UserRole;
