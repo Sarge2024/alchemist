@@ -38,7 +38,8 @@ export class NutritionalEngineService {
     let totalCarbs = 0;
     let totalFat = 0;
 
-    for (const item of ingredients) {
+    // Batch process all ingredients concurrently to eliminate N+1 sequential bottlenecks
+    const promises = ingredients.map(async (item): Promise<NutritionalResult> => {
       // 1. Busca local via Prisma (Cache Write-Through)
       let data = await this.fetchLocalData(item.name);
 
@@ -84,54 +85,69 @@ export class NutritionalEngineService {
                if (measure) {
                  normalizedQuantity = item.quantity * measure.weightInGrams;
                } else {
-                 // Fallback genérico caso a medida não exista para este ingrediente específico
-                 if (standardUnit === 'COLHER_SOPA') normalizedQuantity = item.quantity * 15;
-                 else if (standardUnit === 'XICARA') normalizedQuantity = item.quantity * 150;
-                 else if (standardUnit === 'COLHER_CHA') normalizedQuantity = item.quantity * 5;
-                 // Evita que 1 unidade = 1g
-                 else if (standardUnit === 'UNIDADE') normalizedQuantity = item.quantity * 100;
+                 // Fallback genérico caso a medida não exista na CulinaryMeasure
+                 // Se o banco proprietário tiver a densidade (g/ml), usamos o volume estimado para calcular as gramas exatas!
+                 let volumeInMl = 0;
+                 if (standardUnit === 'COLHER_SOPA') volumeInMl = 15;
+                 else if (standardUnit === 'XICARA') volumeInMl = 240;
+                 else if (standardUnit === 'COLHER_CHA') volumeInMl = 5;
+                 else if (standardUnit === 'COLHER_SOBREMESA') volumeInMl = 10;
+                 
+                 if (volumeInMl > 0 && data.base_data && data.base_data.density) {
+                    normalizedQuantity = item.quantity * volumeInMl * data.base_data.density;
+                 } else {
+                    // Fallback antigo puramente genérico (ignora variação de densidade)
+                    if (standardUnit === 'COLHER_SOPA') normalizedQuantity = item.quantity * 15;
+                    else if (standardUnit === 'XICARA') normalizedQuantity = item.quantity * 150;
+                    else if (standardUnit === 'COLHER_CHA') normalizedQuantity = item.quantity * 5;
+                    // Evita que 1 unidade = 1g
+                    else if (standardUnit === 'UNIDADE') normalizedQuantity = item.quantity * 100;
+                 }
                }
            }
+        } else if (normalizedUnit === 'ml' && data.base_data && data.base_data.density) {
+            // Conversão de ml direto para gramas via densidade cadastrada na tabela proprietária
+            normalizedQuantity = item.quantity * data.base_data.density;
         }
 
         // Regra de três: (quantidade_normalizada / base_100g) * valor_do_nutriente
         const factor = normalizedQuantity / 100;
         
-        const calcCals = data.calories * factor;
-        const calcProt = data.protein * factor;
-        const calcCarbs = data.carbs * factor;
-        const calcFat = data.fat * factor;
-
-        details.push({
+        return {
           ingredient: item.name,
           source: data.source as any,
           quantity: item.quantity,
           unit: item.unit,
-          calories: calcCals,
-          protein: calcProt,
-          carbs: calcCarbs,
-          fat: calcFat,
+          calories: data.calories * factor,
+          protein: data.protein * factor,
+          carbs: data.carbs * factor,
+          fat: data.fat * factor,
           micronutrients: data.micronutrients,
           base_data: data
-        });
-
-        totalCalories += calcCals;
-        totalProtein += calcProt;
-        totalCarbs += calcCarbs;
-        totalFat += calcFat;
+        };
       } else {
         // Fallback: não encontrado (ou em cache como NOT_FOUND)
-        details.push({
+        return {
           ingredient: item.name,
-          source: 'NOT_FOUND',
+          source: 'NOT_FOUND' as any,
           quantity: item.quantity,
           unit: item.unit,
           calories: 0,
           protein: 0,
           carbs: 0,
           fat: 0
-        });
+        };
       }
+    });
+
+    const results = await Promise.all(promises);
+
+    for (const res of results) {
+       details.push(res);
+       totalCalories += res.calories;
+       totalProtein += res.protein;
+       totalCarbs += res.carbs;
+       totalFat += res.fat;
     }
 
     return {
@@ -235,7 +251,11 @@ export class NutritionalEngineService {
           protein: bestMatch.protein,
           carbs: bestMatch.carbohydrates,
           fat: bestMatch.lipids,
-          micronutrients: bestMatch.micronutrients
+          micronutrients: bestMatch.micronutrients,
+          density: bestMatch.density,
+          standardPurchaseQuantity: bestMatch.standardPurchaseQuantity,
+          standardPurchaseUnit: bestMatch.standardPurchaseUnit,
+          estimatedPrice: bestMatch.estimatedPrice
         };
       }
       return null;

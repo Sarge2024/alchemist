@@ -161,8 +161,15 @@ publicRecipesRouter.get('/search', async (req: Request, res: Response) => {
 // ──────────────────────────────────────────────────────────
 // GET /categories — List distinct categories available
 // ──────────────────────────────────────────────────────────
+let categoriesCache: any = null;
+let categoriesCacheExpiry = 0;
+
 publicRecipesRouter.get('/categories', async (_req: Request, res: Response) => {
   try {
+    if (categoriesCache && Date.now() < categoriesCacheExpiry) {
+      return res.json(categoriesCache);
+    }
+
     const recipes = await prisma.recipe.findMany({
       select: { tipo_prato: true, base_alimento: true, momento: true }
     });
@@ -177,11 +184,14 @@ publicRecipesRouter.get('/categories', async (_req: Request, res: Response) => {
       r.momento.forEach(m => moments.add(m));
     });
 
-    res.json({
+    categoriesCache = {
       tipo_prato: Array.from(categories).sort(),
       base_alimento: Array.from(bases).sort(),
       momento: Array.from(moments).sort()
-    });
+    };
+    categoriesCacheExpiry = Date.now() + 5 * 60 * 1000; // 5 minutes TTL
+
+    res.json(categoriesCache);
   } catch (error: any) {
     console.error('[Public API] Error fetching categories:', error);
     res.status(500).json({ error: 'Internal server error' });

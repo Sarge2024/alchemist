@@ -1,6 +1,7 @@
 import "dotenv/config";
 
 import express from "express";
+import { downloadAndSaveImage } from "./src/infra/utils/imageUtils";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -111,105 +112,22 @@ const identityService = new IdentityAccessService();
 
 const storage = multer.memoryStorage();
 
-const upload = multer({ 
-  storage,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith("image/") || file.mimetype === "application/pdf") {
-      cb(null, true);
-    } else {
-      cb(new Error("Apenas imagens e PDFs são permitidos"));
-    }
-  }
-});
 
-/**
- * Helper function to download and save an image locally
- */
-/**
- * Helper: Faz upload de arquivo local para o Firebase Storage e retorna URL pública
- */
-async function uploadToStorage(localPath: string, destinationName: string): Promise<string | null> {
-  try {
-    let fullLocalPath = localPath;
-    
-    if (localPath.startsWith('/uploads/')) {
-      fullLocalPath = path.join(process.cwd(), 'public', localPath);
-    } else if (!path.isAbsolute(localPath)) {
-      fullLocalPath = path.join(process.cwd(), 'public', localPath);
-    }
-    
-    if (!fs.existsSync(fullLocalPath)) {
-      console.error(`[Storage] Arquivo não encontrado para upload: ${fullLocalPath}`);
-      return null;
-    }
 
-    const buffer = fs.readFileSync(fullLocalPath);
-    
-    const blob = await put(`recipes/${destinationName}`, buffer, {
-      access: 'public',
-      token: process.env.BLOB_READ_WRITE_TOKEN
-    });
 
-    return blob.url;
-  } catch (error) {
-    console.error("[Storage] Erro no upload para o Vercel Blob:", error);
-    return null;
-  }
-}
-
-async function downloadAndSaveImage(url: string): Promise<string | null> {
-  try {
-    if (!url || !url.startsWith('http')) return null;
-
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-      }
-    });
-
-    if (!response.ok) throw new Error(`Failed to fetch image: ${response.statusText}`);
-    
-    const contentType = response.headers.get("content-type");
-    if (!contentType || !contentType.startsWith("image/")) {
-      console.warn(`URL does not point to a valid image: ${url}`);
-      return null;
-    }
-
-    const buffer = Buffer.from(await response.arrayBuffer());
-    
-    // Extract extension from content-type or URL
-    let extension = contentType.split("/")[1]?.split("+")[0] || "jpg";
-    if (extension === "jpeg") extension = "jpg";
-    
-    const filename = `downloaded-${Date.now()}-${Math.round(Math.random() * 1e9)}.${extension}`;
-    const filePath = path.join(uploadDir, filename);
-
-    fs.writeFileSync(filePath, buffer);
-    console.log(`[Image Service] Salva com sucesso: /uploads/${filename}`);
-    return `/uploads/${filename}`;
-  } catch (error) {
-    console.error(`[Image Service] Erro ao baixar imagem de ${url}:`, error);
-    return null;
-  }
-}
-
-// Middleware to protect API routes if APP_API_KEY is configured
-const authenticateAPI = (req: express.Request, res: express.Response, next: express.NextFunction) => {
-  const apiKey = process.env.APP_API_KEY;
-  if (!apiKey || apiKey === "" || apiKey === "your_app_api_key_here") {
-    return next(); // If not configured or placeholder, allow all (dev mode)
-  }
-
-  const clientKey = req.headers["x-api-key"];
-  if (clientKey === apiKey) {
-    return next();
-  }
-
-  res.status(401).json({ error: "Unauthorized: Invalid or missing API Key" });
-};
+import adminRouter from './src/infra/api/adminRouter';
+import loungeRouter from './src/infra/api/loungeRouter';
+import chatRouter from './src/infra/api/chatRouter';
+import gamificationRouter from './src/infra/api/gamificationRouter';
+import { authenticateAPI } from './src/infra/middlewares/authenticateAPI';
+import { upload } from './src/infra/middlewares/uploadMiddleware';
 
 const app = express();
+
+app.use('/api/admin', adminRouter);
+app.use('/api/lounge', loungeRouter);
+app.use('/api/chat', chatRouter);
+app.use('/api/gamification', gamificationRouter);
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
 
 app.use(cors({
@@ -314,144 +232,20 @@ app.post("/api/upload", authenticateAPI, (req, res) => {
 });
 
 // API Route for Checking Gemini API Keys Status
-app.post("/api/admin/check-keys", authenticateAPI, async (req, res) => {
-  try {
-    const keys = getAvailableGeminiKeys();
-    console.log(`[Admin API] Diagnóstico: Verificando ${keys.length} chaves...`);
-    
-    const results = [];
-    for (let i = 0; i < keys.length; i++) {
-      const key = keys[i];
-      const statusResult = await geminiService.checkApiKeyStatus(key);
-      results.push({
-        key: `API Key #${i + 1}`,
-        keyRaw: key,
-        ...statusResult
-      });
-    }
-    
-    res.json({ success: true, keys: results });
-  } catch (error: any) {
-    console.error("[Admin API] Erro no diagnóstico:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+
 
 /**
  * Endpoint de Migração: Converte imagens de receitas (URLs externas -> locais)
  */
-app.post("/api/admin/migrate-recipe-images", authenticateAPI, async (req, res) => {
-  try {
-    const db = getFirestore();
-    const recipesRef = db.collection('recipes');
-    const snapshot = await recipesRef.get();
-    
-    console.log(`[Migration] Iniciando migração e sincronização em nuvem para ${snapshot.size} receitas...`);
-    
-    let migratedCount = 0;
-    let cloudSyncedCount = 0;
-    let skippedCount = 0;
-    let errorCount = 0;
 
-    for (const doc of snapshot.docs) {
-      const data = doc.data();
-      const currentImage = data.image;
-      
-      console.log(`[Migration] Processando: "${data.title}" | Imagem atual: "${currentImage}"`);
-
-      if (!currentImage) {
-        skippedCount++;
-        continue;
-      }
-
-      // Caso 1: Ainda é uma URL externa - Baixa e sobe pra nuvem
-      if (typeof currentImage === 'string' && (currentImage.startsWith('http://') || currentImage.startsWith('https://')) && !currentImage.includes('public.blob.vercel-storage.com')) {
-        console.log(`[Migration] Baixando e subindo para nuvem: ${data.title}`);
-        const localPath = await downloadAndSaveImage(currentImage);
-        
-        if (localPath) {
-          const fileName = path.basename(localPath);
-          const cloudUrl = await uploadToStorage(localPath, fileName);
-          
-          if (cloudUrl) {
-            await doc.ref.update({ 
-              image: cloudUrl,
-              updatedAt: FieldValue.serverTimestamp()
-            });
-            cloudSyncedCount++;
-            migratedCount++;
-          } else {
-            // Se falhou cloud, mantém local por segurança
-            await doc.ref.update({ image: localPath });
-            migratedCount++;
-          }
-        } else {
-          errorCount++;
-        }
-      } 
-      // Caso 2: Já é local - Sobe pra nuvem se necessário
-      else if (typeof currentImage === 'string' && currentImage.startsWith('/uploads/')) {
-        console.log(`[Migration] Sincronizando imagem local com nuvem: ${data.title}`);
-        const fileName = path.basename(currentImage);
-        const cloudUrl = await uploadToStorage(currentImage, fileName);
-        
-        if (cloudUrl) {
-          await doc.ref.update({ 
-            image: cloudUrl,
-            updatedAt: FieldValue.serverTimestamp()
-          });
-          cloudSyncedCount++;
-        } else {
-          skippedCount++;
-        }
-      }
-      else {
-        skippedCount++;
-      }
-    }
-
-    res.json({ 
-      success: true, 
-      migratedCount, 
-      cloudSyncedCount,
-      skippedCount, 
-      errorCount,
-      message: `Sincronização concluída. ${cloudSyncedCount} imagens estão agora na nuvem.`
-    });
-  } catch (error: any) {
-    console.error("[Migration] Erro crítico:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
 
 /**
  * Endpoint de Administração: Sincroniza manualmente receitas no banco de dados vetorial para RAG
  */
-app.post("/api/admin/sync-recipes-rag", authenticateAPI, async (req, res) => {
-  try {
-    await RagBackendService.syncRecipesToPostgreSQL();
-    res.json({ success: true, message: "Sincronização de receitas concluída com sucesso." });
-  } catch (error: any) {
-    console.error("[Admin RAG Sync] Erro:", error);
-    res.status(500).json({ success: false, error: error.message });
-  }
-});
+
 
 // API Route for Admin Role Management
-app.post("/api/admin/set-role", async (req, res) => {
-  const { uid, role } = req.body;
-  if (!uid || !role) {
-    return res.status(400).json({ error: "UID e Role são obrigatórios." });
-  }
 
-  try {
-    await identityService.assignRole(uid, role);
-    res.json({ success: true, message: `Role ${role} atribuída ao usuário ${uid}` });
-  } catch (error: any) {
-    console.error("[Admin API] Erro ao definir role:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 
 // API Route for Fetching HTML (proxy to avoid CORS)
@@ -566,557 +360,36 @@ app.post("/api/fetch-html", authenticateAPI, async (req, res) => {
 });
 
 // Enviar mensagem para o Lounge com moderação automática
-app.post("/api/lounge/messages", authenticateAPI, async (req, res) => {
-  const { text, senderId, senderRole, senderName, metadata } = req.body;
-  console.log(`[Lounge API] Recebendo mensagem de ${senderName || senderId} (${senderRole}): "${text?.substring(0, 50)}..."`);
-  
-  if (!text || !senderId) {
-    return res.status(400).json({ error: "Texto e SenderId são obrigatórios." });
-  }
 
-  try {
-    const db = getFirestore();
-    console.log(`[Lounge API] Iniciando moderação para: "${text.substring(0, 30)}..."`);
-    let status = await ModerationService.validateCulinaryRelevance(text);
-    console.log(`[Lounge API] Resultado da moderação: ${status}`);
-    
-    const finalMetadata = { ...(metadata || {}) };
-
-    if (status === 'rejected') {
-      // É uma mensagem restrita. Vamos checar o histórico do usuário nos últimos 10 minutos.
-      const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000);
-      const recentMessagesSnapshot = await db.collection('lounge_messages')
-        .where('timestamp', '>=', tenMinutesAgo)
-        .get();
-
-      let restrictedCount = 0;
-      recentMessagesSnapshot.forEach(doc => {
-        const data = doc.data();
-        if (data.senderId === senderId && (data.status === 'rejected' || (data.metadata && data.metadata.restricted === true))) {
-          restrictedCount++;
-        }
-      });
-
-      if (restrictedCount === 0) {
-        // Primeira ocorrência: publica com a marcação de inadequado
-        status = 'approved';
-        finalMetadata.restricted = true;
-        console.log(`[Lounge API] Primeira ocorrência de inadequação nos últimos 10 minutos. Publicando com restrição.`);
-      } else {
-        // Segunda ocorrência ou mais: bloqueia
-        console.log(`[Lounge API] Segunda ocorrência ou mais de inadequação nos últimos 10 minutos (${restrictedCount} anteriores). Bloqueando mensagem.`);
-      }
-    }
-
-    const messageData = {
-      text,
-      senderId,
-      senderName: senderName || 'Alquimista Anônimo',
-      senderRole: senderRole || 'user',
-      timestamp: new Date(), 
-      status,
-      reactions: {},
-      metadata: finalMetadata
-    };
-
-    console.log(`[Lounge API] Salvando mensagem no Firestore...`);
-    const docRef = await db.collection('lounge_messages').add({
-      ...messageData,
-      timestamp: FieldValue.serverTimestamp() // Força server timestamp
-    });
-    console.log(`[Lounge API] Mensagem salva com sucesso! ID: ${docRef.id}`);
-
-    // Integração da Gamificação: Dar XP pela mensagem no Lounge (apenas se for aprovada e não restrita)
-    let gamificationResult = null;
-    if (status === 'approved' && !finalMetadata.restricted) {
-      try {
-        // Assumindo que senderId corresponde ao Supabase/Firebase UID
-        gamificationResult = await GamificationService.processEvent(senderId, 'COLLABORATION_MESSAGE');
-        console.log(`[Lounge API] XP atribuído: +${gamificationResult.xpGained} XP. Nível Atual: ${gamificationResult.currentLevel}`);
-      } catch (gamiErr: any) {
-        console.warn("[Lounge API] Erro não fatal na gamificação (Usuário não cadastrado no Prisma?):", gamiErr.message);
-      }
-    }
-
-    // Trigger Alchemist bot if mentioned (@alchemist, @copilot, @chef, @alquimista)
-    const lowerText = text.toLowerCase();
-    if (status === 'approved' && (lowerText.includes('@alchemist') || lowerText.includes('@copilot') || lowerText.includes('@chef') || lowerText.includes('@alquimista'))) {
-      console.log(`[Lounge API] Bot acionado! Iniciando processamento do Alchemist RAG...`);
-      // Run asynchronously so it doesn't block the request response
-      Promise.resolve().then(async () => {
-        try {
-          const answer = await RagBackendService.askGeminiWithContext(text, [], 5, senderId);
-          const copilotMessage = {
-            text: answer,
-            senderId: 'copilot-agent',
-            senderName: 'Alchemist',
-            senderRole: 'agent',
-            timestamp: FieldValue.serverTimestamp(),
-            status: 'approved',
-            reactions: {},
-            metadata: { isBot: true, replyTo: docRef.id }
-          };
-          await db.collection('lounge_messages').add(copilotMessage);
-          console.log(`[Lounge API] Resposta do Alchemist salva com sucesso!`);
-        } catch (err) {
-          console.error("[Lounge API] Erro ao gerar resposta do Alchemist:", err);
-          const fallbackMessage = {
-            text: "Desculpe, nossos servidores estão em delay, pergunte novamente por favor",
-            senderId: 'copilot-agent',
-            senderName: 'Alchemist',
-            senderRole: 'agent',
-            timestamp: FieldValue.serverTimestamp(),
-            status: 'approved',
-            reactions: {},
-            metadata: { isBot: true, replyTo: docRef.id }
-          };
-          await db.collection('lounge_messages').add(fallbackMessage).catch(e => console.error("[Lounge API] Falha final ao salvar fallback:", e));
-        }
-      });
-    }
-
-    // Inicia verificação de engajamento proativo se a mensagem foi aprovada e não acionou o bot diretamente
-    if (status === 'approved' && !(lowerText.includes('@alchemist') || lowerText.includes('@copilot') || lowerText.includes('@chef') || lowerText.includes('@alquimista'))) {
-      RagBackendService.checkAndTriggerProactiveEngagement(db).catch(err => 
-        console.error("[Lounge API] Erro no fluxo de engajamento proativo:", err)
-      );
-    }
-
-    res.json({ 
-      success: true, 
-      id: docRef.id, 
-      status,
-      message: status === 'approved' ? (finalMetadata.restricted ? "Mensagem publicada com restrição de contexto." : "Mensagem publicada!") : "Sua mensagem passará por revisão.",
-      gamification: gamificationResult
-    });
-    
-  } catch (error: any) {
-    console.error("[Lounge API] ERRO CRÍTICO ao postar mensagem:", error);
-    res.status(500).json({ error: error.message || "Erro interno ao processar mensagem" });
-  }
-});
 
 // Gatilho manual para gerar Ata Diária
-app.post("/api/lounge/generate-ata", authenticateAPI, async (req, res) => {
-  try {
-    const ata = await AtaGeneratorService.generateDailyAta();
-    if (!ata) {
-      return res.json({ success: true, message: "Sem mensagens para gerar ata hoje." });
-    }
-    res.json({ success: true, ata });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
+
 
 // ───────────────────────────────────────────────────────────────
 // Admin Analytics Dashboard Endpoint
 // ───────────────────────────────────────────────────────────────
-app.get("/api/admin/analytics", authenticateAPI, async (req, res) => {
-  try {
-    const db = getFirestore();
-    const now = new Date();
-    const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-     // 1. Firestore: Lounge Messages stats
-    let allMessages: any[] = [];
-    try {
-      const allMsgsSnap = await db.collection('lounge_messages').get();
-      allMessages = allMsgsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
-    } catch (fsError) {
-      console.error("[Admin Analytics] Erro ao buscar lounge_messages do Firestore (provável cota excedida):", fsError);
-    }
-    
-    const approvedMsgs = allMessages.filter(m => m.status === 'approved');
-    const rejectedMsgs = allMessages.filter(m => m.status === 'rejected');
-    const pendingMsgs = allMessages.filter(m => m.status === 'pending');
-    const copilotMsgs = allMessages.filter(m => m.senderRole === 'agent');
-
-    // Messages per day (last 7 days)
-    const messagesPerDay: Record<string, number> = {};
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      messagesPerDay[d.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' })] = 0;
-    }
-    allMessages.forEach(m => {
-      const ts = m.timestamp?.toDate?.() || (m.timestamp?._seconds ? new Date(m.timestamp._seconds * 1000) : null);
-      if (ts && ts >= sevenDaysAgo) {
-        const key = ts.toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit' });
-        if (messagesPerDay[key] !== undefined) messagesPerDay[key]++;
-      }
-    });
-
-    // Top senders (ranking)
-    const senderCounts: Record<string, { name: string; count: number; likes: number }> = {};
-    approvedMsgs.forEach(m => {
-      const id = m.senderId;
-      if (id === 'copilot-agent') return;
-      if (!senderCounts[id]) {
-        senderCounts[id] = { name: m.senderName || 'Anônimo', count: 0, likes: 0 };
-      }
-      senderCounts[id].count++;
-      senderCounts[id].likes += Object.keys(m.reactions || {}).length;
-    });
-    const topSenders = Object.entries(senderCounts)
-      .map(([id, data]) => ({ id, ...data }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 10);
-
-    // Total likes across all messages
-    const totalLikes = allMessages.reduce((acc, m) => acc + Object.keys(m.reactions || {}).length, 0);
-
-    // 2. Prisma: Users & Gamification
-    const totalUsers = await prisma.user.count();
-    const totalRecipes = await prisma.recipe.count();
-    
-    const leaderboard = await prisma.userGamificationProfile.findMany({
-      orderBy: { xp_total: 'desc' },
-      take: 10,
-      include: {
-        user: {
-          select: { displayName: true, photoURL: true, uid: true }
-        }
-      }
-    });
-
-    // Grau distribution
-    const grauDistribution = await prisma.userGamificationProfile.groupBy({
-      by: ['grau'],
-      _count: { grau: true }
-    });
-
-    // 3. Moderation rate
-    const moderationRate = allMessages.length > 0
-      ? Math.round((rejectedMsgs.length / allMessages.length) * 100)
-      : 0;
-
-    // 4. User Interactions summary from Prisma
-    const interactionsData = await prisma.userInteraction.groupBy({
-      by: ['eventType'],
-      _sum: { count: true }
-    });
-    const interactionSummary: Record<string, number> = {};
-    interactionsData.forEach(item => {
-      interactionSummary[item.eventType] = item._sum.count || 0;
-    });
-
-    // 5. Top interactors based on database interaction records
-    const userInteractionSums = await prisma.userInteraction.groupBy({
-      by: ['userId'],
-      _sum: { count: true },
-      orderBy: { _sum: { count: 'desc' } },
-      take: 10
-    });
-    
-    const topInteractors = await Promise.all(
-      userInteractionSums.map(async (item) => {
-        const usr = await prisma.user.findUnique({
-          where: { id: item.userId },
-          select: { displayName: true, photoURL: true }
-        });
-        return {
-          uid: item.userId,
-          displayName: usr?.displayName || 'Anônimo',
-          photoURL: usr?.photoURL || '',
-          totalInteractions: item._sum.count || 0
-        };
-      })
-    );
-
-    // 6. AI Bot Questions Statistics
-    const botMentions = allMessages.filter(m => 
-      m.senderRole !== 'agent' && 
-      (m.text?.toLowerCase().includes('@alchemist') || 
-       m.text?.toLowerCase().includes('@copilot') || 
-       m.text?.toLowerCase().includes('@chef') || 
-       m.text?.toLowerCase().includes('@alquimista'))
-    );
-    const totalQuestions = botMentions.length;
-    const totalAnswers = copilotMsgs.length;
-    const restrictedQuestions = botMentions.filter(m => m.metadata?.restricted || m.restricted).length;
-
-    // 7. System Performance and Response Times (real uptime and memory + telemetry)
-    const memoryUsage = process.memoryUsage();
-    const systemPerformance = {
-      uptimeSeconds: Math.round(process.uptime()),
-      avgResponseTimeMs: 145, // Telemetry average response time
-      memoryHeapUsedMb: Math.round(memoryUsage.heapUsed / 1024 / 1024),
-      memoryHeapTotalMb: Math.round(memoryUsage.heapTotal / 1024 / 1024),
-      cpuLoadPercent: 8 + Math.floor(Math.random() * 10) // Mock active CPU load
-    };
-
-    res.json({
-      success: true,
-      overview: {
-        totalUsers,
-        totalRecipes,
-        totalMessages: allMessages.length,
-        approvedMessages: approvedMsgs.length,
-        rejectedMessages: rejectedMsgs.length,
-        pendingMessages: pendingMsgs.length,
-        copilotMessages: copilotMsgs.length,
-        totalLikes,
-        moderationRate
-      },
-      messagesPerDay,
-      topSenders,
-      leaderboard: leaderboard.map(p => ({
-        uid: p.user.uid,
-        displayName: p.user.displayName,
-        photoURL: p.user.photoURL,
-        xp: p.xp_total,
-        nivel: p.nivel,
-        grau: p.grau
-      })),
-      grauDistribution: grauDistribution.map(g => ({
-        grau: g.grau,
-        count: g._count.grau
-      })),
-      interactionSummary,
-      topInteractors,
-      botQuestions: {
-        totalQuestions,
-        totalAnswers,
-        restrictedQuestions
-      },
-      systemPerformance
-    });
-  } catch (error: any) {
-    console.error("[Admin Analytics] Erro:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Endpoint para buscar as interações de um usuário
-app.get("/api/gamification/interactions/:uid", authenticateAPI, async (req, res) => {
-  try {
-    const { uid } = req.params;
-    const user = await prisma.user.findUnique({ where: { uid } });
-    if (!user) return res.status(404).json({ error: "User not found" });
 
-    const interactions = await prisma.userInteraction.findMany({
-      where: { userId: user.id }
-    });
-    
-    res.json({ success: true, interactions });
-  } catch (error: any) {
-    console.error("Erro ao buscar interações:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Endpoint para atualizar/lançar uma interação manual
-app.post("/api/gamification/interactions/:uid", authenticateAPI, async (req, res) => {
-  try {
-    const { uid } = req.params;
-    const { eventType, count } = req.body;
-    
-    const user = await prisma.user.findUnique({ where: { uid } });
-    if (!user) return res.status(404).json({ error: "User not found" });
 
-    const interaction = await prisma.userInteraction.upsert({
-      where: {
-        userId_eventType: {
-          userId: user.id,
-          eventType: eventType
-        }
-      },
-      update: {
-        count: count
-      },
-      create: {
-        userId: user.id,
-        eventType: eventType,
-        count: count
-      }
-    });
-
-    // Sincronizar selos/badges correspondentes à nova contagem
-    await GamificationService.checkAndGrantBadges(user.id, eventType, count);
-
-    // Recalcular a pontuação total (XP) e o nível do usuário
-    await GamificationService.recalculateXPAndLevel(user.id);
-
-    res.json({ success: true, interaction });
-  } catch (error: any) {
-    console.error("Erro ao atualizar interação:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // Endpoint to get the RAG Assistant Chat History
-app.get("/api/chat/history", authenticateAPI, async (req, res) => {
-  try {
-    const userId = req.query.userId as string;
-    if (!userId) {
-      return res.status(400).json({ error: "userId is required" });
-    }
 
-    const db = getFirestore();
-    const snapshot = await db.collection("copilot_chat_history")
-      .where("userId", "==", userId)
-      .orderBy("timestamp", "desc")
-      .limit(6)
-      .get();
-
-    const history = snapshot.docs.map(doc => {
-      const data = doc.data();
-      return {
-        id: doc.id,
-        sender: data.role === 'user' ? 'user' : 'ai',
-        text: data.text,
-        timestamp: data.timestamp?.toDate ? data.timestamp.toDate() : new Date()
-      };
-    }).reverse();
-
-    res.json({ success: true, history });
-  } catch (error) {
-    console.error("[Chat History] Error fetching chat history:", error);
-    res.status(500).json({ error: "Failed to fetch history" });
-  }
-});
 
 // Endpoint to ask the RAG Assistant (AI Chat)
-app.post("/api/chat/ask", authenticateAPI, async (req, res) => {
-  try {
-    const { question, history, userId, userName } = req.body;
-    if (!question) {
-      return res.status(400).json({ error: "question is required" });
-    }
-    
-    // Sanitize conversation history (last 10 turns max to avoid token overflow)
-    const conversationHistory = Array.isArray(history)
-      ? history.slice(-10).map((t: any) => ({
-          role: t.role === 'user' ? 'user' as const : 'assistant' as const,
-          text: typeof t.text === 'string' ? t.text.substring(0, 1000) : ''
-        }))
-      : [];
-    
-    // Calls the RAG Backend Service with conversation history for multi-turn context
-    const answer = await RagBackendService.askGeminiWithContext(question, conversationHistory, 5, userId, userName);
 
-    if (userId) {
-      const db = getFirestore();
-      
-      // Save to Firestore with a slight offset to ensure stable sorting
-      await db.collection("copilot_chat_history").add({
-        userId,
-        role: "user",
-        text: question.substring(0, 2000),
-        timestamp: new Date(Date.now() - 10)
-      });
-      
-      await db.collection("copilot_chat_history").add({
-        userId,
-        role: "assistant",
-        text: answer,
-        timestamp: new Date()
-      });
-    }
-    
-    res.json({ success: true, answer });
-  } catch (error: any) {
-    console.error("[Chat RAG API] Erro:", error);
-    res.json({ success: true, answer: "Desculpe, nossos servidores estão em delay, pergunte novamente por favor" });
-  }
-});
 
 // Endpoint Fast Routing (Sem RAG)
-app.post("/api/chat/quick-route", authenticateAPI, async (req, res) => {
-  try {
-    const { topic } = req.body;
-    if (!topic) {
-      return res.status(400).json({ error: "topic is required" });
-    }
-    const answer = await FastRoutingService.getQuickRoutingOptions(topic);
-    res.json({ success: true, answer });
-  } catch (error: any) {
-    console.error("[Quick Route API] Erro:", error);
-    res.json({ success: true, answer: "Não foi possível carregar as opções agora, mas pode mandar no chat." });
-  }
-});
+
 
 // Endpoint Admin para reconstruir Índice
-app.post("/api/admin/rebuild-index", authenticateAPI, async (req, res) => {
-  try {
-    await FastRoutingService.refreshIndex();
-    res.json({ success: true, message: "Índice atualizado com sucesso." });
-  } catch (error: any) {
-    console.error("[Admin API] Erro ao atualizar índice:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
+
 
 // Endpoint to process a gamification event and assign XP
-app.post("/api/gamification/event", authenticateAPI, async (req, res) => {
-  try {
-    const { uid, eventType } = req.body;
-    
-    if (!uid || !eventType) {
-      return res.status(400).json({ error: "uid and eventType are required" });
-    }
 
-    // Garantir que o usuário existe no Prisma (Postgres) buscando do Firestore se necessário
-    let user = await prisma.user.findUnique({ where: { uid } });
-    if (!user) {
-      const db = getFirestore();
-      const userDoc = await db.collection("users").doc(uid).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        const emailToUse = userData?.email || `${uid}@example.com`;
-        let existingUserByEmail = await prisma.user.findUnique({ where: { email: emailToUse } });
-        
-        if (existingUserByEmail) {
-          user = await prisma.user.update({
-            where: { email: emailToUse },
-            data: { uid: uid, displayName: userData?.displayName || existingUserByEmail.displayName }
-          });
-          console.log(`[Gamification Event API] Usuário ${user.displayName} teve o UID atualizado no Prisma.`);
-        } else {
-          user = await prisma.user.create({
-            data: {
-              uid,
-              displayName: userData?.displayName || 'Sem Nome',
-              email: emailToUse,
-              photoURL: userData?.photoURL || null,
-              whatsapp: userData?.whatsapp || null,
-              state: userData?.state || 'ES',
-              country: userData?.country || 'BR'
-            }
-          });
-          console.log(`[Gamification Event API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
-        }
-      } else {
-        return res.json({ success: false, error: `Usuário com UID ${uid} não encontrado no Firestore nem no Prisma.` });
-      }
-    }
-
-    const result = await GamificationService.processEvent(uid, eventType);
-    
-    // Mercador de Permuta: 1 Moeda a cada 10 XP
-    if (result.xpGained > 0) {
-      try {
-        const db = getFirestore();
-        const FieldValue = (await import('firebase-admin/firestore')).FieldValue;
-        const moedasGanhas = result.xpGained / 10;
-        await db.collection("users").doc(uid).update({
-          moedas: FieldValue.increment(moedasGanhas)
-        });
-        console.log(`[Gamification Event API] +${moedasGanhas} Moedas dadas ao usuário ${uid}`);
-      } catch (err) {
-        console.error(`[Gamification Event API] Erro ao creditar moedas para ${uid}:`, err);
-      }
-    }
-
-    res.json({ success: true, ...result });
-  } catch (error: any) {
-    console.error(`[Gamification Event API] Erro ao processar evento ${req.body?.eventType}:`, error.message);
-    // Retorna success: false mas 200 OK para não quebrar a UI
-    res.json({ success: false, error: error.message });
-  }
-});
 
 // Endpoint para retornar os avatares permitidos de acordo com o nível do usuário
 app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
@@ -1170,315 +443,33 @@ app.get("/api/avatars/:uid", authenticateAPI, async (req, res) => {
 });
 
 // Endpoint para buscar o Perfil de Gamificação do Usuário
-app.get("/api/gamification/profile/:uid", authenticateAPI, async (req, res) => {
-  const { uid } = req.params;
-  try {
-    // Garantir que o usuário existe no Prisma (Postgres) buscando do Firestore se necessário
-    let user = await prisma.user.findUnique({ where: { uid } });
-    if (!user) {
-      const db = getFirestore();
-      const userDoc = await db.collection("users").doc(uid).get();
-      if (userDoc.exists) {
-        const userData = userDoc.data();
-        const emailToUse = userData?.email || `${uid}@example.com`;
-        let existingUserByEmail = await prisma.user.findUnique({ where: { email: emailToUse } });
-        
-        if (existingUserByEmail) {
-          user = await prisma.user.update({
-            where: { email: emailToUse },
-            data: { uid: uid, displayName: userData?.displayName || existingUserByEmail.displayName }
-          });
-          console.log(`[Profile API] Usuário ${user.displayName} teve o UID atualizado no Prisma.`);
-        } else {
-          user = await prisma.user.create({
-            data: {
-              uid,
-              displayName: userData?.displayName || 'Sem Nome',
-              email: emailToUse,
-              photoURL: userData?.photoURL || null,
-              whatsapp: userData?.whatsapp || null,
-              state: userData?.state || 'ES',
-              country: userData?.country || 'BR'
-            }
-          });
-          console.log(`[Profile API] Usuário ${user.displayName} auto-sincronizado para o Prisma.`);
-        }
-      }
-    }
 
-    const profile = await GamificationService.getProfile(uid);
-    if (!profile) {
-      return res.status(404).json({ error: "Perfil de gamificação não encontrado." });
-    }
-    let relativeXp = profile.xp_total;
-    let nextLevelXp = 100;
-
-    if (profile.xp_total < 100) {
-      relativeXp = profile.xp_total;
-      nextLevelXp = 100;
-    } else if (profile.xp_total < 300) {
-      relativeXp = profile.xp_total - 100;
-      nextLevelXp = 200;
-    } else if (profile.xp_total < 600) {
-      relativeXp = profile.xp_total - 300;
-      nextLevelXp = 300;
-    } else if (profile.xp_total < 1000) {
-      relativeXp = profile.xp_total - 600;
-      nextLevelXp = 400;
-    } else {
-      relativeXp = profile.xp_total - 1000;
-      nextLevelXp = 999999;
-    }
-
-    const mappedProfile = {
-      ...profile,
-      level: profile.nivel,
-      tier: profile.grau,
-      xp: relativeXp,
-      nextLevelXp: nextLevelXp
-    };
-    res.json({ success: true, profile: mappedProfile });
-  } catch (error: any) {
-    console.error("[Gamification API] Erro ao buscar perfil:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
 
 // ======== ADMIN: Avatares e Selos ========
 
 // Listar todos os Avatares
-app.get("/api/admin/avatars", authenticateAPI, async (req, res) => {
-  try {
-    const avatars = await prisma.avatarOption.findMany({ orderBy: { criadoEm: 'desc' }});
-    res.json(avatars);
-  } catch (error: any) {
-    console.error(error);
-    res.status(500).json({ 
-      error: "Erro ao buscar avatares", 
-      details: error?.message || String(error),
-      stack: error?.stack 
-    });
-  }
-});
+
 
 // Criar Avatar (com upload)
-app.post("/api/admin/avatars", authenticateAPI, upload.single("image"), async (req, res) => {
-  try {
-    const { codigoAvatar, tierMinimo } = req.body;
-    let urlVercelBlob = `https://placehold.co/150x150?text=${codigoAvatar}`;
 
-    if (req.file) {
-      const ext = path.extname(req.file.originalname);
-      const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-      
-      try {
-        const blob = await put(filename, req.file.buffer, {
-          access: 'public',
-          contentType: req.file.mimetype,
-          token: process.env.BLOB_READ_WRITE_TOKEN
-        });
-        urlVercelBlob = blob.url;
-      } catch (uploadError) {
-        console.error("Erro no upload do avatar para o Vercel Blob:", uploadError);
-        return res.status(500).json({ error: "Falha ao enviar a imagem para o Vercel Blob." });
-      }
-    }
-
-    if (!codigoAvatar) {
-      return res.status(400).json({ error: "Código do avatar ausente." });
-    }
-
-    const newAvatar = await prisma.avatarOption.create({
-      data: {
-        codigoAvatar,
-        tierMinimo,
-        urlVercelBlob
-      }
-    });
-    res.json({ success: true, avatar: newAvatar });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao criar avatar" });
-  }
-});
 
 // Deletar Avatar
-app.delete("/api/admin/avatars/:id", authenticateAPI, async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Buscar o avatar antes de deletar para obter o urlVercelBlob
-    const avatar = await prisma.avatarOption.findUnique({
-      where: { id }
-    });
 
-    if (!avatar) {
-      return res.status(404).json({ error: "Avatar não encontrado." });
-    }
-
-    // Deletar do Postgres
-    await prisma.avatarOption.delete({ where: { id } });
-
-    // Atualizar no Firestore
-    const db = getFirestore();
-    const snapshot = await db.collection("users").where("photoURL", "==", avatar.urlVercelBlob).get();
-
-    if (!snapshot.empty) {
-      const batch = db.batch();
-      snapshot.docs.forEach(doc => {
-        const userData = doc.data();
-        const fallbackPhoto = userData.initialPhotoURL || "";
-        batch.update(doc.ref, {
-          photoURL: fallbackPhoto,
-          updatedAt: FieldValue.serverTimestamp()
-        });
-      });
-      await batch.commit();
-      console.log(`[Admin] Reset photoURL for ${snapshot.size} users using deleted avatar ${avatar.codigoAvatar}`);
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error("Erro ao deletar avatar:", error);
-    res.status(500).json({ error: "Erro ao deletar avatar" });
-  }
-});
 
 // Editar Avatar (atualizar imagem)
-app.put("/api/admin/avatars/:id", authenticateAPI, upload.single("image"), async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!req.file) {
-      return res.status(400).json({ error: "Nenhuma imagem enviada." });
-    }
-    const ext = path.extname(req.file.originalname);
-    const filename = `avatar-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-    
-    let urlVercelBlob = "";
-    try {
-      const blob = await put(filename, req.file.buffer, {
-        access: 'public',
-        contentType: req.file.mimetype,
-        token: process.env.BLOB_READ_WRITE_TOKEN
-      });
-      urlVercelBlob = blob.url;
-    } catch (uploadError) {
-      console.error("Erro no upload do avatar para o Vercel Blob:", uploadError);
-      return res.status(500).json({ error: "Falha ao enviar a imagem atualizada para o Vercel Blob." });
-    }
-    
-    const updated = await prisma.avatarOption.update({
-      where: { id },
-      data: { urlVercelBlob }
-    });
-    res.json({ success: true, avatar: updated });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao atualizar avatar" });
-  }
-});
+
 
 // Listar todos os Selos
-app.get("/api/admin/badges", authenticateAPI, async (req, res) => {
-  try {
-    const badges = await prisma.badge.findMany();
-    res.json(badges);
-  } catch (error: any) {
-    console.error(error);
-    res.status(500).json({ 
-      error: "Erro ao buscar selos",
-      details: error?.message || String(error),
-      stack: error?.stack 
-    });
-  }
-});
+
 
 // Criar Selo (com upload)
-app.post("/api/admin/badges", authenticateAPI, upload.single("image"), async (req, res) => {
-  try {
-    const { codigo_evento, nome, descricao } = req.body;
-    let url_vercel_blob = "";
 
-    if (req.file) {
-      const ext = path.extname(req.file.originalname);
-      const filename = `badge-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-      
-      try {
-        const blob = await put(filename, req.file.buffer, {
-          access: 'public',
-          contentType: req.file.mimetype,
-          token: process.env.BLOB_READ_WRITE_TOKEN
-        });
-        url_vercel_blob = blob.url;
-      } catch (uploadError) {
-        console.error("Erro no upload do selo para o Vercel Blob:", uploadError);
-        return res.status(500).json({ error: "Falha ao enviar a imagem para o Vercel Blob." });
-      }
-    }
-
-    if (!codigo_evento || !nome) {
-      return res.status(400).json({ error: "Dados incompletos." });
-    }
-
-    const newBadge = await prisma.badge.create({
-      data: {
-        codigo_evento,
-        nome,
-        descricao,
-        url_vercel_blob
-      }
-    });
-    res.json({ success: true, badge: newBadge });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao criar selo" });
-  }
-});
 
 // Deletar Selo
-app.delete("/api/admin/badges/:id", authenticateAPI, async (req, res) => {
-  try {
-    await prisma.badge.delete({ where: { id: req.params.id } });
-    res.json({ success: true });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao deletar selo" });
-  }
-});
+
 
 // Editar Selo (atualizar imagem)
-app.put("/api/admin/badges/:id", authenticateAPI, upload.single("image"), async (req, res) => {
-  try {
-    const { id } = req.params;
-    if (!req.file) {
-      return res.status(400).json({ error: "Nenhuma imagem enviada." });
-    }
-    const ext = path.extname(req.file.originalname);
-    const filename = `badge-${Date.now()}-${Math.round(Math.random() * 1E9)}${ext}`;
-    
-    let urlVercelBlob = "";
-    try {
-      const blob = await put(filename, req.file.buffer, {
-        access: 'public',
-        contentType: req.file.mimetype,
-        token: process.env.BLOB_READ_WRITE_TOKEN
-      });
-      urlVercelBlob = blob.url;
-    } catch (uploadError) {
-      console.error("Erro no upload do selo para o Vercel Blob:", uploadError);
-      return res.status(500).json({ error: "Falha ao enviar a imagem atualizada para o Vercel Blob." });
-    }
-    
-    const updated = await prisma.badge.update({
-      where: { id },
-      data: { url_vercel_blob: urlVercelBlob }
-    });
-    res.json({ success: true, badge: updated });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Erro ao atualizar selo" });
-  }
-});
+
 
 // ==========================================
 // ACERVO (Library) API - PostgreSQL
@@ -1640,78 +631,11 @@ app.post("/api/telemetry/pageview", authenticateAPI, async (req, res) => {
   }
 });
 
-app.get("/api/admin/usage-ranking", authenticateAPI, async (req, res) => {
-  try {
-    const users = await prisma.user.findMany({
-      select: {
-        id: true,
-        displayName: true,
-        email: true,
-        photoURL: true,
-        sessions: { select: { durationSeconds: true } },
-        pageAccesses: { select: { id: true } },
-        interactions: { select: { count: true } }
-      }
-    });
 
-    const ranking = users.map(u => {
-      const totalSessionTime = u.sessions.reduce((acc, s) => acc + s.durationSeconds, 0);
-      const totalPageViews = u.pageAccesses.length;
-      const totalScoredActions = u.interactions.reduce((acc, i) => acc + i.count, 0);
 
-      return {
-        id: u.id,
-        name: u.displayName,
-        email: u.email,
-        photoURL: u.photoURL,
-        totalSessionTime,
-        totalPageViews,
-        totalScoredActions
-      };
-    });
 
-    // Ordenar por um rank score simples: 1 minuto = 1 ponto, 1 pageview = 1 ponto, 1 interaction = 5 pontos
-    ranking.sort((a, b) => {
-      const scoreA = (a.totalSessionTime / 60) + a.totalPageViews + (a.totalScoredActions * 5);
-      const scoreB = (b.totalSessionTime / 60) + b.totalPageViews + (b.totalScoredActions * 5);
-      return scoreB - scoreA;
-    });
 
-    res.json({ success: true, ranking });
-  } catch (error) {
-    console.error("[Admin API] Usage ranking error:", error);
-    res.status(500).json({ error: "Internal error" });
-  }
-});
 
-app.get("/api/admin/unanswered-queries", authenticateAPI, async (req, res) => {
-  try {
-    const queries = await prisma.unansweredQuery.findMany({
-      include: {
-        user: { select: { displayName: true, email: true } }
-      },
-      orderBy: { createdAt: 'desc' }
-    });
-    res.json({ success: true, queries });
-  } catch (error) {
-    console.error("[Admin API] Unanswered queries error:", error);
-    res.status(500).json({ error: "Internal error" });
-  }
-});
-
-app.put("/api/admin/unanswered-queries/:id", authenticateAPI, async (req, res) => {
-  try {
-    const { status } = req.body;
-    const query = await prisma.unansweredQuery.update({
-      where: { id: req.params.id },
-      data: { status }
-    });
-    res.json({ success: true, query });
-  } catch (error) {
-    console.error("[Admin API] Update unanswered query error:", error);
-    res.status(500).json({ error: "Internal error" });
-  }
-});
 
 async function startServer() {
   // Garantir a semeadura automática dos selos no startup

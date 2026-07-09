@@ -69,28 +69,39 @@ model Recipe {
   slug              String?            @unique
   owner             User               @relation(fields: [ownerId], references: [id])
   recipeIngredients RecipeIngredient[]
+
+  @@index([createdAt])
+  @@index([ownerId])
+  @@index([tipo_prato])
 }
 
 model GlobalFoodItem {
-  id                String             @id @default(uuid())
-  name              String             @unique
-  category          String?
-  source            String             @default("CUSTOM")
-  externalId        String?
-  calories          Float              @default(0)
-  protein           Float              @default(0)
-  carbohydrates     Float              @default(0)
-  lipids            Float              @default(0)
-  baseUnit          String             @default("g")
-  baseQuantity      Float              @default(100)
-  micronutrients    Json?
-  brand             String?
-  barcode           String?            @unique
-  portionSize       Float?
-  portionUnit       String?
-  imageUrl          String?
-  allergens         String[]
-  recipeIngredients RecipeIngredient[]
+  id                       String             @id @default(uuid())
+  name                     String             @unique
+  category                 String?
+  source                   String             @default("CUSTOM")
+  externalId               String?
+  calories                 Float              @default(0)
+  protein                  Float              @default(0)
+  carbohydrates            Float              @default(0)
+  lipids                   Float              @default(0)
+  baseUnit                 String             @default("g")
+  baseQuantity             Float              @default(100)
+  micronutrients           Json?
+  brand                    String?
+  barcode                  String?            @unique
+  portionSize              Float?
+  portionUnit              String?
+  imageUrl                 String?
+  allergens                String[]
+  density                  Float?
+  standardPurchaseQuantity Float?
+  standardPurchaseUnit     String?
+  estimatedPrice           Float?
+  recipeIngredients        RecipeIngredient[]
+
+  @@index([name])
+  @@index([source])
 }
 
 model RecipeIngredient {
@@ -103,6 +114,9 @@ model RecipeIngredient {
   preparationTime Float?
   foodItem        GlobalFoodItem @relation(fields: [foodItemId], references: [id])
   recipe          Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+
+  @@index([recipeId])
+  @@index([foodItemId])
 }
 
 model UserGamificationProfile {
@@ -220,6 +234,7 @@ model CulinaryMeasure {
   weightInGrams  Float
 
   @@unique([ingredientName, measureName])
+  @@index([ingredientName])
 }
 
 enum Role {
@@ -234,4 +249,13 @@ enum Grau {
   ALQUIMISTA
   PERITO
   MESTRE_ALQUIMISTA
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  key        String    @unique
+  name       String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  isActive   Boolean   @default(true)
 }

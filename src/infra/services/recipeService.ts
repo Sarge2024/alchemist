@@ -362,8 +362,8 @@ export const recipeService = {
         image: ASSETS.MOCKS.TAPIOCA,
         ingredients: [
           { name: 'goma de tapioca peneirada', quantity: '100g' },
-          { name: 'queijo coalho ralado grosso', quantity: '50g' },
-          { name: 'Manteiga de garrafa para finalizar', quantity: 'a gosto' },
+          { name: 'queijo coalho', quantity: '50g', preparationMode: 'Ralado' },
+          { name: 'Manteiga de garrafa para finalizar', quantity: '0' },
           { name: 'Recheio de sua preferência (coco, queijo ou carne de sol)', quantity: '' }
         ],
         instructions: [
@@ -397,7 +397,7 @@ export const recipeService = {
           { name: 'lombo salgado', quantity: '200g' },
           { name: 'paio', quantity: '100g' },
           { name: 'linguiça calabresa', quantity: '100g' },
-          { name: 'Arroz branco, couve e farofa para acompanhar', quantity: 'a gosto' }
+          { name: 'Arroz branco, couve e farofa para acompanhar', quantity: '0' }
         ],
         instructions: [
           'Deixe as carnes salgadas de molho por 24h trocando a água.',
@@ -426,10 +426,10 @@ export const recipeService = {
         image: ASSETS.MOCKS.SALMON,
         ingredients: [
           { name: 'Filés de salmão', quantity: '2' },
-          { name: 'Salsa e alecrim picados', quantity: 'a gosto' },
-          { name: 'Raspas de limão siciliano', quantity: 'a gosto' },
-          { name: 'Azeite de oliva extra virgem', quantity: 'a gosto' },
-          { name: 'Sal e pimenta a gosto', quantity: '' }
+          { name: 'Salsa e alecrim', quantity: '0', preparationMode: 'Picado' },
+          { name: 'Raspas de limão siciliano', quantity: '0' },
+          { name: 'Azeite de oliva extra virgem', quantity: '0' },
+          { name: 'Sal e pimenta', quantity: '0' }
         ],
         instructions: [
           'Tempere os filés with sal e pimenta.',

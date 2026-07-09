@@ -1141,20 +1141,25 @@ var geminiService = {
       - dietType (string): TIPO DE DIETA (USE EXATAMENTE UMA DESTAS: 'Convencional', 'Vegana', 'Vegetariana', 'Low Carb', 'Keto', 'Sem Gl\xFAten', 'Sem Lactose', 'Fit'). Se n\xE3o houver restri\xE7\xE3o clara, use 'Convencional'.
       - difficulty (F\xE1cil, M\xE9dio, Dif\xEDcil), servings.
       - isClassic (boolean): Determine se esta \xE9 uma receita CL\xC1SSICA ou TRADICIONAL. Receitas cl\xE1ssicas s\xE3o aquelas amplamente conhecidas, com origem hist\xF3rica clara, heran\xE7a cultural ou pratos ic\xF4nicos (ex: Feijoada, Carbonara, Ratatouille). Se o texto descrever uma hist\xF3ria de fam\xEDlia ou heran\xE7a, tamb\xE9m marque como true.
-      - ingredients (objeto[] com name, quantity e group). 
+      - ingredients (objeto[] com name, quantity, preparationMode e group).
         REGRAS DE INGREDIENTES:
         - SEPARE OBRIGATORIAMENTE a quantidade (n\xFAmero + unidade) do nome (ex: "500g de Farinha" -> name: "Farinha", quantity: "500g").
         - EXTRAIA A QUANTIDADE EXATA DO TEXTO. Se o texto diz "2 ovos" ou "4 copos", use quantity: "2" e quantity: "4 copos".
-        - NUNCA use "a gosto" a menos que esteja explicitamente escrito no texto.
+        - Quando o texto indicar "a gosto" (ou equivalente como "a gosto do fregues", "por gosto"), use quantity: "0" — estes sao itens opcionais/complementares com quantidade minima.
         - Mantenha fra\xE7\xF5es leg\xEDveis (ex: "1/2" em vez de "0.5") para facilitar a leitura.
         - N\xC3O repita a quantidade no nome.
         - REMOVA preposi\xE7\xF5es conectoras (ex: "de", "do", "da") do in\xEDcio do nome quando poss\xEDvel.
+        - REMOVA termos de preparo/forma do nome do ingrediente e mova para o campo 'preparationMode' (ex: "picado", "fatiado", "amassado", "mo\xEDdo", "triturado", "ralado", "cortado", "descascado", "lavado", "inteiro", "cru", "cubos", "laminado", "rodelas", "desfiado", "picada", "fatiada", "em cubos", "em rodelas"). O campo preparationMode deve conter APENAS a forma de preparo, e o nome APENAS o ingrediente puro. Se n\xE3o houver termo de preparo, deixe preparationMode vazio ("").
         - O campo 'group' deve ser usado para separar partes da receita (ex: 'Massa', 'Recheio', 'Cobertura').
         - EXEMPLOS:
-          - "4 copos de farinha" -> { quantity: "4 copos", name: "farinha" }
-          - "2 ovos" -> { quantity: "2", name: "ovos" }
-          - "1/2 copo de \xE1gua" -> { quantity: "1/2 copo", name: "\xE1gua" }
-          - "sal a gosto" -> { quantity: "a gosto", name: "sal" }
+          - "4 copos de farinha" -> { quantity: "4 copos", name: "farinha", preparationMode: "" }
+          - "2 ovos" -> { quantity: "2", name: "ovos", preparationMode: "" }
+          - "1/2 copo de \xE1gua" -> { quantity: "1/2 copo", name: "\xE1gua", preparationMode: "" }
+          - "sal a gosto" -> { quantity: "0", name: "sal", preparationMode: "" }
+          - "alho picado" -> { quantity: "3 dentes", name: "alho", preparationMode: "Picado" }
+          - "queijo ralado grosso" -> { quantity: "50g", name: "queijo", preparationMode: "Ralado" }
+          - "cebola em cubos" -> { quantity: "1", name: "cebola", preparationMode: "Em cubos" }
+          - "tomate fatiado" -> { quantity: "2", name: "tomate", preparationMode: "Fatiado" }
         - instructions (string[]).
         - equipment (string[]): Liste TODOS os utens\xEDlios e equipamentos de cozinha necess\xE1rios para o preparo da receita.
           Analise os ingredientes e instru\xE7\xF5es para inferir os equipamentos mesmo que n\xE3o estejam expl\xEDcitos no texto.

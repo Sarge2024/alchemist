@@ -5,15 +5,17 @@
  * e exclusão de conteúdos que violem as regras da comunidade.
  */
 import { motion, AnimatePresence } from 'motion/react';
-import { Trash2, Shield, Loader2, Search, Filter, AlertTriangle, User, Calendar, ExternalLink, Edit3, BarChart2, Users, BookOpen, MessageSquare, Award, Heart, Sparkles, Activity, ChefHat, TrendingUp, Cpu, Clock, HardDrive, HelpCircle, Image as ImageIcon, Upload } from 'lucide-react';
+import { Trash2, Shield, Loader2, Search, Filter, AlertTriangle, User, Calendar, ExternalLink, Edit3, BarChart2, Users, BookOpen, MessageSquare, Award, Heart, Sparkles, Activity, ChefHat, TrendingUp, Cpu, Clock, HardDrive, HelpCircle, Image as ImageIcon, Upload, Key } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { recipeService, Recipe } from '../infra/services/recipeService';
 import { loungeService, LoungeMessage } from '../infra/services/loungeService';
+import { apiKeysService, ApiKey } from '../infra/services/apiKeysService';
 import { useAuth } from '../context/AuthContext';
 import { getAssetUrl } from '../lib/assets';
 import { db } from '../lib/firebase';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { AdminIngredientsTab } from '../components/AdminIngredientsTab';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<string>('recipes');
@@ -40,6 +42,10 @@ export default function AdminDashboard() {
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
   const defaultFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [apiKeysList, setApiKeysList] = useState<ApiKey[]>([]);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+
   const { user, isAdmin: authIsAdmin } = useAuth();
   const isAdmin = authIsAdmin || !!import.meta.env.DEV;
 
@@ -48,12 +54,56 @@ export default function AdminDashboard() {
       if (activeTab === 'recipes') fetchAllRecipes();
       else if (activeTab === 'lounge') fetchAllMessages();
       else if (activeTab === 'analytics') fetchAnalytics();
+      else if (activeTab === 'apiKeys') fetchApiKeys();
       else if (activeTab === 'heroImages') {
         fetchHeroImages();
         fetchCategoryImages();
       }
     }
   }, [isAdmin, activeTab]);
+
+  const fetchApiKeys = async () => {
+    setLoading(true);
+    try {
+      const keys = await apiKeysService.getAllKeys();
+      setApiKeysList(keys);
+    } catch (error) {
+      console.error('Error fetching API keys:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateApiKey = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newKeyName.trim()) return;
+    setIsGeneratingKey(true);
+    try {
+      const newKey = await apiKeysService.createKey(newKeyName.trim());
+      setApiKeysList([newKey, ...apiKeysList]);
+      setNewKeyName('');
+      alert('Chave de API gerada com sucesso! (Nesta demonstração exibiremos ela completa na lista).');
+    } catch (error) {
+      console.error('Error creating API key:', error);
+      alert('Erro ao gerar chave de API.');
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
+  const handleRevokeApiKey = async (id: string) => {
+    if (!window.confirm('Tem certeza que deseja revogar esta chave de API? Aplicações usando ela perderão o acesso imediatamente.')) return;
+    setIsDeleting(true);
+    try {
+      await apiKeysService.revokeKey(id);
+      setApiKeysList(prev => prev.filter(k => k.id !== id));
+    } catch (error) {
+      console.error('Error revoking API key:', error);
+      alert('Erro ao revogar chave de API.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const fetchHeroImages = async () => {
     try {
@@ -315,6 +365,18 @@ export default function AdminDashboard() {
           className={`px-8 py-3 rounded-2xl font-bold text-sm transition-all ${activeTab === 'heroImages' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
         >
           Imagens da Home
+        </button>
+        <button
+          onClick={() => { setActiveTab('apiKeys'); setSearchTerm(''); }}
+          className={`px-8 py-3 rounded-2xl font-bold text-sm transition-all ${activeTab === 'apiKeys' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          Chaves de API
+        </button>
+        <button
+          onClick={() => { setActiveTab('ingredients'); setSearchTerm(''); }}
+          className={`px-8 py-3 rounded-2xl font-bold text-sm transition-all ${activeTab === 'ingredients' ? 'bg-primary text-white shadow-lg' : 'text-on-surface-variant hover:text-on-surface'}`}
+        >
+          Gestão de Ingredientes
         </button>
       </div>
 
@@ -852,6 +914,87 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+      ) : activeTab === 'apiKeys' ? (
+        <div className="space-y-8 animate-fade-in">
+          <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high p-8">
+            <h2 className="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2">
+              <Key className="w-6 h-6 text-primary" /> Gerar Nova Chave de API
+            </h2>
+            <form onSubmit={handleCreateApiKey} className="flex gap-4 items-end max-w-2xl">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-on-surface mb-2">Nome da Aplicação ou Identificador</label>
+                <input
+                  type="text"
+                  required
+                  value={newKeyName}
+                  onChange={(e) => setNewKeyName(e.target.value)}
+                  placeholder="ex: Alchymist-Web"
+                  className="w-full px-4 py-3 rounded-2xl bg-surface-container border border-surface-container-high text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/50"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isGeneratingKey || !newKeyName.trim()}
+                className="px-6 py-3 h-[52px] rounded-2xl font-bold bg-primary text-white hover:bg-primary/90 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isGeneratingKey ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Gerar Chave'}
+              </button>
+            </form>
+          </div>
+          <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high overflow-hidden">
+            <div className="p-8 border-b border-surface-container-high">
+              <h2 className="text-2xl font-bold text-on-surface">Chaves Ativas</h2>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-surface-container-low/50 border-b border-surface-container-high">
+                    <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Nome</th>
+                    <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Chave</th>
+                    <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Criada em</th>
+                    <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant">Último uso</th>
+                    <th className="px-8 py-5 text-xs font-bold uppercase tracking-widest text-on-surface-variant text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-container-high">
+                  {apiKeysList.map((k) => (
+                    <tr key={k.id} className="hover:bg-surface-container/30 transition-colors">
+                      <td className="px-8 py-6 font-bold text-on-surface">{k.name}</td>
+                      <td className="px-8 py-6 font-mono text-sm text-on-surface-variant break-all">
+                        {k.key}
+                      </td>
+                      <td className="px-8 py-6 text-sm text-on-surface-variant">
+                        {new Date(k.createdAt).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="px-8 py-6 text-sm text-on-surface-variant">
+                        {k.lastUsedAt ? new Date(k.lastUsedAt).toLocaleString('pt-BR') : 'Nunca'}
+                      </td>
+                      <td className="px-8 py-6 text-right">
+                        <button 
+                          onClick={() => handleRevokeApiKey(k.id)}
+                          disabled={isDeleting}
+                          className="p-3 bg-red-50 text-red-400 hover:bg-red-500 hover:text-white rounded-xl transition-all disabled:opacity-50"
+                          title="Revogar Chave"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {apiKeysList.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-8 text-center text-on-surface-variant">
+                        Nenhuma chave de API registrada.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : activeTab === 'ingredients' ? (
+        <AdminIngredientsTab />
       ) : (
         <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high overflow-hidden">
           <div className="overflow-x-auto">

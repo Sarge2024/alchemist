@@ -86,6 +86,10 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String portionUnit "❓"
     String imageUrl "❓"
     String allergens 
+    Float density "❓"
+    Float standardPurchaseQuantity "❓"
+    String standardPurchaseUnit "❓"
+    Float estimatedPrice "❓"
     }
   
 
@@ -195,6 +199,16 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String ingredientName 
     String measureName 
     Float weightInGrams 
+    }
+  
+
+  "ApiKey" {
+    String id "🗝️"
+    String key 
+    String name 
+    DateTime createdAt 
+    DateTime lastUsedAt "❓"
+    Boolean isActive 
     }
   
     "User" |o--|| "Role" : "enum:role"

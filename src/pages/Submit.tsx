@@ -733,6 +733,18 @@ export default function Submit() {
                     <option value="Frito">Frito</option>
                     <option value="Grelhado">Grelhado</option>
                     <option value="Refogado">Refogado</option>
+                    <option value="Picado">Picado</option>
+                    <option value="Fatiado">Fatiado</option>
+                    <option value="Em cubos">Em cubos</option>
+                    <option value="Em rodelas">Em rodelas</option>
+                    <option value="Amassado">Amassado</option>
+                    <option value="Moído">Moído</option>
+                    <option value="Triturado">Triturado</option>
+                    <option value="Ralado">Ralado</option>
+                    <option value="Descascado">Descascado</option>
+                    <option value="Lavado">Lavado</option>
+                    <option value="Desfiado">Desfiado</option>
+                    <option value="Laminado">Laminado</option>
                   </select>
                 </div>
                 <div className="flex-1 min-w-[120px] space-y-2 w-full">
