@@ -26,6 +26,9 @@ import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
 import { dishAlchemistsRouter } from "./src/infra/api/dishAlchemistsRouter";
 import { publicRecipesRouter } from "./src/infra/api/publicRecipesRouter";
 import { productsRouter } from "./src/infra/api/productsRouter";
+import { apiKeysRouter } from "./src/infra/api/apiKeysRouter";
+import { adminIngredientsRouter } from './src/infra/api/adminIngredientsRouter';
+import { publicIngredientsRouter } from './src/infra/api/publicIngredientsRouter';
 import { RagBackendService } from "./src/infra/services/ragBackendService";
 import { prisma } from "./src/infra/prisma/client";
 
@@ -140,9 +143,12 @@ registerMcpRoutes(app);
 
 // Monta rotas de Receitas e Ingredientes (internas, com Firebase Auth)
 app.use('/api', dishAlchemistsRouter);
+app.use('/api', apiKeysRouter);
+app.use('/api', adminIngredientsRouter);
 
 // Monta API pública v1 (inter-app, com API Key auth)
 app.use('/api/v1/public', publicRecipesRouter);
+app.use('/api/v1/public', publicIngredientsRouter);
 
 // Monta API de Produtos Industrializados (barcode + Open Food Facts)
 app.use('/api/v1/products', productsRouter);

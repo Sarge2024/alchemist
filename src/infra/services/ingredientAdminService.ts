@@ -90,5 +90,15 @@ export const ingredientAdminService = {
       headers
     });
     if (!response.ok) throw new Error('Falha ao excluir ingrediente');
+  },
+
+  async mergeIngredients(survivorId: string, duplicateIds: string[]): Promise<void> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`/api/admin/ingredients/merge`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ survivorId, duplicateIds })
+    });
+    if (!response.ok) throw new Error('Falha ao mesclar ingredientes');
   }
 };

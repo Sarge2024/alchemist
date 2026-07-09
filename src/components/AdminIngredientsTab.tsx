@@ -18,8 +18,15 @@ export function AdminIngredientsTab() {
   const [searchingExternal, setSearchingExternal] = useState(false);
   const [externalQuery, setExternalQuery] = useState('');
 
+  // Merge state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showMergeModal, setShowMergeModal] = useState(false);
+  const [survivorId, setSurvivorId] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
+
   useEffect(() => {
     fetchData();
+    setSelectedIds(new Set());
   }, [activeSubTab]);
 
   const fetchData = async () => {
@@ -108,6 +115,40 @@ export function AdminIngredientsTab() {
     }
   };
 
+  const handleToggleSelect = (id: string) => {
+    const newSet = new Set(selectedIds);
+    if (newSet.has(id)) newSet.delete(id);
+    else newSet.add(id);
+    setSelectedIds(newSet);
+  };
+
+  const handleExecuteMerge = async () => {
+    if (!survivorId) {
+      alert("Selecione o ingrediente mestre (que deve permanecer).");
+      return;
+    }
+    const duplicateIds = Array.from(selectedIds).filter(id => id !== survivorId);
+    if (duplicateIds.length === 0) {
+      alert("É necessário pelo menos um ingrediente duplicado para mesclar.");
+      return;
+    }
+    if (!confirm(`Tem certeza? As fichas técnicas apontarão para o ingrediente mestre escolhido e os demais (${duplicateIds.length}) serão EXCLUÍDOS permanentemente.`)) return;
+    
+    setMerging(true);
+    try {
+      await ingredientAdminService.mergeIngredients(survivorId, duplicateIds);
+      setShowMergeModal(false);
+      setSelectedIds(new Set());
+      setSurvivorId(null);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao mesclar ingredientes');
+    } finally {
+      setMerging(false);
+    }
+  };
+
   const filteredIngredients = ingredients.filter(i => 
     i.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -146,11 +187,39 @@ export function AdminIngredientsTab() {
         </div>
       </div>
 
+      {selectedIds.size > 0 && (
+        <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4 flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold">
+              {selectedIds.size}
+            </div>
+            <span className="text-on-surface font-medium">Ingredientes selecionados para Carteira de Avaliação</span>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              onClick={() => setSelectedIds(new Set())}
+              className="px-4 py-2 text-on-surface-variant hover:text-on-surface transition-colors font-medium text-sm"
+            >
+              Cancelar
+            </button>
+            <button 
+              onClick={() => setShowMergeModal(true)}
+              className="bg-primary text-white px-6 py-2 rounded-xl font-bold hover:bg-primary/90 transition-colors text-sm shadow-md flex items-center gap-2"
+            >
+              <Database className="w-4 h-4" /> Avaliar Duplicatas (Mesclar)
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="bg-surface-container-lowest rounded-3xl border border-surface-container-high overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-surface-container-low/50 text-on-surface-variant text-sm border-b border-surface-container-high">
+                <th className="px-4 py-4 w-12 text-center">
+                  {/* Título vazio para coluna de checkbox */}
+                </th>
                 <th className="px-6 py-4 font-bold">Nome / Origem</th>
                 <th className="px-6 py-4 font-bold">Kcal | P | C | G (100g)</th>
                 <th className="px-6 py-4 font-bold">Densidade (g/ml)</th>
@@ -174,7 +243,15 @@ export function AdminIngredientsTab() {
                 </tr>
               ) : (
                 filteredIngredients.map(ing => (
-                  <tr key={ing.id} className="hover:bg-surface-container-lowest transition-colors">
+                  <tr key={ing.id} className={`hover:bg-surface-container-lowest transition-colors ${selectedIds.has(ing.id) ? 'bg-primary/5' : ''}`}>
+                    <td className="px-4 py-4 text-center">
+                      <input 
+                        type="checkbox"
+                        checked={selectedIds.has(ing.id)}
+                        onChange={() => handleToggleSelect(ing.id)}
+                        className="w-4 h-4 rounded text-primary focus:ring-primary border-surface-container-high cursor-pointer"
+                      />
+                    </td>
                     <td className="px-6 py-4">
                       {editingId === ing.id ? (
                         <input 
@@ -213,10 +290,11 @@ export function AdminIngredientsTab() {
                         <input 
                           type="number" 
                           step="0.01"
-                          placeholder="Ex: 0.8"
+                          placeholder="Ex: 0.92 (Óleo)"
                           value={editForm.density ?? ''} 
                           onChange={e => setEditForm({...editForm, density: e.target.value === '' ? null : parseFloat(e.target.value)})}
                           className="w-full bg-surface-container p-2 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm"
+                          title="Densidade em g/ml. Para líquidos, isso converte a base de 100g no volume equivalente."
                         />
                       ) : (
                         <div className="text-sm">
@@ -232,7 +310,23 @@ export function AdminIngredientsTab() {
                       {editingId === ing.id ? (
                         <div className="flex gap-2 text-xs">
                           <input type="number" placeholder="Qtd" value={editForm.standardPurchaseQuantity ?? ''} onChange={e => setEditForm({...editForm, standardPurchaseQuantity: e.target.value === '' ? null : parseFloat(e.target.value)})} className="w-16 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                          <input type="text" placeholder="Und" value={editForm.standardPurchaseUnit ?? ''} onChange={e => setEditForm({...editForm, standardPurchaseUnit: e.target.value})} className="w-12 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
+                          <select 
+                            value={editForm.standardPurchaseUnit ?? ''} 
+                            onChange={e => setEditForm({...editForm, standardPurchaseUnit: e.target.value})} 
+                            className="w-20 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary text-xs"
+                          >
+                            <option value="">Und...</option>
+                            <option value="kg">kg</option>
+                            <option value="g">g</option>
+                            <option value="l">L</option>
+                            <option value="ml">ml</option>
+                            <option value="un">un</option>
+                            <option value="dz">dz</option>
+                            <option value="pct">pct</option>
+                            <option value="cx">cx</option>
+                            <option value="lata">lata</option>
+                            <option value="mç">mç</option>
+                          </select>
                           <input type="number" placeholder="R$" step="0.01" value={editForm.estimatedPrice ?? ''} onChange={e => setEditForm({...editForm, estimatedPrice: e.target.value === '' ? null : parseFloat(e.target.value)})} className="w-16 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
                         </div>
                       ) : (
@@ -345,6 +439,77 @@ export function AdminIngredientsTab() {
                   {externalQuery ? 'Nenhum resultado encontrado na USDA para essa busca.' : 'Digite um termo em inglês e clique em Buscar.'}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Merge Modal */}
+      {showMergeModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in p-4">
+          <div className="bg-surface-container-lowest w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-surface-container-high flex justify-between items-center bg-surface-container-low">
+              <div>
+                <h3 className="text-xl font-black text-on-surface flex items-center gap-2">
+                  <Database className="text-primary w-6 h-6" /> Carteira de Avaliação: Mesclar Ingredientes
+                </h3>
+                <p className="text-sm text-on-surface-variant mt-1">
+                  Selecione qual ingrediente deve <strong>permanecer</strong>. Os demais serão excluídos e as fichas técnicas serão atualizadas automaticamente para apontar para o ingrediente escolhido.
+                </p>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto flex-1 space-y-3">
+              {ingredients.filter(ing => selectedIds.has(ing.id)).map(ing => (
+                <label 
+                  key={ing.id} 
+                  className={`flex items-start gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${survivorId === ing.id ? 'border-primary bg-primary/5' : 'border-surface-container-high hover:border-primary/30 bg-surface-container-low'}`}
+                >
+                  <input 
+                    type="radio" 
+                    name="survivor" 
+                    value={ing.id} 
+                    checked={survivorId === ing.id}
+                    onChange={() => setSurvivorId(ing.id)}
+                    className="mt-1 w-5 h-5 text-primary focus:ring-primary border-surface-container-high"
+                  />
+                  <div className="flex-1">
+                    <div className="font-bold text-on-surface text-lg">{ing.name}</div>
+                    <div className="text-sm text-on-surface-variant flex gap-4 mt-1">
+                      <span>Origem: {ing.source}</span>
+                      <span>Kcal: {ing.calories}</span>
+                      <span>Prot: {ing.protein}g</span>
+                      <span>ID: {ing.id.split('-')[0]}...</span>
+                    </div>
+                  </div>
+                  {survivorId === ing.id && (
+                    <div className="bg-primary text-white text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> Mestre
+                    </div>
+                  )}
+                </label>
+              ))}
+            </div>
+
+            <div className="p-6 border-t border-surface-container-high flex justify-end gap-3 bg-surface-container-low">
+              <button 
+                onClick={() => { setShowMergeModal(false); setSurvivorId(null); }}
+                className="px-6 py-3 font-bold text-on-surface-variant hover:text-on-surface transition-colors"
+                disabled={merging}
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleExecuteMerge}
+                disabled={merging || !survivorId}
+                className="bg-primary text-white px-8 py-3 rounded-2xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {merging ? (
+                  <><RefreshCw className="w-5 h-5 animate-spin" /> Mesclando e atualizando receitas...</>
+                ) : (
+                  <><Save className="w-5 h-5" /> Mesclar Fichas e Excluir Duplicatas</>
+                )}
+              </button>
             </div>
           </div>
         </div>

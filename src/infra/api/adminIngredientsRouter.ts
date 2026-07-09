@@ -144,6 +144,36 @@ adminIngredientsRouter.put('/admin/ingredients/:id', authenticateFirebase, requi
   }
 });
 
+// POST /api/admin/ingredients/merge — Mesclar ingredientes duplicados
+adminIngredientsRouter.post('/admin/ingredients/merge', authenticateFirebase, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { survivorId, duplicateIds } = req.body;
+    
+    if (!survivorId || !Array.isArray(duplicateIds) || duplicateIds.length === 0) {
+      return res.status(400).json({ error: 'Dados inválidos para mesclagem' });
+    }
+
+    // Executa a mesclagem em uma transação para garantir integridade
+    await prisma.$transaction(async (tx) => {
+      // 1. Redireciona todas as receitas que usavam as duplicatas para o sobrevivente
+      await tx.recipeIngredient.updateMany({
+        where: { foodItemId: { in: duplicateIds } },
+        data: { foodItemId: survivorId }
+      });
+
+      // 2. Deleta os ingredientes duplicados
+      await tx.globalFoodItem.deleteMany({
+        where: { id: { in: duplicateIds } }
+      });
+    });
+
+    res.json({ success: true, message: 'Ingredientes mesclados com sucesso' });
+  } catch (error: any) {
+    console.error('[AdminIngredients] Erro ao mesclar ingredientes:', error);
+    res.status(500).json({ error: 'Erro interno ao mesclar ingredientes.' });
+  }
+});
+
 // DELETE /api/admin/ingredients/:id — Remover ingrediente
 adminIngredientsRouter.delete('/admin/ingredients/:id', authenticateFirebase, requireAdmin, async (req: Request, res: Response) => {
   try {

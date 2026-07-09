@@ -133,6 +133,12 @@ export interface Recipe {
   imageOptions?: string[];
   chefTips?: string;
   faqs?: { question: string, answer: string }[];
+  nutrition?: {
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  };
 }
 
 const RECIPES_COLLECTION = 'recipes';
