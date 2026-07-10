@@ -154,6 +154,7 @@ adminIngredientsRouter.put('/admin/ingredients/:id', authenticateFirebase, requi
   try {
     const { id } = req.params;
     const { 
+      name,
       source, 
       calories, 
       protein, 
@@ -167,6 +168,7 @@ adminIngredientsRouter.put('/admin/ingredients/:id', authenticateFirebase, requi
     } = req.body;
 
     const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
     if (source !== undefined) updateData.source = source;
     if (calories !== undefined) updateData.calories = calories;
     if (protein !== undefined) updateData.protein = protein;
