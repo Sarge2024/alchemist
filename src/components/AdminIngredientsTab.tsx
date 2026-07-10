@@ -247,19 +247,19 @@ export function AdminIngredientsTab() {
         </div>
       )}
 
-      <div className="bg-surface-container-lowest rounded-3xl border border-surface-container-high overflow-hidden shadow-sm">
-        <div className="overflow-auto max-h-[600px]">
+      <div className="bg-surface-container-lowest rounded-3xl border border-surface-container-high overflow-hidden shadow-sm flex flex-col max-h-[60vh]">
+        <div className="overflow-y-auto flex-1 relative">
           <table className="w-full text-left border-collapse">
-            <thead className="sticky top-0 z-10 shadow-sm">
-              <tr className="bg-surface-container-low text-on-surface-variant text-sm border-b border-surface-container-high">
-                <th className="px-4 py-4 w-12 text-center">
+            <thead className="sticky top-0 z-20 shadow-sm backdrop-blur-md bg-surface-container-low/95">
+              <tr className="text-on-surface-variant text-sm border-b border-surface-container-high">
+                <th className="px-4 py-4 w-12 text-center bg-surface-container-low/95">
                   {/* Título vazio para coluna de checkbox */}
                 </th>
-                <th className="px-6 py-4 font-bold">Nome / Origem</th>
-                <th className="px-6 py-4 font-bold">Kcal | P | C | G (100g)</th>
-                <th className="px-6 py-4 font-bold">Densidade (g/ml)</th>
-                <th className="px-6 py-4 font-bold">Compra (Qtd | Und | R$)</th>
-                <th className="px-6 py-4 font-bold text-right">Ações</th>
+                <th className="px-6 py-4 font-bold bg-surface-container-low/95">Nome / Origem</th>
+                <th className="px-6 py-4 font-bold bg-surface-container-low/95">Kcal | P | C | G (100g)</th>
+                <th className="px-6 py-4 font-bold bg-surface-container-low/95">Densidade (g/ml)</th>
+                <th className="px-6 py-4 font-bold bg-surface-container-low/95">Compra (Qtd | Und | R$)</th>
+                <th className="px-6 py-4 font-bold text-right bg-surface-container-low/95">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-surface-container-high">
@@ -288,99 +288,39 @@ export function AdminIngredientsTab() {
                       />
                     </td>
                     <td className="px-6 py-4">
-                      {editingId === ing.id ? (
-                        <input 
-                          type="text" 
-                          value={editForm.name || ''} 
-                          onChange={e => setEditForm({...editForm, name: e.target.value})}
-                          className="w-full bg-surface-container p-2 rounded-xl border border-surface-container-high focus:ring-2 focus:ring-primary"
-                        />
-                      ) : (
-                        <div>
-                          <div className="font-bold text-on-surface">{ing.name}</div>
-                          <div className="text-xs text-on-surface-variant flex items-center gap-1 mt-1">
-                            <Database className="w-3 h-3" />
-                            <span className={ing.source === 'NOT_FOUND' ? 'text-red-500 font-bold' : ''}>{ing.source}</span>
-                            {ing.externalId && ` (ID: ${ing.externalId})`}
-                          </div>
+                      <div>
+                        <div className="font-bold text-on-surface">{ing.name}</div>
+                        <div className="text-xs text-on-surface-variant flex items-center gap-1 mt-1">
+                          <Database className="w-3 h-3" />
+                          <span className={ing.source === 'NOT_FOUND' ? 'text-red-500 font-bold' : ''}>{ing.source}</span>
+                          {ing.externalId && ` (ID: ${ing.externalId})`}
                         </div>
-                      )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
-                      {editingId === ing.id ? (
-                        <div className="grid grid-cols-2 gap-2 text-xs">
-                          <input type="number" placeholder="Kcal" value={editForm.calories ?? ''} onChange={e => setEditForm({...editForm, calories: parseFloat(e.target.value)})} className="bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                          <input type="number" placeholder="Prot" value={editForm.protein ?? ''} onChange={e => setEditForm({...editForm, protein: parseFloat(e.target.value)})} className="bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                          <input type="number" placeholder="Carb" value={editForm.carbohydrates ?? ''} onChange={e => setEditForm({...editForm, carbohydrates: parseFloat(e.target.value)})} className="bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                          <input type="number" placeholder="Gord" value={editForm.lipids ?? ''} onChange={e => setEditForm({...editForm, lipids: parseFloat(e.target.value)})} className="bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                        </div>
-                      ) : (
-                        <div className="text-sm font-medium">
-                          {ing.calories} <span className="text-on-surface-variant font-normal">|</span> {ing.protein} <span className="text-on-surface-variant font-normal">|</span> {ing.carbohydrates} <span className="text-on-surface-variant font-normal">|</span> {ing.lipids}
-                        </div>
-                      )}
+                      <div className="text-sm font-medium">
+                        {ing.calories} <span className="text-on-surface-variant font-normal">|</span> {ing.protein} <span className="text-on-surface-variant font-normal">|</span> {ing.carbohydrates} <span className="text-on-surface-variant font-normal">|</span> {ing.lipids}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
-                      {editingId === ing.id ? (
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          placeholder="Ex: 0.92 (Óleo)"
-                          value={editForm.density ?? ''} 
-                          onChange={e => setEditForm({...editForm, density: e.target.value === '' ? null : parseFloat(e.target.value)})}
-                          className="w-full bg-surface-container p-2 rounded-xl border-none focus:ring-2 focus:ring-primary text-sm"
-                          title="Densidade em g/ml. Para líquidos, isso converte a base de 100g no volume equivalente."
-                        />
-                      ) : (
-                        <div className="text-sm">
-                          {ing.density ? (
-                            <span className="bg-indigo-500/10 text-indigo-500 px-2 py-1 rounded-lg font-bold">{ing.density} g/ml</span>
-                          ) : (
-                            <span className="text-on-surface-variant/50">-</span>
-                          )}
-                        </div>
-                      )}
+                      <div className="text-sm">
+                        {ing.density ? (
+                          <span className="bg-indigo-500/10 text-indigo-500 px-2 py-1 rounded-lg font-bold">{ing.density} g/ml</span>
+                        ) : (
+                          <span className="text-on-surface-variant/50">-</span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
-                      {editingId === ing.id ? (
-                        <div className="flex gap-2 text-xs">
-                          <input type="number" placeholder="Qtd" value={editForm.standardPurchaseQuantity ?? ''} onChange={e => setEditForm({...editForm, standardPurchaseQuantity: e.target.value === '' ? null : parseFloat(e.target.value)})} className="w-16 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                          <select 
-                            value={editForm.standardPurchaseUnit ?? ''} 
-                            onChange={e => setEditForm({...editForm, standardPurchaseUnit: e.target.value})} 
-                            className="w-20 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary text-xs"
-                          >
-                            <option value="">Und...</option>
-                            <option value="kg">kg</option>
-                            <option value="g">g</option>
-                            <option value="l">L</option>
-                            <option value="ml">ml</option>
-                            <option value="un">un</option>
-                            <option value="dz">dz</option>
-                            <option value="pct">pct</option>
-                            <option value="cx">cx</option>
-                            <option value="lata">lata</option>
-                            <option value="mç">mç</option>
-                          </select>
-                          <input type="number" placeholder="R$" step="0.01" value={editForm.estimatedPrice ?? ''} onChange={e => setEditForm({...editForm, estimatedPrice: e.target.value === '' ? null : parseFloat(e.target.value)})} className="w-16 bg-surface-container p-1 rounded border-none focus:ring-1 focus:ring-primary" />
-                        </div>
-                      ) : (
-                        <div className="text-sm text-on-surface-variant">
-                          {ing.standardPurchaseQuantity ? `${ing.standardPurchaseQuantity} ` : ''}
-                          {ing.standardPurchaseUnit ? `${ing.standardPurchaseUnit} ` : ''}
-                          {ing.estimatedPrice ? `| R$ ${ing.estimatedPrice.toFixed(2)}` : ''}
-                          {!ing.standardPurchaseQuantity && !ing.standardPurchaseUnit && !ing.estimatedPrice && '-'}
-                        </div>
-                      )}
+                      <div className="text-sm text-on-surface-variant">
+                        {ing.standardPurchaseQuantity ? `${ing.standardPurchaseQuantity} ` : ''}
+                        {ing.standardPurchaseUnit ? `${ing.standardPurchaseUnit} ` : ''}
+                        {ing.estimatedPrice ? `| R$ ${ing.estimatedPrice.toFixed(2)}` : ''}
+                        {!ing.standardPurchaseQuantity && !ing.standardPurchaseUnit && !ing.estimatedPrice && '-'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-right space-x-2">
-                      {editingId === ing.id ? (
-                        <>
-                          <button onClick={() => setEditingId(null)} className="text-on-surface-variant hover:text-on-surface text-sm">Cancelar</button>
-                          <button onClick={handleSaveEdit} className="text-primary hover:text-primary/80"><Save className="w-5 h-5" /></button>
-                        </>
-                      ) : (
-                        <>
+                      <>
                           {ing.source === 'NOT_FOUND' && (
                             <button 
                               onClick={() => handleOpenSearchModal(ing)}
@@ -647,6 +587,107 @@ export function AdminIngredientsTab() {
               >
                 {creating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                 Salvar Ingrediente
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Modal */}
+      {editingId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest w-full max-w-2xl rounded-[2rem] border border-surface-container-high shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-surface-container-high flex justify-between items-center bg-surface-container-low/30">
+              <h3 className="text-xl font-black text-on-surface flex items-center gap-2"><Edit3 className="w-5 h-5 text-primary" /> Editar Ingrediente</h3>
+              <button 
+                onClick={() => setEditingId(null)}
+                className="w-10 h-10 rounded-xl bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-on-surface-variant mb-1">Nome do Ingrediente *</label>
+                <input 
+                  type="text" 
+                  value={editForm.name || ''} 
+                  onChange={e => setEditForm({...editForm, name: e.target.value})}
+                  className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Kcal (100g)</label>
+                  <input type="number" value={editForm.calories ?? ''} onChange={e => setEditForm({...editForm, calories: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Proteínas (g)</label>
+                  <input type="number" value={editForm.protein ?? ''} onChange={e => setEditForm({...editForm, protein: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Carboidratos (g)</label>
+                  <input type="number" value={editForm.carbohydrates ?? ''} onChange={e => setEditForm({...editForm, carbohydrates: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Gorduras (g)</label>
+                  <input type="number" value={editForm.lipids ?? ''} onChange={e => setEditForm({...editForm, lipids: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-surface-container-high">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Densidade (g/ml)</label>
+                  <input type="number" step="0.01" value={editForm.density ?? ''} onChange={e => setEditForm({...editForm, density: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Opcional" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-surface-container-high">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Qtd. Compra</label>
+                  <input type="number" step="0.01" value={editForm.standardPurchaseQuantity ?? ''} onChange={e => setEditForm({...editForm, standardPurchaseQuantity: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Un. Compra</label>
+                  <select 
+                    value={editForm.standardPurchaseUnit ?? ''} 
+                    onChange={e => setEditForm({...editForm, standardPurchaseUnit: e.target.value})} 
+                    className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="l">L</option>
+                    <option value="ml">ml</option>
+                    <option value="un">un</option>
+                    <option value="dz">dz</option>
+                    <option value="pct">pct</option>
+                    <option value="cx">cx</option>
+                    <option value="lata">lata</option>
+                    <option value="mç">mç</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Preço (R$)</label>
+                  <input type="number" step="0.01" value={editForm.estimatedPrice ?? ''} onChange={e => setEditForm({...editForm, estimatedPrice: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-surface-container-high bg-surface-container-low/30 flex justify-end gap-3">
+              <button 
+                onClick={() => setEditingId(null)}
+                className="px-6 py-3 rounded-xl text-on-surface-variant hover:text-on-surface font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleSaveEdit}
+                className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2"
+              >
+                <Save className="w-5 h-5" /> Salvar Alterações
               </button>
             </div>
           </div>
