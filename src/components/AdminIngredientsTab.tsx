@@ -336,7 +336,6 @@ export function AdminIngredientsTab() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </>
-                      )}
                     </td>
                   </tr>
                 ))
