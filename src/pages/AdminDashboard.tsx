@@ -917,6 +917,18 @@ export default function AdminDashboard() {
       ) : activeTab === 'apiKeys' ? (
         <div className="space-y-8 animate-fade-in">
           <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high p-8">
+            <h2 className="text-2xl font-bold text-on-surface mb-4 flex items-center gap-2">
+              <Key className="w-6 h-6 text-primary" /> Chave de API Atual do Sistema (Frontend)
+            </h2>
+            <div className="bg-surface-container-high/40 p-4 rounded-xl font-mono text-sm break-all text-on-surface-variant border border-surface-container-high">
+              {import.meta.env.VITE_APP_API_KEY || 'Nenhuma chave configurada no ambiente'}
+            </div>
+            <p className="text-xs text-on-surface-variant mt-3">
+              Esta é a chave configurada no ambiente atual (<code className="font-bold">VITE_APP_API_KEY</code>). Ela é utilizada nativamente pelas requisições da aplicação (ex: envio de imagens).
+            </p>
+          </div>
+
+          <div className="bg-surface-container-lowest rounded-[2.5rem] shadow-sm border border-surface-container-high p-8">
             <h2 className="text-2xl font-bold text-on-surface mb-6 flex items-center gap-2">
               <Key className="w-6 h-6 text-primary" /> Gerar Nova Chave de API
             </h2>

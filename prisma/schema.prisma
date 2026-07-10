@@ -98,6 +98,8 @@ model GlobalFoodItem {
   standardPurchaseQuantity Float?
   standardPurchaseUnit     String?
   estimatedPrice           Float?
+  defaultCorrectionFactor  Float?
+  defaultCookingFactor     Float?
   recipeIngredients        RecipeIngredient[]
 
   @@index([name])
@@ -105,15 +107,21 @@ model GlobalFoodItem {
 }
 
 model RecipeIngredient {
-  id              String         @id @default(uuid())
-  recipeId        String
-  foodItemId      String
-  quantity        Float
-  unit            String
-  preparationMode String?
-  preparationTime Float?
-  foodItem        GlobalFoodItem @relation(fields: [foodItemId], references: [id])
-  recipe          Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  id               String         @id @default(uuid())
+  recipeId         String
+  foodItemId       String
+  quantity         Float
+  unit             String
+  preparationMode  String?
+  preparationTime  Float?
+  grossWeight      Float?
+  cleanWeight      Float?
+  cookedWeight     Float?
+  correctionFactor Float?
+  cookingFactor    Float?
+  perCapitaClean   Float?
+  foodItem         GlobalFoodItem @relation(fields: [foodItemId], references: [id])
+  recipe           Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
 
   @@index([recipeId])
   @@index([foodItemId])

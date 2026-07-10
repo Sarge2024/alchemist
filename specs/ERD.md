@@ -90,6 +90,8 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     Float standardPurchaseQuantity "❓"
     String standardPurchaseUnit "❓"
     Float estimatedPrice "❓"
+    Float defaultCorrectionFactor "❓"
+    Float defaultCookingFactor "❓"
     }
   
 
@@ -99,6 +101,12 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String unit 
     String preparationMode "❓"
     Float preparationTime "❓"
+    Float grossWeight "❓"
+    Float cleanWeight "❓"
+    Float cookedWeight "❓"
+    Float correctionFactor "❓"
+    Float cookingFactor "❓"
+    Float perCapitaClean "❓"
     }
   
 

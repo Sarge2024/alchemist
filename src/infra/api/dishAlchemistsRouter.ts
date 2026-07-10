@@ -28,6 +28,38 @@ const generateSlug = (text: string) => {
     .replace(/-+$/, '');            // Trim do final
 };
 
+// Auxiliar para UAN
+function processUanVariables(ing: any) {
+  let grossWeight = ing.grossWeight ? parseFloat(ing.grossWeight) : null;
+  let cleanWeight = ing.cleanWeight ? parseFloat(ing.cleanWeight) : null;
+  let cookedWeight = ing.cookedWeight ? parseFloat(ing.cookedWeight) : null;
+  let perCapitaClean = ing.perCapitaClean ? parseFloat(ing.perCapitaClean) : null;
+  
+  let correctionFactor = ing.correctionFactor ? parseFloat(ing.correctionFactor) : null;
+  let cookingFactor = ing.cookingFactor ? parseFloat(ing.cookingFactor) : null;
+
+  if (grossWeight !== null && cleanWeight !== null && cleanWeight > 0) {
+    correctionFactor = grossWeight / cleanWeight;
+  } else if (cleanWeight !== null && correctionFactor !== null) {
+    grossWeight = cleanWeight * correctionFactor;
+  }
+
+  if (cookedWeight !== null && cleanWeight !== null && cleanWeight > 0) {
+    cookingFactor = cookedWeight / cleanWeight;
+  } else if (cleanWeight !== null && cookingFactor !== null) {
+    cookedWeight = cleanWeight * cookingFactor;
+  }
+
+  return {
+    grossWeight: grossWeight !== null && !isNaN(grossWeight) ? grossWeight : null,
+    cleanWeight: cleanWeight !== null && !isNaN(cleanWeight) ? cleanWeight : null,
+    cookedWeight: cookedWeight !== null && !isNaN(cookedWeight) ? cookedWeight : null,
+    correctionFactor: correctionFactor !== null && !isNaN(correctionFactor) ? Math.max(1, correctionFactor) : null,
+    cookingFactor: cookingFactor !== null && !isNaN(cookingFactor) ? cookingFactor : null,
+    perCapitaClean: perCapitaClean !== null && !isNaN(perCapitaClean) ? perCapitaClean : null,
+  };
+}
+
 // Auxiliar para parsing de quantidade e unidade
 function parseQuantityAndUnit(qtyStr: string) {
   if (!qtyStr) return { quantity: 1, unit: 'un' };
@@ -199,6 +231,7 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
         });
 
         const { quantity, unit } = parseQuantityAndUnit(qtyStr);
+        const uan = processUanVariables(typeof ing === 'object' ? ing : {});
 
         await prisma.recipeIngredient.create({
           data: {
@@ -206,7 +239,8 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
             foodItemId: foodItem.id,
             quantity,
             unit,
-            preparationMode: group !== 'Outros' ? group : null
+            preparationMode: group !== 'Outros' ? group : null,
+            ...uan
           }
         });
       }
@@ -332,6 +366,7 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
         });
 
         const { quantity, unit } = parseQuantityAndUnit(qtyStr);
+        const uan = processUanVariables(typeof ing === 'object' ? ing : {});
 
         await prisma.recipeIngredient.create({
           data: {
@@ -339,7 +374,8 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
             foodItemId: foodItem.id,
             quantity,
             unit,
-            preparationMode: group !== 'Outros' ? group : null
+            preparationMode: group !== 'Outros' ? group : null,
+            ...uan
           }
         });
       }

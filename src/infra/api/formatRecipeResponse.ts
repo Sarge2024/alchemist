@@ -50,7 +50,15 @@ export function formatRecipeResponse(recipe: any) {
       category: ri.foodItem.category || '',
       quantity: ri.quantity,
       unit: ri.unit,
-      preparationMode: ri.preparationMode || null
+      preparationMode: ri.preparationMode || null,
+      grossWeight: ri.grossWeight,
+      cleanWeight: ri.cleanWeight,
+      cookedWeight: ri.cookedWeight,
+      correctionFactor: ri.correctionFactor,
+      cookingFactor: ri.cookingFactor,
+      perCapitaClean: ri.perCapitaClean,
+      defaultCorrectionFactor: ri.foodItem.defaultCorrectionFactor,
+      defaultCookingFactor: ri.foodItem.defaultCookingFactor
     })),
     nutrition
   };

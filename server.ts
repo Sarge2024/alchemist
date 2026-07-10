@@ -25,6 +25,7 @@ import cron from "node-cron";
 import { registerMcpRoutes } from "./src/infra/mcp/mcpServer";
 import { dishAlchemistsRouter } from "./src/infra/api/dishAlchemistsRouter";
 import { publicRecipesRouter } from "./src/infra/api/publicRecipesRouter";
+import { managerRouter } from "./src/infra/api/managerRouter";
 import { productsRouter } from "./src/infra/api/productsRouter";
 import { apiKeysRouter } from "./src/infra/api/apiKeysRouter";
 import { adminIngredientsRouter } from './src/infra/api/adminIngredientsRouter';
@@ -149,6 +150,9 @@ app.use('/api', adminIngredientsRouter);
 // Monta API pública v1 (inter-app, com API Key auth)
 app.use('/api/v1/public', publicRecipesRouter);
 app.use('/api/v1/public', publicIngredientsRouter);
+
+// Monta API B2B do Alchymist Manager v1
+app.use('/api/v1/manager', managerRouter);
 
 // Monta API de Produtos Industrializados (barcode + Open Food Facts)
 app.use('/api/v1/products', productsRouter);

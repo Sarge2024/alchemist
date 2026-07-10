@@ -37,7 +37,7 @@ export default function Submit() {
     prepTime: '',
     servings: '',
     difficulty: 'Médio',
-    ingredients: [{ name: '', quantity: '', group: '', preparationMode: '', preparationTime: '' }],
+    ingredients: [{ name: '', quantity: '', group: '', preparationMode: '', preparationTime: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' }],
     instructions: [''],
     equipment: [],
     isClassic: false,
@@ -69,14 +69,20 @@ export default function Submit() {
         // Ensure ingredients are in the correct format if they came as strings or mismatch
         ingredients: Array.isArray(location.state.scrapedData.ingredients) 
           ? location.state.scrapedData.ingredients.map((ing: any) => {
-              if (typeof ing === 'string') return { name: ing, quantity: '', group: '' };
+              if (typeof ing === 'string') return { name: ing, quantity: '', group: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' };
               return { 
                 name: ing.name || '', 
                 quantity: ing.quantity || '', 
-                group: ing.group || '' 
+                group: ing.group || '',
+                preparationMode: ing.preparationMode || '',
+                preparationTime: ing.preparationTime || '',
+                grossWeight: ing.grossWeight || '',
+                cleanWeight: ing.cleanWeight || '',
+                cookedWeight: ing.cookedWeight || '',
+                perCapitaClean: ing.perCapitaClean || ''
               };
             })
-          : [{ name: '', quantity: '', group: '' }]
+          : [{ name: '', quantity: '', group: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' }]
       }));
     }
   }, [user, id, isEditing, location.state]);
@@ -177,7 +183,7 @@ export default function Submit() {
 
   const addArrayItem = (field: 'ingredients' | 'instructions') => {
     if (field === 'ingredients') {
-      setFormData(prev => ({ ...prev, ingredients: [...prev.ingredients, { name: '', quantity: '', group: '', preparationMode: '', preparationTime: '' }] }));
+      setFormData(prev => ({ ...prev, ingredients: [...prev.ingredients, { name: '', quantity: '', group: '', preparationMode: '', preparationTime: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' }] }));
     } else {
       setFormData(prev => ({ ...prev, instructions: [...prev.instructions, ''] }));
     }
@@ -688,7 +694,8 @@ export default function Submit() {
           </div>
           <div className="space-y-4">
             {(formData.ingredients as Ingredient[]).map((ing, i) => (
-              <div key={i} className="flex flex-col md:flex-row gap-4 p-4 bg-surface-container rounded-2xl relative group items-end md:items-start">
+              <div key={i} className="flex flex-col bg-surface-container rounded-2xl">
+                <div className="flex flex-col md:flex-row gap-4 p-4 relative group items-end md:items-start">
                 <div className="flex-1 min-w-[120px] space-y-2 w-full">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Parte / Grupo</label>
                   <input 
@@ -758,16 +765,67 @@ export default function Submit() {
                     className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
                   />
                 </div>
+              </div>
+                <div className="flex flex-col md:flex-row gap-4 p-4 pt-0 relative group items-end md:items-start border-t border-stone-200/50">
+                <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PB (g)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={ing.grossWeight || ''}
+                    onChange={(e) => handleIngredientChange(i, 'grossWeight', e.target.value)}
+                    placeholder="Peso Bruto" 
+                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PL (g)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={ing.cleanWeight || ''}
+                    onChange={(e) => handleIngredientChange(i, 'cleanWeight', e.target.value)}
+                    placeholder="Peso Líquido" 
+                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PC (g)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={ing.cookedWeight || ''}
+                    onChange={(e) => handleIngredientChange(i, 'cookedWeight', e.target.value)}
+                    placeholder="Peso Cozido" 
+                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                  />
+                </div>
+                <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Per Capita (g)</label>
+                  <input 
+                    type="number"
+                    min="0"
+                    step="0.1"
+                    value={ing.perCapitaClean || ''}
+                    onChange={(e) => handleIngredientChange(i, 'perCapitaClean', e.target.value)}
+                    placeholder="Por pessoa" 
+                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                  />
+                </div>
                 {formData.ingredients.length > 1 && (
                   <button 
                     type="button" 
                     onClick={() => removeArrayItem(i, 'ingredients')}
-                    className="p-2 text-stone-400 hover:text-red-500 transition-colors bg-white md:bg-transparent rounded-full shadow-sm md:shadow-none mb-1"
+                    className="p-2 text-stone-400 hover:text-red-500 transition-colors bg-white md:bg-transparent rounded-full shadow-sm md:shadow-none mb-1 ml-auto"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 )}
               </div>
+            </div>
             ))}
           </div>
         </section>

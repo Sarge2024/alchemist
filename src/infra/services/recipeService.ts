@@ -103,6 +103,14 @@ export interface Ingredient {
   group?: string;
   preparationMode?: string;
   preparationTime?: string;
+  grossWeight?: string;
+  cleanWeight?: string;
+  cookedWeight?: string;
+  correctionFactor?: string;
+  cookingFactor?: string;
+  perCapitaClean?: string;
+  defaultCorrectionFactor?: number;
+  defaultCookingFactor?: number;
 }
 
 export interface Recipe {

@@ -160,7 +160,9 @@ router.get("/analytics", authenticateAPI, async (req, res) => {
      // 1. Firestore: Lounge Messages stats
     let allMessages: any[] = [];
     try {
-      const allMsgsSnap = await db.collection('lounge_messages').get();
+      const allMsgsSnap = await db.collection('lounge_messages')
+        .where('timestamp', '>=', thirtyDaysAgo)
+        .get();
       allMessages = allMsgsSnap.docs.map(d => ({ id: d.id, ...d.data() })) as any[];
     } catch (fsError) {
       console.error("[Admin Analytics] Erro ao buscar lounge_messages do Firestore (provável cota excedida):", fsError);
