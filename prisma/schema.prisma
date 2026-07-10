@@ -60,6 +60,7 @@ model Recipe {
   difficulty        String?
   custo_estimado    String?
   instructions      String[]
+  chefTips          String?
   rating            Float              @default(4.5)
   reviewsCount      Int                @default(0)
   isClassic         Boolean            @default(false)

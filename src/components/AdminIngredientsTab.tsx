@@ -24,6 +24,13 @@ export function AdminIngredientsTab() {
   const [survivorId, setSurvivorId] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
 
+  // Create state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createForm, setCreateForm] = useState<Partial<GlobalFoodItem>>({
+    name: '', calories: 0, protein: 0, carbohydrates: 0, lipids: 0, source: 'PROPRIETARIA'
+  });
+  const [creating, setCreating] = useState(false);
+
   useEffect(() => {
     fetchData();
     setSelectedIds(new Set());
@@ -149,6 +156,25 @@ export function AdminIngredientsTab() {
     }
   };
 
+  const handleCreateIngredient = async () => {
+    if (!createForm.name) {
+      alert("O nome do ingrediente é obrigatório.");
+      return;
+    }
+    setCreating(true);
+    try {
+      await ingredientAdminService.createIngredient(createForm);
+      setShowCreateModal(false);
+      setCreateForm({ name: '', calories: 0, protein: 0, carbohydrates: 0, lipids: 0, source: 'PROPRIETARIA' });
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao criar ingrediente');
+    } finally {
+      setCreating(false);
+    }
+  };
+
   const filteredIngredients = ingredients.filter(i => 
     i.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -175,15 +201,24 @@ export function AdminIngredientsTab() {
           </button>
         </div>
 
-        <div className="relative">
-          <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
-          <input
-            type="text"
-            placeholder="Buscar ingrediente..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 rounded-2xl bg-surface-container-low border-none focus:ring-2 focus:ring-primary text-on-surface w-64"
-          />
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+            <input
+              type="text"
+              placeholder="Buscar ingrediente..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2 rounded-2xl bg-surface-container-low border-none focus:ring-2 focus:ring-primary text-on-surface w-64"
+            />
+          </div>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="bg-primary text-white px-4 py-2 rounded-2xl font-bold flex items-center gap-2 hover:bg-primary/90 transition-colors shadow-sm"
+          >
+            <Plus className="w-5 h-5" />
+            Novo Ingrediente
+          </button>
         </div>
       </div>
 
@@ -213,10 +248,10 @@ export function AdminIngredientsTab() {
       )}
 
       <div className="bg-surface-container-lowest rounded-3xl border border-surface-container-high overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-auto max-h-[600px]">
           <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-surface-container-low/50 text-on-surface-variant text-sm border-b border-surface-container-high">
+            <thead className="sticky top-0 z-10 shadow-sm">
+              <tr className="bg-surface-container-low text-on-surface-variant text-sm border-b border-surface-container-high">
                 <th className="px-4 py-4 w-12 text-center">
                   {/* Título vazio para coluna de checkbox */}
                 </th>
@@ -509,6 +544,109 @@ export function AdminIngredientsTab() {
                 ) : (
                   <><Save className="w-5 h-5" /> Mesclar Fichas e Excluir Duplicatas</>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest w-full max-w-2xl rounded-[2rem] border border-surface-container-high shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div className="p-6 border-b border-surface-container-high flex justify-between items-center bg-surface-container-low/30">
+              <h3 className="text-xl font-black text-on-surface">Novo Ingrediente</h3>
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="w-10 h-10 rounded-xl bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto space-y-4">
+              <div>
+                <label className="block text-sm font-bold text-on-surface-variant mb-1">Nome do Ingrediente *</label>
+                <input 
+                  type="text" 
+                  value={createForm.name || ''} 
+                  onChange={e => setCreateForm({...createForm, name: e.target.value})}
+                  className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface"
+                  placeholder="Ex: Farinha de Trigo Especial"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Kcal (100g)</label>
+                  <input type="number" value={createForm.calories ?? ''} onChange={e => setCreateForm({...createForm, calories: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Proteínas (g)</label>
+                  <input type="number" value={createForm.protein ?? ''} onChange={e => setCreateForm({...createForm, protein: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Carboidratos (g)</label>
+                  <input type="number" value={createForm.carbohydrates ?? ''} onChange={e => setCreateForm({...createForm, carbohydrates: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Gorduras (g)</label>
+                  <input type="number" value={createForm.lipids ?? ''} onChange={e => setCreateForm({...createForm, lipids: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-surface-container-high">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Densidade (g/ml)</label>
+                  <input type="number" step="0.01" value={createForm.density ?? ''} onChange={e => setCreateForm({...createForm, density: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Opcional. Ex: 0.92 para óleo" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t border-surface-container-high">
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Qtd. Compra</label>
+                  <input type="number" step="0.01" value={createForm.standardPurchaseQuantity ?? ''} onChange={e => setCreateForm({...createForm, standardPurchaseQuantity: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Ex: 5" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Un. Compra</label>
+                  <select 
+                    value={createForm.standardPurchaseUnit ?? ''} 
+                    onChange={e => setCreateForm({...createForm, standardPurchaseUnit: e.target.value})} 
+                    className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary"
+                  >
+                    <option value="">Selecione...</option>
+                    <option value="kg">kg</option>
+                    <option value="g">g</option>
+                    <option value="l">L</option>
+                    <option value="ml">ml</option>
+                    <option value="un">un</option>
+                    <option value="dz">dz</option>
+                    <option value="pct">pct</option>
+                    <option value="cx">cx</option>
+                    <option value="lata">lata</option>
+                    <option value="mç">mç</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-on-surface-variant mb-1">Preço (R$)</label>
+                  <input type="number" step="0.01" value={createForm.estimatedPrice ?? ''} onChange={e => setCreateForm({...createForm, estimatedPrice: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" placeholder="Ex: 24.90" />
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-surface-container-high bg-surface-container-low/30 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowCreateModal(false)}
+                className="px-6 py-3 rounded-xl text-on-surface-variant hover:text-on-surface font-bold transition-colors"
+              >
+                Cancelar
+              </button>
+              <button 
+                onClick={handleCreateIngredient}
+                disabled={creating}
+                className="bg-primary text-white px-8 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {creating ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                Salvar Ingrediente
               </button>
             </div>
           </div>

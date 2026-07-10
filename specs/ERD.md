@@ -58,6 +58,7 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String difficulty "❓"
     String custo_estimado "❓"
     String instructions 
+    String chefTips "❓"
     Float rating 
     Int reviewsCount 
     Boolean isClassic 

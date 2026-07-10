@@ -72,22 +72,22 @@ export const RecipeCard: React.FC<RecipeCardProps> = ({ recipe }) => {
           {title}
         </h3>
 
-        {recipe.nutrition && (
+        {recipe.nutrition && recipe.nutrition.total_nutrition && (
           <div className="flex flex-wrap gap-1.5 md:gap-2 mb-2 md:mb-3">
             <span className="text-[9px] md:text-[11px] font-medium text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded-md flex gap-1 items-center">
-              <span className="font-bold text-amber-600">{Math.round(recipe.nutrition.calories || 0)}</span>
+              <span className="font-bold text-amber-600">{Math.round(recipe.nutrition.total_nutrition.calories || 0)}</span>
               <span className="opacity-75">kcal</span>
             </span>
             <span className="text-[9px] md:text-[11px] font-medium text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded-md flex gap-1 items-center">
-              <span className="font-bold text-blue-600">{Math.round(recipe.nutrition.protein || 0)}g</span>
+              <span className="font-bold text-blue-600">{Math.round(recipe.nutrition.total_nutrition.protein || 0)}g</span>
               <span className="opacity-75">P</span>
             </span>
             <span className="text-[9px] md:text-[11px] font-medium text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded-md flex gap-1 items-center">
-              <span className="font-bold text-emerald-600">{Math.round(recipe.nutrition.carbs || 0)}g</span>
+              <span className="font-bold text-emerald-600">{Math.round(recipe.nutrition.total_nutrition.carbs || 0)}g</span>
               <span className="opacity-75">C</span>
             </span>
             <span className="text-[9px] md:text-[11px] font-medium text-on-surface-variant bg-surface-container px-1.5 py-0.5 rounded-md flex gap-1 items-center">
-              <span className="font-bold text-rose-600">{Math.round(recipe.nutrition.fat || 0)}g</span>
+              <span className="font-bold text-rose-600">{Math.round(recipe.nutrition.total_nutrition.fat || 0)}g</span>
               <span className="opacity-75">G</span>
             </span>
           </div>

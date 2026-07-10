@@ -174,7 +174,8 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
       custo_estimado,
       instructions,
       ingredients,
-      isClassic
+      isClassic,
+      chefTips
     } = req.body;
 
     const slug = `${generateSlug(title || 'receita')}-${Math.random().toString(36).substring(2, 8)}`;
@@ -198,6 +199,7 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
         rating: 4.5,
         reviewsCount: 0,
         isClassic: typeof isClassic === 'boolean' ? isClassic : false,
+        chefTips: chefTips || null,
         slug,
         ownerId: user.id
       }
@@ -302,7 +304,8 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
       custo_estimado,
       instructions,
       ingredients,
-      isClassic
+      isClassic,
+      chefTips
     } = req.body;
 
     let slug = recipe.slug;
@@ -328,6 +331,7 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
         custo_estimado: custo_estimado !== undefined ? custo_estimado : undefined,
         instructions: Array.isArray(instructions) ? instructions : undefined,
         isClassic: typeof isClassic === 'boolean' ? isClassic : undefined,
+        chefTips: chefTips !== undefined ? chefTips : undefined,
         slug
       }
     });

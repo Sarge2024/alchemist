@@ -94,6 +94,7 @@ export function formatRecipeResponse(recipe: any) {
       defaultCorrectionFactor: ri.foodItem.defaultCorrectionFactor,
       defaultCookingFactor: ri.foodItem.defaultCookingFactor
     })),
-    nutrition
+    nutrition,
+    chefTips: recipe.chefTips || ''
   };
 }

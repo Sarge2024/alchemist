@@ -103,6 +103,52 @@ adminIngredientsRouter.get('/admin/ingredients/search-external', authenticateFir
   }
 });
 
+// POST /api/admin/ingredients — Criar novo ingrediente manualmente
+adminIngredientsRouter.post('/admin/ingredients', authenticateFirebase, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { 
+      name,
+      source,
+      calories,
+      protein,
+      carbohydrates,
+      lipids,
+      density,
+      standardPurchaseQuantity,
+      standardPurchaseUnit,
+      estimatedPrice,
+      externalId
+    } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'O nome do ingrediente é obrigatório' });
+    }
+
+    const newIngredient = await prisma.globalFoodItem.create({
+      data: {
+        name,
+        source: source || 'PROPRIETARIA',
+        calories: calories || 0,
+        protein: protein || 0,
+        carbohydrates: carbohydrates || 0,
+        lipids: lipids || 0,
+        density: density === "" ? null : (density ? parseFloat(density) : null),
+        standardPurchaseQuantity: standardPurchaseQuantity === "" ? null : (standardPurchaseQuantity ? parseFloat(standardPurchaseQuantity) : null),
+        standardPurchaseUnit: standardPurchaseUnit || null,
+        estimatedPrice: estimatedPrice === "" ? null : (estimatedPrice ? parseFloat(estimatedPrice) : null),
+        externalId: externalId || null,
+        baseUnit: 'g',
+        baseQuantity: 100
+      }
+    });
+
+    res.status(201).json({ data: newIngredient });
+  } catch (error: any) {
+    console.error('[AdminIngredients] Erro ao criar ingrediente:', error);
+    res.status(500).json({ error: 'Erro ao criar ingrediente.' });
+  }
+});
+
 // PUT /api/admin/ingredients/:id — Atualizar/Parear ingrediente
 adminIngredientsRouter.put('/admin/ingredients/:id', authenticateFirebase, requireAdmin, async (req: Request, res: Response) => {
   try {

@@ -71,6 +71,18 @@ export const ingredientAdminService = {
     return resData.data || [];
   },
 
+  async createIngredient(data: Partial<GlobalFoodItem>): Promise<GlobalFoodItem> {
+    const headers = await getAuthHeaders();
+    const response = await fetch('/api/admin/ingredients', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(data)
+    });
+    if (!response.ok) throw new Error('Falha ao criar ingrediente');
+    const resData = await response.json();
+    return resData.data;
+  },
+
   async updateIngredient(id: string, data: Partial<GlobalFoodItem>): Promise<GlobalFoodItem> {
     const headers = await getAuthHeaders();
     const response = await fetch(`/api/admin/ingredients/${id}`, {
