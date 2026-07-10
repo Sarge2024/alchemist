@@ -5,22 +5,56 @@
 // consistência de formato entre todas as origens de requisição.
 
 export function formatRecipeResponse(recipe: any) {
-  const nutrition = recipe.recipeIngredients.reduce(
-    (acc: any, ri: any) => {
-      const factor = (Number(ri.quantity) || 0) / 100;
-      acc.calories += (ri.foodItem.calories || 0) * factor;
-      acc.protein += (ri.foodItem.protein || 0) * factor;
-      acc.carbs += (ri.foodItem.carbohydrates || 0) * factor;
-      acc.fat += (ri.foodItem.lipids || 0) * factor;
-      return acc;
-    },
-    { calories: 0, protein: 0, carbs: 0, fat: 0 }
-  );
+  let totalCalories = 0;
+  let totalProtein = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
 
-  // Round nutrition values
-  Object.keys(nutrition).forEach(k => {
-    nutrition[k] = Math.round(nutrition[k] * 10) / 10;
+  const nutritionDetails = recipe.recipeIngredients.map((ri: any) => {
+    let weightGrams = 0;
+    if (ri.cleanWeight && ri.cleanWeight > 0) {
+      weightGrams = Number(ri.cleanWeight);
+    } else if (ri.grossWeight && ri.grossWeight > 0) {
+      weightGrams = Number(ri.grossWeight);
+    } else {
+      const u = ri.unit?.toLowerCase() || '';
+      if (u === 'g' || u === 'ml') weightGrams = Number(ri.quantity) || 0;
+      else if (u === 'kg' || u === 'l') weightGrams = (Number(ri.quantity) || 0) * 1000;
+      else weightGrams = Number(ri.quantity) || 0;
+    }
+
+    const factor = weightGrams / 100;
+    const calories = (ri.foodItem.calories || 0) * factor;
+    const protein = (ri.foodItem.protein || 0) * factor;
+    const carbs = (ri.foodItem.carbohydrates || 0) * factor;
+    const fat = (ri.foodItem.lipids || 0) * factor;
+
+    totalCalories += calories;
+    totalProtein += protein;
+    totalCarbs += carbs;
+    totalFat += fat;
+
+    return {
+      ingredient: ri.foodItem.name,
+      source: 'TACO',
+      quantity: weightGrams,
+      unit: 'g',
+      calories: Math.round(calories * 10) / 10,
+      protein: Math.round(protein * 10) / 10,
+      carbs: Math.round(carbs * 10) / 10,
+      fat: Math.round(fat * 10) / 10
+    };
   });
+
+  const nutrition = {
+    total_nutrition: {
+      calories: Math.round(totalCalories * 10) / 10,
+      protein: Math.round(totalProtein * 10) / 10,
+      carbs: Math.round(totalCarbs * 10) / 10,
+      fat: Math.round(totalFat * 10) / 10
+    },
+    details: nutritionDetails
+  };
 
   return {
     id: recipe.id,

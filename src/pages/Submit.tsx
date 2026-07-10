@@ -235,6 +235,13 @@ export default function Submit() {
         });
         console.log('updateRecipe concluído com sucesso');
         alert('Receita atualizada com sucesso!');
+        
+        if (originalRecipe?.slug) {
+          navigate(`/receita/${originalRecipe.slug}`);
+        } else {
+          navigate(`/recipe/${id}`);
+        }
+        return;
       } else {
         console.log('Chamando createRecipe...');
         const newId = await recipeService.createRecipe({

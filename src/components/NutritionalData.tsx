@@ -38,6 +38,12 @@ export const NutritionalData: React.FC<NutritionalDataProps> = ({ recipe }) => {
     const fetchNutrition = async () => {
       if (!recipe.ingredients || recipe.ingredients.length === 0) return;
       
+      // Use pre-calculated backend nutrition if available!
+      if (recipe.nutrition && recipe.nutrition.total_nutrition && recipe.nutrition.details) {
+        setData(recipe.nutrition as unknown as NutriData);
+        return;
+      }
+      
       setLoading(true);
       setError('');
       try {

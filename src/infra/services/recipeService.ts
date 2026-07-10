@@ -142,10 +142,8 @@ export interface Recipe {
   chefTips?: string;
   faqs?: { question: string, answer: string }[];
   nutrition?: {
-    calories: number;
-    protein: number;
-    carbs: number;
-    fat: number;
+    total_nutrition: { calories: number; protein: number; carbs: number; fat: number; };
+    details: { ingredient: string; source: string; quantity: number; unit: string; calories: number; protein: number; carbs: number; fat: number; }[];
   };
 }
 
@@ -185,15 +183,21 @@ const mapRecipeResponse = (recipe: any): any => {
     ...recipe,
     tipo_prato,
     category: tipo_prato,
-    // Garante que o ownerId esteja preenchido para compatibilidade com verificações de propriedade
     ownerId: recipe.author ? recipe.author.uid : recipe.ownerId,
     ingredients: Array.isArray(recipe.ingredients)
       ? recipe.ingredients.map((ing: any) => ({
           name: ing.name,
           quantity: ing.quantity ? `${ing.quantity} ${ing.unit || ''}`.trim() : '',
-          group: ing.preparationMode || ing.category || 'Geral'
+          group: ing.preparationMode || ing.category || 'Geral',
+          grossWeight: ing.grossWeight,
+          cleanWeight: ing.cleanWeight,
+          cookedWeight: ing.cookedWeight,
+          correctionFactor: ing.correctionFactor,
+          cookingFactor: ing.cookingFactor,
+          perCapitaClean: ing.perCapitaClean
         }))
-      : []
+      : [],
+    nutrition: recipe.nutrition || null
   };
 };
 
