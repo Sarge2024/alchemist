@@ -60,6 +60,7 @@ model Recipe {
   difficulty        String?
   custo_estimado    String?
   instructions      String[]
+  preparationSteps  Json?
   chefTips          String?
   rating            Float              @default(4.5)
   reviewsCount      Int                @default(0)
@@ -114,8 +115,6 @@ model RecipeIngredient {
   foodItemId       String
   quantity         Float
   unit             String
-  preparationMode  String?
-  preparationTime  Float?
   grossWeight      Float?
   cleanWeight      Float?
   cookedWeight     Float?

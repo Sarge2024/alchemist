@@ -100,6 +100,7 @@ export function generateSlug(text: string): string {
 export interface Ingredient {
   name: string;
   quantity: string;
+  unit?: string;
   group?: string;
   preparationMode?: string;
   preparationTime?: string;
@@ -111,6 +112,12 @@ export interface Ingredient {
   perCapitaClean?: string;
   defaultCorrectionFactor?: number;
   defaultCookingFactor?: number;
+}
+
+export interface PreparationStep {
+  descricao: string;
+  preparo: string;
+  tempo: number;
 }
 
 export interface Recipe {
@@ -131,6 +138,7 @@ export interface Recipe {
   custo_estimado?: string;
   ingredients: (string | Ingredient)[];
   instructions: string[];
+  preparationSteps?: PreparationStep[];
   equipment?: string[];
   ownerId: string;
   createdAt?: any;

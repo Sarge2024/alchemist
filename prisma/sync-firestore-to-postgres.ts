@@ -254,8 +254,7 @@ async function sync() {
                 recipeId: createdRecipe.id,
                 foodItemId,
                 quantity,
-                unit,
-                preparationMode: group !== 'Outros' ? group : null
+                unit
               }
             });
           }

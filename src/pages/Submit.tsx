@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { Upload, Plus, Trash2, Loader2, Play, AlertTriangle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { recipeService, Recipe, Ingredient } from '../infra/services/recipeService';
+import { recipeService, Recipe, RecipeIngredientInput, Ingredient, PreparationStep } from '../infra/services/recipeService';
 import { getAssetUrl } from '../lib/assets';
 import { userService } from '../infra/services/userService';
 import { AnimatePresence } from 'motion/react';
@@ -39,6 +39,7 @@ export default function Submit() {
     difficulty: 'Médio',
     ingredients: [{ name: '', quantity: '', group: '', preparationMode: '', preparationTime: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' }],
     instructions: [''],
+    preparationSteps: [{ descricao: '', preparo: '', tempo: 2 }],
     equipment: [],
     isClassic: false,
     chefTips: '',
@@ -61,12 +62,11 @@ export default function Submit() {
     if (isEditing && user) {
       loadRecipe(id!);
     } else if (!isEditing && location.state?.scrapedData) {
-      setShouldNotifyEmail(false); // Desativa notificação por e-mail por padrão para receitas via scrap
+      setShouldNotifyEmail(false);
       setImageOptions(location.state.scrapedData.imageOptions || []);
       setFormData(prev => ({
         ...prev,
         ...location.state.scrapedData,
-        // Ensure ingredients are in the correct format if they came as strings or mismatch
         ingredients: Array.isArray(location.state.scrapedData.ingredients) 
           ? location.state.scrapedData.ingredients.map((ing: any) => {
               if (typeof ing === 'string') return { name: ing, quantity: '', group: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' };
@@ -92,7 +92,6 @@ export default function Submit() {
     try {
       const recipe = await recipeService.getRecipe(recipeId);
       if (recipe) {
-        // Double check permissions with current user
         if (user && recipe.ownerId !== user.uid && !isAdmin) {
           alert('Você não tem permissão para editar esta receita.');
           navigate('/explore');
@@ -107,7 +106,7 @@ export default function Submit() {
           tipo_prato: recipe.tipo_prato || [],
           base_alimento: recipe.base_alimento || [],
           origem: recipe.origem || 'Brasileira',
-          custo_estimado: recipe.custo_estimado || '$$',
+          custo_estimado: recipe.custo_estimado || '',
           dietType: recipe.dietType || 'Convencional',
           time: recipe.time || '',
           prepTime: recipe.prepTime || '',
@@ -117,6 +116,7 @@ export default function Submit() {
             typeof ing === 'string' ? { name: ing, quantity: '' } : ing
           ),
           instructions: recipe.instructions,
+          preparationSteps: recipe.preparationSteps || [{ descricao: '', preparo: '', tempo: 2 }],
           equipment: recipe.equipment || [],
           isClassic: recipe.isClassic || false,
           chefTips: recipe.chefTips || '',
@@ -181,19 +181,45 @@ export default function Submit() {
     setFormData(prev => ({ ...prev, [field]: newArray }));
   };
 
-  const addArrayItem = (field: 'ingredients' | 'instructions') => {
+  const handlePrepStepChange = (index: number, field: 'descricao' | 'preparo' | 'tempo', value: any) => {
+    const newSteps = [...(formData.preparationSteps || [])];
+    newSteps[index] = { ...newSteps[index], [field]: field === 'tempo' ? (Number(value) || 0) : value };
+    
+    const totalTime = newSteps.reduce((acc, step) => acc + step.tempo, 0);
+    
+    setFormData(prev => ({ 
+      ...prev, 
+      preparationSteps: newSteps,
+      prepTime: totalTime > 0 ? totalTime.toString() : prev.prepTime
+    }));
+  };
+
+  const addArrayItem = (field: 'ingredients' | 'instructions' | 'preparationSteps') => {
     if (field === 'ingredients') {
       setFormData(prev => ({ ...prev, ingredients: [...prev.ingredients, { name: '', quantity: '', group: '', preparationMode: '', preparationTime: '', grossWeight: '', cleanWeight: '', cookedWeight: '', perCapitaClean: '' }] }));
+    } else if (field === 'preparationSteps') {
+      setFormData(prev => ({ ...prev, preparationSteps: [...(prev.preparationSteps || []), { descricao: '', preparo: '', tempo: 2 }] }));
     } else {
       setFormData(prev => ({ ...prev, instructions: [...prev.instructions, ''] }));
     }
   };
 
-  const removeArrayItem = (index: number, field: 'ingredients' | 'instructions') => {
-    if (formData[field].length > 1) {
-      const newArray = [...formData[field]];
+  const removeArrayItem = (index: number, field: 'ingredients' | 'instructions' | 'preparationSteps') => {
+    const array = formData[field] || [];
+    if (array.length > 1) {
+      const newArray = [...array] as any[];
       newArray.splice(index, 1);
-      setFormData(prev => ({ ...prev, [field]: newArray } as any));
+      
+      if (field === 'preparationSteps') {
+        const totalTime = newArray.reduce((acc, step: any) => acc + (step.tempo || 0), 0);
+        setFormData(prev => ({ 
+          ...prev, 
+          [field]: newArray as PreparationStep[],
+          prepTime: totalTime > 0 ? totalTime.toString() : prev.prepTime
+        }));
+      } else {
+        setFormData(prev => ({ ...prev, [field]: newArray }));
+      }
     }
   };
 
@@ -212,11 +238,9 @@ export default function Submit() {
       return;
     }
 
-    console.log('Iniciando submissão da receita...', { isEditing, id });
     setLoading(true);
 
     if (formData.momento.length === 0 || formData.tipo_prato.length === 0 || formData.base_alimento.length === 0) {
-      console.warn('Validação falhou: Campos obrigatórios vazios');
       const errorMsg = 'Por favor, selecione pelo menos um Momento, uma Técnica e uma Base de Alimento.';
       setErrorHeader(errorMsg);
       alert(errorMsg);
@@ -226,14 +250,11 @@ export default function Submit() {
     }
 
     try {
-      console.log('Dados do formulário sendo enviados:', formData);
       if (isEditing && id) {
-        console.log('Chamando updateRecipe...');
         await recipeService.updateRecipe(id, {
           ...formData,
           ownerId: originalRecipe?.ownerId || user.uid,
         });
-        console.log('updateRecipe concluído com sucesso');
         alert('Receita atualizada com sucesso!');
         
         if (originalRecipe?.slug) {
@@ -243,14 +264,11 @@ export default function Submit() {
         }
         return;
       } else {
-        console.log('Chamando createRecipe...');
-        const newId = await recipeService.createRecipe({
+        await recipeService.createRecipe({
           ...formData,
           ownerId: user.uid,
         }, { notifyEmail: shouldNotifyEmail });
-        console.log('createRecipe concluído com sucesso, novo ID:', newId);
         
-        // Gamification: points for publishing a recipe
         try {
           fetch('/api/gamification/event', {
             method: 'POST',
@@ -270,36 +288,15 @@ export default function Submit() {
         alert('Receita publicada com sucesso!');
       }
       
-      console.log('Navegando para /explore');
       navigate('/explore');
     } catch (error: any) {
       console.error('Erro detalhado ao salvar receita:', error);
-      
-      let message = 'Erro ao salvar a receita. Verifique o console para mais detalhes.';
-      if (error?.message) {
-        try {
-          if (error.message.includes('Firestore operation failed:')) {
-             const cleanMsg = error.message.replace('Firestore operation failed: ', '');
-             try {
-               const parsed = JSON.parse(cleanMsg);
-               message = `Erro Firestore (${parsed.operationType}): ${parsed.error}`;
-             } catch (e) {
-               message = `Erro: ${cleanMsg}`;
-             }
-          } else {
-            message = `Erro: ${error.message}`;
-          }
-        } catch (e) {
-          message = `Erro: ${error.message}`;
-        }
-      }
-      
+      let message = 'Erro ao salvar a receita.';
       setErrorHeader(message);
       alert(message);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setLoading(false);
-      console.log('Processo de submissão finalizado');
     }
   };
 
@@ -377,11 +374,9 @@ export default function Submit() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-12">
-        {/* Taxonomy Axes */}
         <section className="space-y-8">
           <h2 className="text-2xl font-bold text-on-surface border-b border-stone-200 pb-4">Taxonomia e Classificação</h2>
           
-          {/* Momento de Consumo */}
           <div className="space-y-4">
             <label className="block font-bold text-on-surface-variant flex items-center gap-2">
               Momento de Consumo <span className="text-primary">*</span>
@@ -402,7 +397,6 @@ export default function Submit() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Categoria e Técnica */}
             <div className="space-y-4">
               <label className="block font-bold text-on-surface-variant">Categoria e Técnica <span className="text-primary">*</span></label>
               <div className="flex flex-wrap gap-2">
@@ -419,7 +413,6 @@ export default function Submit() {
               </div>
             </div>
 
-            {/* Base de Alimento */}
             <div className="space-y-4">
               <label className="block font-bold text-on-surface-variant">Base de Alimento <span className="text-primary">*</span></label>
               <div className="flex flex-wrap gap-2">
@@ -437,7 +430,6 @@ export default function Submit() {
             </div>
           </div>
 
-          {/* Receita Clássica Checkbox */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-center gap-3 p-4 bg-primary/5 rounded-xl border-2 border-primary/20">
               <input 
@@ -453,7 +445,6 @@ export default function Submit() {
               </label>
             </div>
 
-            {/* Notificação por E-mail Checkbox */}
             <div className="flex items-center gap-3 p-4 bg-orange-50/50 rounded-xl border-2 border-orange-200/50">
               <input 
                 type="checkbox" 
@@ -513,7 +504,6 @@ export default function Submit() {
           </div>
         </section>
 
-        {/* Basic Info */}
         <section className="space-y-6">
           <h2 className="text-2xl font-bold text-on-surface border-b border-stone-200 pb-4">Detalhes da Receita</h2>
           <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
@@ -591,7 +581,6 @@ export default function Submit() {
           </div>
         </section>
 
-        {/* Media */}
         <section className="space-y-6">
           <h2 className="text-2xl font-bold text-on-surface border-b border-stone-200 pb-4">Imagem da Receita</h2>
           
@@ -621,7 +610,6 @@ export default function Submit() {
                     </span>
                   </label>
                 </div>
-                <p className="text-xs text-on-surface-variant">Arquivos suportados: JPG, PNG, WEBP. Máx 5MB.</p>
               </div>
 
               <div className="relative">
@@ -667,27 +655,8 @@ export default function Submit() {
               )}
             </div>
           </div>
-
-          {imageOptions.length > 0 && (
-            <div className="space-y-4 pt-4">
-              <label className="block font-semibold text-on-surface-variant">Outras imagens encontradas (Clique para selecionar):</label>
-              <div className="flex overflow-x-auto gap-4 pb-2 scrollbar-thin scrollbar-thumb-stone-300">
-                {imageOptions.map((opt, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, image: opt }))}
-                    className={`flex-shrink-0 w-24 h-24 rounded-xl overflow-hidden border-2 transition-all ${formData.image === opt ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-stone-300'}`}
-                  >
-                    <img src={getAssetUrl(opt)} alt={`Option ${idx}`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
         </section>
 
-        {/* Ingredients */}
         <section className="space-y-6">
           <div className="flex items-center justify-between border-b border-stone-200 pb-4">
             <h2 className="text-2xl font-bold text-on-surface">Ingredientes</h2>
@@ -703,89 +672,64 @@ export default function Submit() {
             {(formData.ingredients as Ingredient[]).map((ing, i) => (
               <div key={i} className="flex flex-col bg-surface-container rounded-2xl">
                 <div className="flex flex-col md:flex-row gap-4 p-4 relative group items-end md:items-start">
-                <div className="flex-1 min-w-[120px] space-y-2 w-full">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Parte / Grupo</label>
-                  <input 
-                    type="text" 
-                    value={ing.group || ''}
-                    onChange={(e) => handleIngredientChange(i, 'group', e.target.value)}
-                    placeholder="Ex: Massa, Recheio..." 
-                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
-                  />
+                  <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Parte / Grupo</label>
+                    <input 
+                      type="text" 
+                      value={ing.group || ''}
+                      onChange={(e) => handleIngredientChange(i, 'group', e.target.value)}
+                      placeholder="Ex: Massa, Recheio..." 
+                      className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                    />
+                  </div>
+                  <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Quantidade</label>
+                    <div className="flex">
+                      <input 
+                        type="text" 
+                        value={ing.quantity}
+                        onChange={(e) => handleIngredientChange(i, 'quantity', e.target.value)}
+                        placeholder="Qtd*" 
+                        className="w-full p-3 rounded-l-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                      />
+                      <select
+                        value={ing.unit}
+                        onChange={(e) => handleIngredientChange(i, 'unit', e.target.value)}
+                        className="w-24 p-3 rounded-r-xl bg-white border-y border-r border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm border-l"
+                      >
+                        <option value="">Unid*</option>
+                        <option value="g">g</option>
+                        <option value="kg">kg</option>
+                        <option value="ml">ml</option>
+                        <option value="l">l</option>
+                        <option value="unidade">un</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="flex-[2] space-y-2 w-full">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Ingrediente</label>
+                    <input 
+                      type="text" 
+                      value={ing.name}
+                      onChange={(e) => handleIngredientChange(i, 'name', e.target.value)}
+                      placeholder="Ex: Açúcar, Farinha..." 
+                      className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                    />
+                  </div>
                 </div>
-                <div className="flex-1 min-w-[120px] space-y-2 w-full">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Quantidade</label>
-                  <input 
-                    type="text" 
-                    value={ing.quantity}
-                    onChange={(e) => handleIngredientChange(i, 'quantity', e.target.value)}
-                    placeholder="Ex: 1 xícara..." 
-                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
-                  />
-                </div>
-                <div className="flex-[2] space-y-2 w-full">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Ingrediente</label>
-                  <input 
-                    type="text" 
-                    value={ing.name}
-                    onChange={(e) => handleIngredientChange(i, 'name', e.target.value)}
-                    placeholder="Ex: Açúcar, Farinha..." 
-                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
-                  />
-                </div>
-                <div className="flex-1 min-w-[120px] space-y-2 w-full">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Preparo</label>
-                  <select
-                    value={ing.preparationMode || ''}
-                    onChange={(e) => handleIngredientChange(i, 'preparationMode', e.target.value)}
-                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm appearance-none"
-                  >
-                    <option value="">Selecione...</option>
-                    <option value="Cru">Cru</option>
-                    <option value="Cozido">Cozido</option>
-                    <option value="Assado">Assado</option>
-                    <option value="Frito">Frito</option>
-                    <option value="Grelhado">Grelhado</option>
-                    <option value="Refogado">Refogado</option>
-                    <option value="Picado">Picado</option>
-                    <option value="Fatiado">Fatiado</option>
-                    <option value="Em cubos">Em cubos</option>
-                    <option value="Em rodelas">Em rodelas</option>
-                    <option value="Amassado">Amassado</option>
-                    <option value="Moído">Moído</option>
-                    <option value="Triturado">Triturado</option>
-                    <option value="Ralado">Ralado</option>
-                    <option value="Descascado">Descascado</option>
-                    <option value="Lavado">Lavado</option>
-                    <option value="Desfiado">Desfiado</option>
-                    <option value="Laminado">Laminado</option>
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[120px] space-y-2 w-full">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">Tempo (min)</label>
-                  <input 
-                    type="number"
-                    min="0"
-                    value={ing.preparationTime || ''}
-                    onChange={(e) => handleIngredientChange(i, 'preparationTime', e.target.value)}
-                    placeholder="Ex: 15" 
-                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
-                  />
-                </div>
-              </div>
                 <div className="flex flex-col md:flex-row gap-4 p-4 pt-0 relative group items-end md:items-start border-t border-stone-200/50">
-                <div className="flex-1 min-w-[120px] space-y-2 w-full">
-                  <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PB (g)</label>
-                  <input 
-                    type="number"
-                    min="0"
-                    step="0.1"
-                    value={ing.grossWeight || ''}
-                    onChange={(e) => handleIngredientChange(i, 'grossWeight', e.target.value)}
-                    placeholder="Peso Bruto" 
-                    className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
-                  />
-                </div>
+                  <div className="flex-1 min-w-[120px] space-y-2 w-full">
+                    <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PB (g)</label>
+                    <input 
+                      type="number"
+                      min="0"
+                      step="0.1"
+                      value={ing.grossWeight || ''}
+                      onChange={(e) => handleIngredientChange(i, 'grossWeight', e.target.value)}
+                      placeholder="Peso Bruto" 
+                      className="w-full p-3 rounded-xl bg-white border border-stone-100 focus:ring-2 focus:ring-primary outline-none text-sm" 
+                    />
+                  </div>
                 <div className="flex-1 min-w-[120px] space-y-2 w-full">
                   <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">PL (g)</label>
                   <input 

@@ -173,6 +173,7 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
       difficulty,
       custo_estimado,
       instructions,
+      preparationSteps,
       ingredients,
       isClassic,
       chefTips
@@ -196,6 +197,7 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
         difficulty: difficulty || null,
         custo_estimado: custo_estimado || null,
         instructions: Array.isArray(instructions) ? instructions : [],
+        preparationSteps: Array.isArray(preparationSteps) ? preparationSteps : [],
         rating: 4.5,
         reviewsCount: 0,
         isClassic: typeof isClassic === 'boolean' ? isClassic : false,
@@ -241,7 +243,6 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
             foodItemId: foodItem.id,
             quantity,
             unit,
-            preparationMode: group !== 'Outros' ? group : null,
             ...uan
           }
         });
@@ -266,8 +267,9 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
 // ──────────────────────────────────────────────────────────
 dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, res: Response) => {
   try {
+    const recipeId = req.params.id;
     const recipe = await prisma.recipe.findUnique({
-      where: { id: req.params.id },
+      where: { id: recipeId },
       include: { owner: true }
     });
 
@@ -291,7 +293,6 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
     const {
       title,
       description,
-      image,
       momento,
       tipo_prato,
       base_alimento,
@@ -303,36 +304,39 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
       difficulty,
       custo_estimado,
       instructions,
+      preparationSteps,
       ingredients,
       isClassic,
       chefTips
     } = req.body;
 
-    let slug = recipe.slug;
-    if (title && title !== recipe.title) {
-      slug = `${generateSlug(title)}-${Math.random().toString(36).substring(2, 8)}`;
+    let totalPrepTimeMinutes = 0;
+    if (Array.isArray(preparationSteps)) {
+      totalPrepTimeMinutes = preparationSteps.reduce((acc: number, step: any) => {
+        return acc + (Number(step.tempo) || 0);
+      }, 0);
+    } else {
+      // Falback para não perder o que tinha se não foi enviado
+      totalPrepTimeMinutes = parseFloat(prepTime || "0");
     }
 
     await prisma.recipe.update({
-      where: { id: recipe.id },
+      where: { id: recipeId },
       data: {
-        title: title !== undefined ? title : undefined,
-        description: description !== undefined ? description : undefined,
-        image: image !== undefined ? image : undefined,
+        title,
+        description,
         momento: Array.isArray(momento) ? momento : undefined,
         tipo_prato: Array.isArray(tipo_prato) ? tipo_prato : undefined,
         base_alimento: Array.isArray(base_alimento) ? base_alimento : undefined,
-        origem: origem !== undefined ? origem : undefined,
-        time: time !== undefined ? time : undefined,
-        prepTime: prepTime !== undefined ? prepTime : undefined,
-        dietType: dietType !== undefined ? dietType : undefined,
-        servings: servings !== undefined ? servings : undefined,
-        difficulty: difficulty !== undefined ? difficulty : undefined,
-        custo_estimado: custo_estimado !== undefined ? custo_estimado : undefined,
+        origem,
+        time,
+        prepTime: totalPrepTimeMinutes > 0 ? totalPrepTimeMinutes.toString() : prepTime,
+        dietType,
+        servings,
+        difficulty,
+        custo_estimado,
         instructions: Array.isArray(instructions) ? instructions : undefined,
-        isClassic: typeof isClassic === 'boolean' ? isClassic : undefined,
-        chefTips: chefTips !== undefined ? chefTips : undefined,
-        slug
+        preparationSteps: Array.isArray(preparationSteps) ? preparationSteps : undefined
       }
     });
 
@@ -378,7 +382,6 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
             foodItemId: foodItem.id,
             quantity,
             unit,
-            preparationMode: group !== 'Outros' ? group : null,
             ...uan
           }
         });

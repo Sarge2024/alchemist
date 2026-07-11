@@ -58,6 +58,7 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String difficulty "❓"
     String custo_estimado "❓"
     String instructions 
+    Json preparationSteps "❓"
     String chefTips "❓"
     Float rating 
     Int reviewsCount 
@@ -101,8 +102,6 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String id "🗝️"
     Float quantity 
     String unit 
-    String preparationMode "❓"
-    Float preparationTime "❓"
     Float grossWeight "❓"
     Float cleanWeight "❓"
     Float cookedWeight "❓"

@@ -54,7 +54,7 @@ publicRecipesRouter.get('/recipes', async (req: Request, res: Response) => {
     const [recipes, total] = await Promise.all([
       prisma.recipe.findMany({
         where,
-        omit: { instructions: true },
+        omit: { instructions: true, preparationSteps: true },
         include: {
           recipeIngredients: {
             include: { foodItem: true }
@@ -135,7 +135,7 @@ publicRecipesRouter.get('/search', async (req: Request, res: Response) => {
           { description: { contains: q, mode: 'insensitive' } }
         ]
       },
-      omit: { instructions: true },
+      omit: { instructions: true, preparationSteps: true },
       include: {
         recipeIngredients: {
           include: { foodItem: true }

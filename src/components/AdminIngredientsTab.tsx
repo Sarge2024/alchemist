@@ -596,19 +596,19 @@ export function AdminIngredientsTab() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Kcal (100g)</label>
-                  <input type="number" value={createForm.calories ?? ''} onChange={e => setCreateForm({...createForm, calories: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={createForm.calories ?? ''} onChange={e => setCreateForm({...createForm, calories: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Proteínas (g)</label>
-                  <input type="number" value={createForm.protein ?? ''} onChange={e => setCreateForm({...createForm, protein: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={createForm.protein ?? ''} onChange={e => setCreateForm({...createForm, protein: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Carboidratos (g)</label>
-                  <input type="number" value={createForm.carbohydrates ?? ''} onChange={e => setCreateForm({...createForm, carbohydrates: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={createForm.carbohydrates ?? ''} onChange={e => setCreateForm({...createForm, carbohydrates: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Gorduras (g)</label>
-                  <input type="number" value={createForm.lipids ?? ''} onChange={e => setCreateForm({...createForm, lipids: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={createForm.lipids ?? ''} onChange={e => setCreateForm({...createForm, lipids: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
               </div>
 
@@ -729,19 +729,19 @@ export function AdminIngredientsTab() {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Kcal (100g)</label>
-                  <input type="number" value={editForm.calories ?? ''} onChange={e => setEditForm({...editForm, calories: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={editForm.calories ?? ''} onChange={e => setEditForm({...editForm, calories: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Proteínas (g)</label>
-                  <input type="number" value={editForm.protein ?? ''} onChange={e => setEditForm({...editForm, protein: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={editForm.protein ?? ''} onChange={e => setEditForm({...editForm, protein: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Carboidratos (g)</label>
-                  <input type="number" value={editForm.carbohydrates ?? ''} onChange={e => setEditForm({...editForm, carbohydrates: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={editForm.carbohydrates ?? ''} onChange={e => setEditForm({...editForm, carbohydrates: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Gorduras (g)</label>
-                  <input type="number" value={editForm.lipids ?? ''} onChange={e => setEditForm({...editForm, lipids: parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
+                  <input type="number" value={editForm.lipids ?? ''} onChange={e => setEditForm({...editForm, lipids: e.target.value === '' ? 0 : parseFloat(e.target.value)})} className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary" />
                 </div>
               </div>
 
