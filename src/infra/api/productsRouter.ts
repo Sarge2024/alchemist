@@ -125,7 +125,7 @@ productsRouter.get('/barcode/:ean', async (req: Request, res: Response) => {
 // ──────────────────────────────────────────────────────────
 productsRouter.post('/', async (req: Request, res: Response) => {
   try {
-    const { name, brand, barcode, calories, protein, carbohydrates, lipids, portionSize, portionUnit, imageUrl, allergens } = req.body;
+    const { name, brand, barcode, calories, protein, carbohydrates, lipids, portionSize, portionUnit, imageUrl, allergens, price, totalPackageSize, totalPackageUnit } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Nome do produto é obrigatório.' });
@@ -146,7 +146,10 @@ productsRouter.post('/', async (req: Request, res: Response) => {
         portionSize: parseFloat(portionSize) || 100,
         portionUnit: portionUnit || 'g',
         imageUrl: imageUrl || null,
-        allergens: allergens || []
+        allergens: allergens || [],
+        estimatedPrice: price !== undefined && price !== null ? parseFloat(price) : null,
+        standardPurchaseQuantity: totalPackageSize !== undefined && totalPackageSize !== null ? parseFloat(totalPackageSize) : null,
+        standardPurchaseUnit: totalPackageUnit || null
       }
     });
 
@@ -212,6 +215,34 @@ productsRouter.get('/', async (req: Request, res: Response) => {
 });
 
 // ──────────────────────────────────────────────────────────
+// PATCH /:id — Atualiza preço e embalagem de um produto existente
+// ──────────────────────────────────────────────────────────
+productsRouter.patch('/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { price, totalPackageSize, totalPackageUnit, imageUrl } = req.body;
+
+    const updated = await prisma.globalFoodItem.update({
+      where: { id },
+      data: {
+        estimatedPrice: price !== undefined && price !== null ? parseFloat(price) : undefined,
+        standardPurchaseQuantity: totalPackageSize !== undefined && totalPackageSize !== null ? parseFloat(totalPackageSize) : undefined,
+        standardPurchaseUnit: totalPackageUnit || undefined,
+        imageUrl: imageUrl || undefined
+      }
+    });
+
+    res.json({
+      success: true,
+      product: formatProduct(updated)
+    });
+  } catch (error) {
+    console.error('[Products API] Erro ao atualizar produto:', error);
+    res.status(500).json({ success: false, error: 'Erro interno ao atualizar produto.' });
+  }
+});
+
+// ──────────────────────────────────────────────────────────
 // Helper: Formata o GlobalFoodItem para o formato de resposta
 // ──────────────────────────────────────────────────────────
 function formatProduct(item: any) {
@@ -230,6 +261,9 @@ function formatProduct(item: any) {
       fat: item.lipids
     },
     allergens: item.allergens || [],
-    source: item.source
+    source: item.source,
+    price: item.estimatedPrice || undefined,
+    totalPackageSize: item.standardPurchaseQuantity || undefined,
+    totalPackageUnit: item.standardPurchaseUnit || undefined
   };
 }
