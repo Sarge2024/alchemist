@@ -12,10 +12,17 @@ const CATEGORY_MAP: Record<string, string[]> = {
   ],
   "Perecíveis e Frescos": [
     "Hortifrúti (FLV)",
-    "Açougue e Peixaria",
-    "Frios e Embutidos",
-    "Laticínios",
     "Padaria e Confeitaria"
+  ],
+  "Açougue": [
+    "Carnes",
+    "Linguiça",
+    "Defumados"
+  ],
+  "Refrigerados": [
+    "Embutidos",
+    "Laticínios",
+    "Frutos do mar"
   ],
   "Congelados": [
     "Pratos Prontos",
@@ -285,6 +292,7 @@ export function AdminIngredientsTab() {
                   {/* Título vazio para coluna de checkbox */}
                 </th>
                 <th className="px-6 py-4 font-bold bg-surface-container-low/95">Nome / Origem</th>
+                <th className="px-6 py-4 font-bold bg-surface-container-low/95">Classificação</th>
                 <th className="px-6 py-4 font-bold bg-surface-container-low/95">Kcal | P | C | G (100g)</th>
                 <th className="px-6 py-4 font-bold bg-surface-container-low/95">Densidade (g/ml)</th>
                 <th className="px-6 py-4 font-bold bg-surface-container-low/95">Compra (Qtd | Und | R$)</th>
@@ -301,7 +309,7 @@ export function AdminIngredientsTab() {
                 </tr>
               ) : filteredIngredients.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-on-surface-variant">
+                  <td colSpan={6} className="px-6 py-12 text-center text-on-surface-variant">
                     Nenhum ingrediente encontrado.
                   </td>
                 </tr>
@@ -324,13 +332,19 @@ export function AdminIngredientsTab() {
                           <span className={ing.source === 'NOT_FOUND' ? 'text-red-500 font-bold' : ''}>{ing.source}</span>
                           {ing.externalId && ` (ID: ${ing.externalId})`}
                         </div>
-                        {(ing.category || ing.subcategory) && (
-                          <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-1">
-                            <Tag className="w-3 h-3" />
-                            {ing.category} {ing.subcategory ? `> ${ing.subcategory}` : ''}
-                          </div>
-                        )}
                       </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {ing.category || ing.subcategory ? (
+                        <div className="flex flex-col">
+                          <span className="text-xs font-bold text-on-surface">{ing.category || '-'}</span>
+                          <span className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                            <Tag className="w-3 h-3" /> {ing.subcategory || '-'}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-on-surface-variant/50">Sem classificação</span>
+                      )}
                     </td>
                     <td className="px-6 py-4">
                       <div className="text-sm font-medium">

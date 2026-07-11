@@ -26,21 +26,28 @@ const TAXONOMY = `
 
 2. Perecíveis e Frescos
 - Hortifrúti (FLV - Frutas, Legumes e Verduras)
-- Açougue e Peixaria
-- Frios e Embutidos
-- Laticínios
 - Padaria e Confeitaria
 
-3. Congelados
+3. Açougue
+- Carnes
+- Linguiça
+- Defumados
+
+4. Refrigerados
+- Embutidos
+- Laticínios
+- Frutos do mar
+
+5. Congelados
 - Pratos Prontos
 - Vegetais Congelados
 - Sorvetes e Sobremesas
 
-4. Bebidas
+6. Bebidas
 - Não Alcoólicas
 - Alcoólicas
 
-5. Saudáveis / Diet e Light (Nicho)
+7. Saudáveis / Diet e Light (Nicho)
 - Alimentos Especiais
 `;
 
