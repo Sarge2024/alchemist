@@ -117,7 +117,9 @@ adminIngredientsRouter.post('/admin/ingredients', authenticateFirebase, requireA
       standardPurchaseQuantity,
       standardPurchaseUnit,
       estimatedPrice,
-      externalId
+      externalId,
+      category,
+      subcategory
     } = req.body;
 
     if (!name) {
@@ -137,6 +139,8 @@ adminIngredientsRouter.post('/admin/ingredients', authenticateFirebase, requireA
         standardPurchaseUnit: standardPurchaseUnit || null,
         estimatedPrice: estimatedPrice === "" ? null : (estimatedPrice ? parseFloat(estimatedPrice) : null),
         externalId: externalId || null,
+        category: category || null,
+        subcategory: subcategory || null,
         baseUnit: 'g',
         baseQuantity: 100
       }
@@ -164,7 +168,9 @@ adminIngredientsRouter.put('/admin/ingredients/:id', authenticateFirebase, requi
       standardPurchaseQuantity, 
       standardPurchaseUnit, 
       estimatedPrice,
-      externalId 
+      externalId,
+      category,
+      subcategory
     } = req.body;
 
     const updateData: any = {};
@@ -179,6 +185,8 @@ adminIngredientsRouter.put('/admin/ingredients/:id', authenticateFirebase, requi
     if (standardPurchaseUnit !== undefined) updateData.standardPurchaseUnit = standardPurchaseUnit;
     if (estimatedPrice !== undefined) updateData.estimatedPrice = estimatedPrice === "" ? null : parseFloat(estimatedPrice);
     if (externalId !== undefined) updateData.externalId = externalId;
+    if (category !== undefined) updateData.category = category;
+    if (subcategory !== undefined) updateData.subcategory = subcategory;
 
     const updated = await prisma.globalFoodItem.update({
       where: { id },

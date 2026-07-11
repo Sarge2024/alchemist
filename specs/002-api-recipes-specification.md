@@ -104,12 +104,24 @@ Retorna uma lista de receitas filtrada e paginada. Para economia de banda e perf
             "unit": "g",
             "preparationMode": "já cozido"
           }
-        ],
         "nutrition": {
-          "calories": 520,
-          "protein": 12.5,
-          "carbs": 105.2,
-          "fat": 4.1
+          "total_nutrition": {
+            "calories": 520,
+            "protein": 12.5,
+            "carbs": 105.2,
+            "fat": 4.1
+          },
+          "details": [
+            {
+              "ingredient": "Arroz Branco Cozido",
+              "quantity": 400,
+              "unit": "g",
+              "calories": 520,
+              "protein": 12.5,
+              "carbs": 105.2,
+              "fat": 4.1
+            }
+          ]
         }
       }
     ],
@@ -170,14 +182,26 @@ Recupera todos os detalhes de uma receita específica, incluindo o array complet
           "unit": "g",
           "preparationMode": "já cozido"
         }
-      ],
-      "nutrition": {
-        "calories": 520,
-        "protein": 12.5,
-        "carbs": 105.2,
-        "fat": 4.1
+        "nutrition": {
+          "total_nutrition": {
+            "calories": 520,
+            "protein": 12.5,
+            "carbs": 105.2,
+            "fat": 4.1
+          },
+          "details": [
+            {
+              "ingredient": "Arroz Branco Cozido",
+              "quantity": 400,
+              "unit": "g",
+              "calories": 520,
+              "protein": 12.5,
+              "carbs": 105.2,
+              "fat": 4.1
+            }
+          ]
+        }
       }
-    }
   }
   ```
 
@@ -276,7 +300,12 @@ O objeto `nutrition` não é estático no banco de dados. Ele é recalculado no 
 - Multiplica-se os valores nutricionais do item (calorias, proteínas, carboidratos e lipídios) por este fator e acumula-se no total da receita.
 - Os totais de `calories` (kcal), `protein` (g), `carbs` (carboidratos em g) e `fat` (lipídios em g) são arredondados para 1 casa decimal.
 
-### 2. Sincronização de Campos (Gotcha de UI)
+### 2. Formato Nutricional (Gotcha de UI)
+- A API retorna a nutrição no formato aninhado: `nutrition.total_nutrition` (macros totais) e `nutrition.details` (detalhes por ingrediente).
+- No frontend (SPA), a interface `Recipe` original esperava um formato "plano": `nutrition.calories`, `nutrition.protein`, etc.
+- **Solução:** O `apiService` do frontend implementa uma função `normalizeRecipe` que extrai os macros de `total_nutrition` e os expõe diretamente em `nutrition` para compatibilidade com os componentes de Dashboard e Planejamento. Os componentes do frontend utilizam um helper utilitário `extractNutrition(recipe)` para garantir leitura segura tanto do formato "plano" (normalizado) quanto do formato aninhado legado já gravado em documentos salvos em banco (Firestore).
+
+### 3. Sincronização de Campos (Gotcha de UI)
 - O banco de dados PostgreSQL utiliza a coluna `tipo_prato` (um array de strings) para identificar a subcategoria técnica da receita.
 - A API mapeia o campo do banco `tipo_prato` para o atributo de saída `category` na resposta JSON para manter retrocompatibilidade com a estrutura de dados original utilizada no frontend SPA.
 

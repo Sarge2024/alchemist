@@ -80,6 +80,7 @@ model GlobalFoodItem {
   id                       String             @id @default(uuid())
   name                     String             @unique
   category                 String?
+  subcategory              String?
   source                   String             @default("CUSTOM")
   externalId               String?
   calories                 Float              @default(0)

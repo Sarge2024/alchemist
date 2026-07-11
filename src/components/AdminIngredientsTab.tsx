@@ -1,6 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Edit3, Trash2, Save, Database, Plus, RefreshCw, CheckCircle } from 'lucide-react';
+import { Search, Edit3, Trash2, Save, Database, Plus, RefreshCw, CheckCircle, Tag } from 'lucide-react';
 import { ingredientAdminService, GlobalFoodItem } from '../infra/services/ingredientAdminService';
+
+const CATEGORY_MAP: Record<string, string[]> = {
+  "Mercearia (Secos e Molhados)": [
+    "Mercearia Salgada (Básica)",
+    "Enlatados e Conservas",
+    "Condimentos e Molhos",
+    "Mercearia Doce",
+    "Matinais"
+  ],
+  "Perecíveis e Frescos": [
+    "Hortifrúti (FLV)",
+    "Açougue e Peixaria",
+    "Frios e Embutidos",
+    "Laticínios",
+    "Padaria e Confeitaria"
+  ],
+  "Congelados": [
+    "Pratos Prontos",
+    "Vegetais Congelados",
+    "Sorvetes e Sobremesas"
+  ],
+  "Bebidas": [
+    "Não Alcoólicas",
+    "Alcoólicas"
+  ],
+  "Saudáveis / Diet e Light": [
+    "Alimentos Especiais"
+  ]
+};
 
 export function AdminIngredientsTab() {
   const [activeSubTab, setActiveSubTab] = useState<'pending' | 'all'>('pending');
@@ -27,7 +56,7 @@ export function AdminIngredientsTab() {
   // Create state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState<Partial<GlobalFoodItem>>({
-    name: '', calories: 0, protein: 0, carbohydrates: 0, lipids: 0, source: 'PROPRIETARIA'
+    name: '', calories: 0, protein: 0, carbohydrates: 0, lipids: 0, source: 'PROPRIETARIA', category: '', subcategory: ''
   });
   const [creating, setCreating] = useState(false);
 
@@ -165,7 +194,7 @@ export function AdminIngredientsTab() {
     try {
       await ingredientAdminService.createIngredient(createForm);
       setShowCreateModal(false);
-      setCreateForm({ name: '', calories: 0, protein: 0, carbohydrates: 0, lipids: 0, source: 'PROPRIETARIA' });
+      setCreateForm({ name: '', calories: 0, protein: 0, carbohydrates: 0, lipids: 0, source: 'PROPRIETARIA', category: '', subcategory: '' });
       fetchData();
     } catch (err) {
       console.error(err);
@@ -295,6 +324,12 @@ export function AdminIngredientsTab() {
                           <span className={ing.source === 'NOT_FOUND' ? 'text-red-500 font-bold' : ''}>{ing.source}</span>
                           {ing.externalId && ` (ID: ${ing.externalId})`}
                         </div>
+                        {(ing.category || ing.subcategory) && (
+                          <div className="text-[10px] text-on-surface-variant flex items-center gap-1 mt-1">
+                            <Tag className="w-3 h-3" />
+                            {ing.category} {ing.subcategory ? `> ${ing.subcategory}` : ''}
+                          </div>
+                        )}
                       </div>
                     </td>
                     <td className="px-6 py-4">
@@ -514,6 +549,36 @@ export function AdminIngredientsTab() {
                 />
               </div>
 
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-1">Departamento (Categoria)</label>
+                  <select
+                    value={createForm.category || ''}
+                    onChange={e => setCreateForm({...createForm, category: e.target.value, subcategory: ''})}
+                    className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface text-sm"
+                  >
+                    <option value="">Selecione um departamento...</option>
+                    {Object.keys(CATEGORY_MAP).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-1">Setor (Subcategoria)</label>
+                  <select
+                    value={createForm.subcategory || ''}
+                    onChange={e => setCreateForm({...createForm, subcategory: e.target.value})}
+                    disabled={!createForm.category}
+                    className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface text-sm disabled:opacity-50"
+                  >
+                    <option value="">Selecione um setor...</option>
+                    {createForm.category && CATEGORY_MAP[createForm.category]?.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-on-surface-variant mb-1">Kcal (100g)</label>
@@ -615,6 +680,36 @@ export function AdminIngredientsTab() {
                   onChange={e => setEditForm({...editForm, name: e.target.value})}
                   className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-1">Departamento (Categoria)</label>
+                  <select
+                    value={editForm.category || ''}
+                    onChange={e => setEditForm({...editForm, category: e.target.value, subcategory: ''})}
+                    className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface text-sm"
+                  >
+                    <option value="">Selecione um departamento...</option>
+                    {Object.keys(CATEGORY_MAP).map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-bold text-on-surface-variant mb-1">Setor (Subcategoria)</label>
+                  <select
+                    value={editForm.subcategory || ''}
+                    onChange={e => setEditForm({...editForm, subcategory: e.target.value})}
+                    disabled={!editForm.category}
+                    className="w-full bg-surface-container p-3 rounded-xl border-none focus:ring-2 focus:ring-primary text-on-surface text-sm disabled:opacity-50"
+                  >
+                    <option value="">Selecione um setor...</option>
+                    {editForm.category && CATEGORY_MAP[editForm.category]?.map(sub => (
+                      <option key={sub} value={sub}>{sub}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

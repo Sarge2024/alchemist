@@ -4,7 +4,9 @@ import { supabase } from '../../lib/supabase';
 export interface GlobalFoodItem {
   id: string;
   name: string;
-  category?: string | null;
+  category?: string;
+  subcategory?: string;
+  micronutrients?: any;
   source: string;
   externalId?: string | null;
   calories: number;
