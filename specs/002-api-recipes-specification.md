@@ -99,11 +99,12 @@ Retorna uma lista de receitas filtrada e paginada. Para economia de banda e perf
           {
             "id": "a6713bc4-0a32-4e2e-83fb-98acb41b8a53",
             "name": "Arroz Branco Cozido",
-            "category": "Cereais",
+            "category": "Mercearia (Secos e Molhados)",
+            "subcategory": "Mercearia Salgada (Básica)",
             "quantity": 400,
-            "unit": "g",
-            "preparationMode": "já cozido"
+            "unit": "g"
           }
+        ],
         "nutrition": {
           "total_nutrition": {
             "calories": 520,
@@ -160,10 +161,22 @@ Recupera todos os detalhes de uma receita específica, incluindo o array complet
       "servings": "6 porções",
       "dietType": "Vegetariano",
       "custo_estimado": "Baixo",
-      "instructions": [
-        "Misture o arroz cozido com os legumes picados em um refratário.",
-        "Cubra com queijo ralado e leve ao forno pré-aquecido a 180°C por 15 minutos para gratinar.",
-        "Sirva quente imediatamente."
+      "preparationSteps": [
+        {
+          "descricao": "Misture o arroz cozido com os legumes picados em um refratário.",
+          "preparo": "Tigela funda",
+          "tempo": 5
+        },
+        {
+          "descricao": "Cubra com queijo ralado e leve ao forno pré-aquecido a 180°C por 15 minutos para gratinar.",
+          "preparo": "Forno a 180°C",
+          "tempo": 15
+        },
+        {
+          "descricao": "Sirva quente imediatamente.",
+          "preparo": "Travessa de Servir",
+          "tempo": 0
+        }
       ],
       "rating": 4.8,
       "reviewsCount": 12,
@@ -177,12 +190,13 @@ Recupera todos os detalhes de uma receita específica, incluindo o array complet
         {
           "id": "a6713bc4-0a32-4e2e-83fb-98acb41b8a53",
           "name": "Arroz Branco Cozido",
-          "category": "Cereais",
+          "category": "Mercearia (Secos e Molhados)",
+          "subcategory": "Mercearia Salgada (Básica)",
           "quantity": 400,
-          "unit": "g",
-          "preparationMode": "já cozido"
+          "unit": "g"
         }
-        "nutrition": {
+      ],
+      "nutrition": {
           "total_nutrition": {
             "calories": 520,
             "protein": 12.5,
@@ -308,6 +322,16 @@ O objeto `nutrition` não é estático no banco de dados. Ele é recalculado no 
 ### 3. Sincronização de Campos (Gotcha de UI)
 - O banco de dados PostgreSQL utiliza a coluna `tipo_prato` (um array de strings) para identificar a subcategoria técnica da receita.
 - A API mapeia o campo do banco `tipo_prato` para o atributo de saída `category` na resposta JSON para manter retrocompatibilidade com a estrutura de dados original utilizada no frontend SPA.
+
+### 4. Modo de Preparo Estruturado (`preparationSteps`)
+- O campo `instructions` (array de strings) foi substituído por `preparationSteps` (JSON array) no retorno de `/recipes/:id`.
+- Cada etapa agora é um objeto rico contendo `descricao` (ação e texto do passo), `preparo` (equipamento ou utensílio usado) e `tempo` (tempo estimado em minutos). O sistema de gestão de ingredientes soma esses tempos parciais para derivar o tempo total (`prepTime`), isolando os custos e equipamentos por etapa do preparo global.
+- O antigo campo `preparationMode` e `preparationTime` outrora anexado aos *ingredientes* foi totalmente abolido, pois o tempo não está vinculado ao ingrediente de per si, e sim à fase de preparo na ficha técnica.
+
+### 5. Taxonomia de Ingredientes (`category` e `subcategory`)
+- O sistema unificou as prateleiras de supermercado aos ingredientes do Alchymist. Todos os alimentos globais possuem `category` (Departamento) e `subcategory` (Setor).
+- Exemplo de categorização: *Perecíveis e Frescos* (Categoria) -> *Hortifrúti* (Subcategoria) e *Açougue* (Categoria) -> *Carnes, Linguiça, Defumados* (Subcategoria).
+- Esta relação permite filtragens mais precisas nas rotas públicas e auxilia no módulo de elaboração de compras para restaurantes.
 
 ---
 
