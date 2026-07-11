@@ -70,6 +70,7 @@ export function formatRecipeResponse(recipe: any) {
     servings: recipe.servings || '',
     dietType: recipe.dietType || '',
     custo_estimado: recipe.custo_estimado || '',
+    instructions: recipe.instructions || [],
     preparationSteps: recipe.preparationSteps || [],
     rating: recipe.rating,
     reviewsCount: recipe.reviewsCount,

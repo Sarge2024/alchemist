@@ -718,7 +718,7 @@ export default function RecipeDetail() {
         "cookTime": parseTime(recipe.time),
         "recipeYield": recipe.servings ? recipe.servings.toString() : undefined,
         "recipeIngredient": recipe.ingredients.map(i => typeof i === 'string' ? i : `${i.quantity || ''} ${i.name || ''}`.trim()),
-        "recipeInstructions": recipe.instructions.map((inst, index) => ({
+        "recipeInstructions": (recipe.instructions || []).map((inst, index) => ({
           "@type": "HowToStep",
           "position": index + 1,
           "text": inst
@@ -899,7 +899,7 @@ export default function RecipeDetail() {
   const mentionsSauce = sauceKeywords.some(keyword => 
     recipe.title.toLowerCase().includes(keyword) || 
     recipe.description?.toLowerCase().includes(keyword) ||
-    recipe.instructions.some(step => step.toLowerCase().includes(keyword))
+    (recipe.instructions || []).some(step => step.toLowerCase().includes(keyword))
   );
 
   // Helper to group ingredients
@@ -1768,7 +1768,7 @@ export default function RecipeDetail() {
                   Modo de Preparo
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '3.5mm' }}>
-                  {recipe.instructions.map((step, i) => (
+                  {(recipe.instructions || []).map((step, i) => (
                     <div key={i} style={{ display: 'flex', gap: '3mm' }}>
                       <div style={{ flex: '0 0 6mm', height: '6mm', backgroundColor: '#914730', color: '#ffffff', borderRadius: '3px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '8pt' }}>
                         {i + 1}
