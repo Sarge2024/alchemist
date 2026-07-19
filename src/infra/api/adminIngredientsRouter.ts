@@ -29,6 +29,11 @@ adminIngredientsRouter.get('/admin/ingredients/pending', authenticateFirebase, r
           { source: 'PENDING' }
         ]
       },
+      include: {
+        tacoMappings: {
+          include: { tacoIngredient: true }
+        }
+      },
       orderBy: { name: 'asc' }
     });
     res.json({ data: pendingItems });
@@ -44,6 +49,11 @@ adminIngredientsRouter.get('/admin/ingredients', authenticateFirebase, requireAd
     const items = await prisma.globalFoodItem.findMany({
       where: {
         source: { notIn: ['NOT_FOUND', 'PENDING'] }
+      },
+      include: {
+        tacoMappings: {
+          include: { tacoIngredient: true }
+        }
       },
       orderBy: { name: 'asc' }
     });
@@ -243,3 +253,98 @@ adminIngredientsRouter.delete('/admin/ingredients/:id', authenticateFirebase, re
     res.status(500).json({ error: 'Erro ao deletar ingrediente. Ele pode estar sendo usado em receitas.' });
   }
 });
+
+// GET /api/admin/ingredients/search-taco — Buscar na TACO para pareamento
+adminIngredientsRouter.get('/admin/ingredients/search-taco', authenticateFirebase, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { query } = req.query;
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'Query obrigatória' });
+    }
+
+    const searchTerms = query.split(' ').filter(term => term.trim().length > 0);
+    const whereClause = searchTerms.length > 0
+      ? { AND: searchTerms.map(term => ({ description: { contains: term, mode: 'insensitive' as const } })) }
+      : {};
+
+    const items = await prisma.tacoIngredient.findMany({
+      where: whereClause,
+      take: 20,
+      orderBy: { description: 'asc' },
+    });
+
+    res.json({ data: items });
+  } catch (error: any) {
+    console.error('[AdminIngredients] Erro na busca TACO:', error);
+    res.status(500).json({ error: 'Erro ao buscar na TACO' });
+  }
+});
+
+// POST /api/admin/ingredients/:id/taco-mapping — Parear GlobalFoodItem com TacoIngredient
+adminIngredientsRouter.post('/admin/ingredients/:id/taco-mapping', authenticateFirebase, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params; // globalFoodItemId
+    const { mappings } = req.body; // array of { tacoIngredientId, preparationType, isDefault }
+
+    if (!Array.isArray(mappings)) {
+      return res.status(400).json({ error: 'O array mappings é obrigatório' });
+    }
+
+    const globalFoodItem = await prisma.globalFoodItem.findUnique({
+      where: { id }
+    });
+
+    if (!globalFoodItem) {
+      return res.status(404).json({ error: 'Ingrediente não encontrado' });
+    }
+
+    let defaultMapping = mappings.find(m => m.isDefault);
+    let defaultTaco = null;
+
+    if (defaultMapping) {
+      defaultTaco = await prisma.tacoIngredient.findUnique({
+        where: { id: defaultMapping.tacoIngredientId }
+      });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // Remover mapeamentos anteriores deste ingrediente para evitar duplicação ou manter clean
+      await tx.globalFoodItemTacoMapping.deleteMany({
+        where: { globalFoodItemId: id }
+      });
+
+      if (mappings.length > 0) {
+        // Inserir os novos mapeamentos
+        await tx.globalFoodItemTacoMapping.createMany({
+          data: mappings.map((m: any) => ({
+            globalFoodItemId: id,
+            tacoIngredientId: m.tacoIngredientId,
+            preparationType: m.preparationType || 'base',
+            isDefault: m.isDefault || false
+          }))
+        });
+      }
+
+      // Se houver um default mapping e dados da TACO, atualizar o GlobalFoodItem
+      if (defaultTaco) {
+        // Somente atualizar se a TACO tiver a informação, senão manter antiga (conforme pedido pelo usuário)
+        const updateData: any = { source: 'TACO' };
+        if (defaultTaco.energia_kcal !== null) updateData.calories = defaultTaco.energia_kcal;
+        if (defaultTaco.proteina !== null) updateData.protein = defaultTaco.proteina;
+        if (defaultTaco.carboidrato !== null) updateData.carbohydrates = defaultTaco.carboidrato;
+        if (defaultTaco.lipideos !== null) updateData.lipids = defaultTaco.lipideos;
+        
+        await tx.globalFoodItem.update({
+          where: { id },
+          data: updateData
+        });
+      }
+    });
+
+    res.json({ success: true, message: 'Pareamento com TACO salvo com sucesso.' });
+  } catch (error: any) {
+    console.error('[AdminIngredients] Erro ao parear com TACO:', error);
+    res.status(500).json({ error: 'Erro ao parear com TACO.' });
+  }
+});
+

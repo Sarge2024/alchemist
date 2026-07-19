@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import { Upload, Plus, Trash2, Loader2, Play, AlertTriangle } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { recipeService, Recipe, RecipeIngredientInput, Ingredient, PreparationStep } from '../infra/services/recipeService';
+import { recipeService, Recipe, Ingredient, PreparationStep } from '../infra/services/recipeService';
 import { getAssetUrl } from '../lib/assets';
 import { userService } from '../infra/services/userService';
 import { AnimatePresence } from 'motion/react';

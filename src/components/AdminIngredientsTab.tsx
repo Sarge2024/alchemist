@@ -54,6 +54,14 @@ export function AdminIngredientsTab() {
   const [searchingExternal, setSearchingExternal] = useState(false);
   const [externalQuery, setExternalQuery] = useState('');
 
+  // TACO Mapping state
+  const [searchTacoModal, setSearchTacoModal] = useState<GlobalFoodItem | null>(null);
+  const [tacoQuery, setTacoQuery] = useState('');
+  const [searchingTaco, setSearchingTaco] = useState(false);
+  const [tacoResults, setTacoResults] = useState<any[]>([]);
+  const [tacoMappings, setTacoMappings] = useState<{tacoIngredientId: number, preparationType: string, isDefault: boolean, name: string}[]>([]);
+
+
   // Merge state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [showMergeModal, setShowMergeModal] = useState(false);
@@ -138,6 +146,80 @@ export function AdminIngredientsTab() {
       setSearchingExternal(false);
     }
   };
+
+  const handleOpenTacoModal = (ing: any) => {
+    setSearchTacoModal(ing);
+    setTacoQuery(ing.name);
+    setTacoResults([]);
+    if (ing.tacoMappings && ing.tacoMappings.length > 0) {
+      setTacoMappings(ing.tacoMappings.map((m: any) => ({
+        tacoIngredientId: m.tacoIngredientId,
+        name: m.tacoIngredient?.description || '',
+        preparationType: m.preparationType,
+        isDefault: m.isDefault
+      })));
+    } else {
+      setTacoMappings([]);
+    }
+    // Auto-search ao abrir o modal
+    handleSearchTaco(ing.name);
+  };
+
+  const handleSearchTaco = async (queryOverride?: string) => {
+    const queryToSearch = queryOverride || tacoQuery;
+    if (!queryToSearch) return;
+    setSearchingTaco(true);
+    try {
+      const results = await ingredientAdminService.searchTaco(queryToSearch);
+      setTacoResults(results);
+    } catch (err) {
+      console.error(err);
+      alert('Erro na busca TACO');
+    } finally {
+      setSearchingTaco(false);
+    }
+  };
+
+  const handleAddTacoMapping = (taco: any) => {
+    if (!tacoMappings.find(m => m.tacoIngredientId === taco.id)) {
+      setTacoMappings([...tacoMappings, {
+        tacoIngredientId: taco.id,
+        name: taco.description,
+        preparationType: 'base',
+        isDefault: tacoMappings.length === 0
+      }]);
+    }
+  };
+
+  const handleRemoveTacoMapping = (id: number) => {
+    setTacoMappings(tacoMappings.filter(m => m.tacoIngredientId !== id));
+  };
+
+  const handleUpdateTacoMapping = (id: number, field: string, value: any) => {
+    setTacoMappings(tacoMappings.map(m => {
+      if (m.tacoIngredientId === id) {
+        return { ...m, [field]: value };
+      }
+      if (field === 'isDefault' && value === true) {
+        // Enforce single default
+        return { ...m, isDefault: false };
+      }
+      return m;
+    }));
+  };
+
+  const handleSaveTacoMappings = async () => {
+    if (!searchTacoModal) return;
+    try {
+      await ingredientAdminService.saveTacoMappings(searchTacoModal.id, tacoMappings);
+      setSearchTacoModal(null);
+      fetchData();
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao salvar pareamento TACO');
+    }
+  };
+
 
   const handlePairIngredient = async (externalMatch: any) => {
     if (!searchExternalModal) return;
@@ -378,6 +460,13 @@ export function AdminIngredientsTab() {
                               <Database className="w-3 h-3" /> Parear USDA
                             </button>
                           )}
+                          <button 
+                            onClick={() => handleOpenTacoModal(ing)}
+                            className="text-indigo-500 hover:text-indigo-400 bg-indigo-500/10 px-3 py-1.5 rounded-lg text-xs font-bold inline-flex items-center gap-1 transition-colors"
+                          >
+                            <Database className="w-3 h-3" /> Parear TACO
+                          </button>
+
                           <button onClick={() => handleEditClick(ing)} className="p-2 text-on-surface-variant hover:text-primary transition-colors">
                             <Edit3 className="w-4 h-4" />
                           </button>
@@ -462,6 +551,153 @@ export function AdminIngredientsTab() {
                   {externalQuery ? 'Nenhum resultado encontrado na USDA para essa busca.' : 'Digite um termo em inglês e clique em Buscar.'}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TACO Pareamento Modal */}
+      {searchTacoModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-surface-container-lowest w-full max-w-4xl rounded-[2rem] border border-surface-container-high shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div className="p-6 border-b border-surface-container-high flex justify-between items-center bg-surface-container-low/30">
+              <div>
+                <h3 className="text-xl font-black text-on-surface">Pareamento Tabela TACO</h3>
+                <p className="text-sm text-on-surface-variant">
+                  Selecionar alimentos TACO para o ingrediente: <span className="font-bold text-indigo-400">{searchTacoModal.name}</span>
+                </p>
+              </div>
+              <button 
+                onClick={() => setSearchTacoModal(null)}
+                className="w-10 h-10 rounded-xl bg-surface-container hover:bg-surface-container-high flex items-center justify-center transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="p-6 border-b border-surface-container-high flex gap-3 bg-surface-container-lowest">
+              <input 
+                type="text" 
+                value={tacoQuery}
+                onChange={e => setTacoQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSearchTaco()}
+                placeholder="Ex: Feijão, Arroz, Frango..."
+                className="flex-1 bg-surface-container p-4 rounded-2xl border-none focus:ring-2 focus:ring-primary text-on-surface font-medium"
+              />
+              <button 
+                onClick={() => handleSearchTaco()}
+                disabled={searchingTaco}
+                className="bg-primary text-white px-8 py-4 rounded-2xl font-bold hover:bg-primary/90 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {searchingTaco ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Search className="w-5 h-5" />}
+                Buscar
+              </button>
+            </div>
+
+            <div className="flex flex-1 overflow-hidden">
+              <div className="w-1/2 p-6 overflow-y-auto border-r border-surface-container-high">
+                <h4 className="font-bold text-on-surface-variant mb-4">Resultados da Busca (TACO)</h4>
+                {searchingTaco ? (
+                  <div className="flex justify-center py-12"><RefreshCw className="w-8 h-8 animate-spin text-primary" /></div>
+                ) : tacoResults.length > 0 ? (
+                  <div className="space-y-3">
+                    {tacoResults.map((res, idx) => {
+                      const isAdded = tacoMappings.some(m => m.tacoIngredientId === res.id);
+                      return (
+                        <div key={idx} className={`p-4 rounded-2xl border transition-colors ${isAdded ? 'bg-primary/10 border-primary/30' : 'bg-surface-container-low border-surface-container-high'}`}>
+                          <div className="flex justify-between items-start gap-4">
+                            <div>
+                              <h4 className="font-bold text-on-surface text-sm">{res.description}</h4>
+                              <div className="text-xs text-on-surface-variant mt-1">
+                                Kcal: {res.energia_kcal} | Prot: {res.proteina}g | Carb: {res.carboidrato}g | Gord: {res.lipideos}g
+                              </div>
+                            </div>
+                            <button 
+                              onClick={() => isAdded ? handleRemoveTacoMapping(res.id) : handleAddTacoMapping(res)}
+                              className={`px-3 py-1.5 rounded-lg font-bold text-xs flex-shrink-0 transition-colors ${isAdded ? 'bg-red-500/10 text-red-500 hover:bg-red-500/20' : 'bg-primary/10 text-primary hover:bg-primary hover:text-white'}`}
+                            >
+                              {isAdded ? 'Remover' : 'Adicionar'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-on-surface-variant text-sm">
+                    {tacoQuery ? 'Nenhum resultado encontrado na TACO para essa busca.' : 'Busque para ver os resultados.'}
+                  </div>
+                )}
+              </div>
+
+              <div className="w-1/2 p-6 overflow-y-auto bg-surface-container-lowest">
+                <h4 className="font-bold text-on-surface-variant mb-4 flex justify-between items-center">
+                  <span>Alimentos Selecionados</span>
+                  <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full text-xs">{tacoMappings.length}</span>
+                </h4>
+                
+                {tacoMappings.length > 0 ? (
+                  <div className="space-y-4">
+                    {tacoMappings.map(mapping => (
+                      <div key={mapping.tacoIngredientId} className="bg-surface-container-low p-4 rounded-2xl border border-surface-container-high space-y-3">
+                        <div className="font-bold text-sm text-on-surface flex justify-between">
+                          <span>{mapping.name}</span>
+                          <button onClick={() => handleRemoveTacoMapping(mapping.tacoIngredientId)} className="text-red-500 hover:text-red-400">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-xs font-bold text-on-surface-variant mb-1">Preparo</label>
+                            <select 
+                              value={mapping.preparationType}
+                              onChange={e => handleUpdateTacoMapping(mapping.tacoIngredientId, 'preparationType', e.target.value)}
+                              className="w-full bg-surface-container p-2 rounded-xl border-none focus:ring-1 focus:ring-primary text-on-surface text-sm"
+                            >
+                              <option value="base">Base</option>
+                              <option value="cru">Cru</option>
+                              <option value="cozido">Cozido</option>
+                              <option value="assado">Assado</option>
+                              <option value="frito">Frito</option>
+                              <option value="grelhado">Grelhado</option>
+                              <option value="conserva">Conserva</option>
+                            </select>
+                          </div>
+                          <div className="flex items-end">
+                            <label className="flex items-center gap-2 cursor-pointer p-2 rounded-xl hover:bg-surface-container transition-colors w-full">
+                              <input 
+                                type="radio" 
+                                name="defaultTaco"
+                                checked={mapping.isDefault}
+                                onChange={() => handleUpdateTacoMapping(mapping.tacoIngredientId, 'isDefault', true)}
+                                className="text-primary focus:ring-primary"
+                              />
+                              <span className="text-xs font-bold text-on-surface">Usar como Padrão</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    <div className="pt-4 mt-4 border-t border-surface-container-high">
+                      <button 
+                        onClick={handleSaveTacoMappings}
+                        className="w-full bg-primary text-white px-6 py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Save className="w-5 h-5" /> Salvar Pareamentos
+                      </button>
+                      <p className="text-[10px] text-on-surface-variant text-center mt-2">
+                        O alimento marcado como "Padrão" atualizará os nutrientes base deste ingrediente.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-on-surface-variant text-sm">
+                    Nenhum alimento selecionado.<br/>Selecione alimentos na lista ao lado.
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>

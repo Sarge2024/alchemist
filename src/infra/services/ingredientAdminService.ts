@@ -114,5 +114,23 @@ export const ingredientAdminService = {
       body: JSON.stringify({ survivorId, duplicateIds })
     });
     if (!response.ok) throw new Error('Falha ao mesclar ingredientes');
+  },
+
+  async searchTaco(query: string): Promise<any[]> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`/api/admin/ingredients/search-taco?query=${encodeURIComponent(query)}`, { headers });
+    if (!response.ok) throw new Error('Falha na busca TACO');
+    const resData = await response.json();
+    return resData.data || [];
+  },
+
+  async saveTacoMappings(id: string, mappings: any[]): Promise<void> {
+    const headers = await getAuthHeaders();
+    const response = await fetch(`/api/admin/ingredients/${id}/taco-mapping`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ mappings })
+    });
+    if (!response.ok) throw new Error('Falha ao salvar mapeamento TACO');
   }
 };

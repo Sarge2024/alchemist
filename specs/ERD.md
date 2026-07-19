@@ -220,6 +220,71 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     Boolean isActive 
     }
   
+
+  "TacoIngredient" {
+    Int id "🗝️"
+    String categoryName 
+    String description 
+    Float umidade "❓"
+    Float energia_kcal "❓"
+    Float energia_kj "❓"
+    Float proteina "❓"
+    Float lipideos "❓"
+    Float colesterol "❓"
+    Float carboidrato "❓"
+    Float fibra_alimentar "❓"
+    Float cinzas "❓"
+    Float calcio "❓"
+    Float magnesio "❓"
+    Float manganes "❓"
+    Float fosforo "❓"
+    Float ferro "❓"
+    Float sodio "❓"
+    Float potassio "❓"
+    Float cobre "❓"
+    Float zinco "❓"
+    Float retinol "❓"
+    Float re "❓"
+    Float rae "❓"
+    Float tiamina "❓"
+    Float riboflavina "❓"
+    Float piridoxina "❓"
+    Float niacina "❓"
+    Float vitamina_c "❓"
+    Float saturados "❓"
+    Float monoinsaturados "❓"
+    Float poliinsaturados "❓"
+    Float acidos_graxos_12_0 "❓"
+    Float acidos_graxos_14_0 "❓"
+    Float acidos_graxos_16_0 "❓"
+    Float acidos_graxos_18_0 "❓"
+    Float acidos_graxos_20_0 "❓"
+    Float acidos_graxos_22_0 "❓"
+    Float acidos_graxos_24_0 "❓"
+    Float acidos_graxos_14_1 "❓"
+    Float acidos_graxos_16_1 "❓"
+    Float acidos_graxos_18_1 "❓"
+    Float acidos_graxos_20_1 "❓"
+    Float acidos_graxos_18_2_n6 "❓"
+    Float acidos_graxos_18_3_n3 "❓"
+    Float acidos_graxos_20_4 "❓"
+    Float acidos_graxos_20_5 "❓"
+    Float acidos_graxos_22_5 "❓"
+    Float acidos_graxos_22_6 "❓"
+    Float acidos_graxos_18_1t "❓"
+    DateTime createdAt 
+    DateTime updatedAt 
+    }
+  
+
+  "GlobalFoodItemTacoMapping" {
+    String id "🗝️"
+    String preparationType 
+    Boolean isDefault 
+    DateTime createdAt 
+    DateTime updatedAt 
+    }
+  
     "User" |o--|| "Role" : "enum:role"
     "Recipe" }o--|| "User" : "owner"
     "RecipeIngredient" }o--|| "GlobalFoodItem" : "foodItem"
@@ -232,4 +297,6 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     "UserSession" }o--|| "User" : "user"
     "PageAccess" }o--|| "User" : "user"
     "UnansweredQuery" }o--|o "User" : "user"
+    "GlobalFoodItemTacoMapping" }o--|| "GlobalFoodItem" : "globalFoodItem"
+    "GlobalFoodItemTacoMapping" }o--|| "TacoIngredient" : "tacoIngredient"
 ```
