@@ -24,21 +24,21 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String email 
     String photoURL "❓"
     String whatsapp "❓"
-    String birthDate "❓"
-    String gender "❓"
-    String gastronomyRelation 
-    String primaryGoals 
-    String mainMotivation "❓"
-    String dietaryRestrictions 
-    String dietaryPreference "❓"
-    String rejectedIngredients 
-    String infrastructureLevel "❓"
-    String kitchenRoutine "❓"
     String state 
     String country 
     Role role 
     DateTime createdAt 
     DateTime updatedAt 
+    String birthDate "❓"
+    String dietaryPreference "❓"
+    String dietaryRestrictions 
+    String gastronomyRelation 
+    String gender "❓"
+    String infrastructureLevel "❓"
+    String kitchenRoutine "❓"
+    String mainMotivation "❓"
+    String primaryGoals 
+    String rejectedIngredients 
     }
   
 
@@ -58,14 +58,14 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String difficulty "❓"
     String custo_estimado "❓"
     String instructions 
-    Json preparationSteps "❓"
-    String chefTips "❓"
     Float rating 
     Int reviewsCount 
     Boolean isClassic 
     DateTime createdAt 
     DateTime updatedAt 
     String slug "❓"
+    String chefTips "❓"
+    Json preparationSteps "❓"
     }
   
 
@@ -73,8 +73,6 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String id "🗝️"
     String name 
     String category "❓"
-    String subcategory "❓"
-    String group "❓"
     String source 
     String externalId "❓"
     Float calories 
@@ -91,11 +89,13 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String imageUrl "❓"
     String allergens 
     Float density "❓"
+    Float estimatedPrice "❓"
     Float standardPurchaseQuantity "❓"
     String standardPurchaseUnit "❓"
-    Float estimatedPrice "❓"
-    Float defaultCorrectionFactor "❓"
     Float defaultCookingFactor "❓"
+    Float defaultCorrectionFactor "❓"
+    String subcategory "❓"
+    String group "❓"
     }
   
 
@@ -103,11 +103,11 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String id "🗝️"
     Float quantity 
     String unit 
-    Float grossWeight "❓"
     Float cleanWeight "❓"
     Float cookedWeight "❓"
-    Float correctionFactor "❓"
     Float cookingFactor "❓"
+    Float correctionFactor "❓"
+    Float grossWeight "❓"
     Float perCapitaClean "❓"
     }
   

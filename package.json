@@ -20,7 +20,8 @@
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit",
     "sync": "tsx src/infra/scripts/sync-version.ts && git add . && git commit -m \"chore(deploy): sync repository and bump version\" && git push",
-    "migrate-blob": "tsx src/infra/scripts/migrate-to-vercel-blob.ts"
+    "migrate-blob": "tsx src/infra/scripts/migrate-to-vercel-blob.ts",
+    "archify:generate": "node docs/archify/generate-reports.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

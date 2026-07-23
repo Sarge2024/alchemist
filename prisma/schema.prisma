@@ -20,21 +20,21 @@ model User {
   email               String                   @unique
   photoURL            String?
   whatsapp            String?
-  birthDate           String?
-  gender              String?
-  gastronomyRelation  String[]
-  primaryGoals        String[]
-  mainMotivation      String?
-  dietaryRestrictions String[]
-  dietaryPreference   String?
-  rejectedIngredients String[]
-  infrastructureLevel String?
-  kitchenRoutine      String?
   state               String
   country             String
   role                Role                     @default(USER)
   createdAt           DateTime                 @default(now())
   updatedAt           DateTime                 @updatedAt
+  birthDate           String?
+  dietaryPreference   String?
+  dietaryRestrictions String[]
+  gastronomyRelation  String[]
+  gender              String?
+  infrastructureLevel String?
+  kitchenRoutine      String?
+  mainMotivation      String?
+  primaryGoals        String[]
+  rejectedIngredients String[]
   pageAccesses        PageAccess[]
   recipes             Recipe[]
   unansweredQueries   UnansweredQuery[]
@@ -60,8 +60,6 @@ model Recipe {
   difficulty        String?
   custo_estimado    String?
   instructions      String[]
-  preparationSteps  Json?
-  chefTips          String?
   rating            Float              @default(4.5)
   reviewsCount      Int                @default(0)
   isClassic         Boolean            @default(false)
@@ -69,6 +67,8 @@ model Recipe {
   updatedAt         DateTime           @updatedAt
   ownerId           String
   slug              String?            @unique
+  chefTips          String?
+  preparationSteps  Json?
   owner             User               @relation(fields: [ownerId], references: [id])
   recipeIngredients RecipeIngredient[]
 
@@ -78,34 +78,34 @@ model Recipe {
 }
 
 model GlobalFoodItem {
-  id                       String             @id @default(uuid())
-  name                     String             @unique
+  id                       String                      @id @default(uuid())
+  name                     String                      @unique
   category                 String?
-  subcategory              String?
-  group                    String?
-  source                   String             @default("CUSTOM")
+  source                   String                      @default("CUSTOM")
   externalId               String?
-  calories                 Float              @default(0)
-  protein                  Float              @default(0)
-  carbohydrates            Float              @default(0)
-  lipids                   Float              @default(0)
-  baseUnit                 String             @default("g")
-  baseQuantity             Float              @default(100)
+  calories                 Float                       @default(0)
+  protein                  Float                       @default(0)
+  carbohydrates            Float                       @default(0)
+  lipids                   Float                       @default(0)
+  baseUnit                 String                      @default("g")
+  baseQuantity             Float                       @default(100)
   micronutrients           Json?
   brand                    String?
-  barcode                  String?            @unique
+  barcode                  String?                     @unique
   portionSize              Float?
   portionUnit              String?
   imageUrl                 String?
   allergens                String[]
   density                  Float?
+  estimatedPrice           Float?
   standardPurchaseQuantity Float?
   standardPurchaseUnit     String?
-  estimatedPrice           Float?
-  defaultCorrectionFactor  Float?
   defaultCookingFactor     Float?
-  recipeIngredients        RecipeIngredient[]
+  defaultCorrectionFactor  Float?
+  subcategory              String?
+  group                    String?
   tacoMappings             GlobalFoodItemTacoMapping[]
+  recipeIngredients        RecipeIngredient[]
 
   @@index([name])
   @@index([source])
@@ -117,11 +117,11 @@ model RecipeIngredient {
   foodItemId       String
   quantity         Float
   unit             String
-  grossWeight      Float?
   cleanWeight      Float?
   cookedWeight     Float?
-  correctionFactor Float?
   cookingFactor    Float?
+  correctionFactor Float?
+  grossWeight      Float?
   perCapitaClean   Float?
   foodItem         GlobalFoodItem @relation(fields: [foodItemId], references: [id])
   recipe           Recipe         @relation(fields: [recipeId], references: [id], onDelete: Cascade)
@@ -248,6 +248,89 @@ model CulinaryMeasure {
   @@index([ingredientName])
 }
 
+model ApiKey {
+  id         String    @id @default(uuid())
+  key        String    @unique
+  name       String
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  isActive   Boolean   @default(true)
+}
+
+model TacoIngredient {
+  id                    Int                         @id
+  categoryName          String
+  description           String
+  umidade               Float?
+  energia_kcal          Float?
+  energia_kj            Float?
+  proteina              Float?
+  lipideos              Float?
+  colesterol            Float?
+  carboidrato           Float?
+  fibra_alimentar       Float?
+  cinzas                Float?
+  calcio                Float?
+  magnesio              Float?
+  manganes              Float?
+  fosforo               Float?
+  ferro                 Float?
+  sodio                 Float?
+  potassio              Float?
+  cobre                 Float?
+  zinco                 Float?
+  retinol               Float?
+  re                    Float?
+  rae                   Float?
+  tiamina               Float?
+  riboflavina           Float?
+  piridoxina            Float?
+  niacina               Float?
+  vitamina_c            Float?
+  saturados             Float?
+  monoinsaturados       Float?
+  poliinsaturados       Float?
+  acidos_graxos_12_0    Float?
+  acidos_graxos_14_0    Float?
+  acidos_graxos_16_0    Float?
+  acidos_graxos_18_0    Float?
+  acidos_graxos_20_0    Float?
+  acidos_graxos_22_0    Float?
+  acidos_graxos_24_0    Float?
+  acidos_graxos_14_1    Float?
+  acidos_graxos_16_1    Float?
+  acidos_graxos_18_1    Float?
+  acidos_graxos_20_1    Float?
+  acidos_graxos_18_2_n6 Float?
+  acidos_graxos_18_3_n3 Float?
+  acidos_graxos_20_4    Float?
+  acidos_graxos_20_5    Float?
+  acidos_graxos_22_5    Float?
+  acidos_graxos_22_6    Float?
+  acidos_graxos_18_1t   Float?
+  createdAt             DateTime                    @default(now())
+  updatedAt             DateTime                    @updatedAt
+  tacoMappings          GlobalFoodItemTacoMapping[]
+
+  @@index([description])
+}
+
+model GlobalFoodItemTacoMapping {
+  id               String         @id @default(uuid())
+  globalFoodItemId String
+  tacoIngredientId Int
+  preparationType  String         @default("base")
+  isDefault        Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  globalFoodItem   GlobalFoodItem @relation(fields: [globalFoodItemId], references: [id], onDelete: Cascade)
+  tacoIngredient   TacoIngredient @relation(fields: [tacoIngredientId], references: [id], onDelete: Cascade)
+
+  @@unique([globalFoodItemId, tacoIngredientId])
+  @@index([globalFoodItemId])
+  @@index([tacoIngredientId])
+}
+
 enum Role {
   USER
   COLLABORATOR
@@ -261,90 +344,3 @@ enum Grau {
   PERITO
   MESTRE_ALQUIMISTA
 }
-
-model ApiKey {
-  id         String    @id @default(uuid())
-  key        String    @unique
-  name       String
-  createdAt  DateTime  @default(now())
-  lastUsedAt DateTime?
-  isActive   Boolean   @default(true)
-}
-
-model TacoIngredient {
-  id                  Int     @id
-  categoryName        String  // Tipo de Alimento
-  description         String  // Descrição do alimento
-  umidade             Float?
-  energia_kcal        Float?
-  energia_kj          Float?
-  proteina            Float?
-  lipideos            Float?
-  colesterol          Float?
-  carboidrato         Float?
-  fibra_alimentar     Float?
-  cinzas              Float?
-  calcio              Float?
-  magnesio            Float?
-  manganes            Float?
-  fosforo             Float?
-  ferro               Float?
-  sodio               Float?
-  potassio            Float?
-  cobre               Float?
-  zinco               Float?
-  retinol             Float?
-  re                  Float?
-  rae                 Float?
-  tiamina             Float?
-  riboflavina         Float?
-  piridoxina          Float?
-  niacina             Float?
-  vitamina_c          Float?
-  saturados           Float?
-  monoinsaturados     Float?
-  poliinsaturados     Float?
-  acidos_graxos_12_0  Float?
-  acidos_graxos_14_0  Float?
-  acidos_graxos_16_0  Float?
-  acidos_graxos_18_0  Float?
-  acidos_graxos_20_0  Float?
-  acidos_graxos_22_0  Float?
-  acidos_graxos_24_0  Float?
-  acidos_graxos_14_1  Float?
-  acidos_graxos_16_1  Float?
-  acidos_graxos_18_1  Float?
-  acidos_graxos_20_1  Float?
-  acidos_graxos_18_2_n6 Float?
-  acidos_graxos_18_3_n3 Float?
-  acidos_graxos_20_4  Float?
-  acidos_graxos_20_5  Float?
-  acidos_graxos_22_5  Float?
-  acidos_graxos_22_6  Float?
-  acidos_graxos_18_1t Float?
-
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  tacoMappings        GlobalFoodItemTacoMapping[]
-
-  @@index([description])
-}
-
-model GlobalFoodItemTacoMapping {
-  id               String         @id @default(uuid())
-  globalFoodItemId String
-  tacoIngredientId Int
-  preparationType  String         @default("base") // e.g., cru, cozido, assado, frito, base
-  isDefault        Boolean        @default(false)
-  
-  globalFoodItem   GlobalFoodItem @relation(fields: [globalFoodItemId], references: [id], onDelete: Cascade)
-  tacoIngredient   TacoIngredient @relation(fields: [tacoIngredientId], references: [id], onDelete: Cascade)
-  
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-
-  @@unique([globalFoodItemId, tacoIngredientId])
-  @@index([globalFoodItemId])
-  @@index([tacoIngredientId])
-}
-

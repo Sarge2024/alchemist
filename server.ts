@@ -132,7 +132,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/lounge', loungeRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/gamification', gamificationRouter);
-const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 4005;
+const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 11000;
 
 app.use(cors({
   origin: '*',
