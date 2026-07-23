@@ -64,6 +64,11 @@ function processUanVariables(ing: any) {
 function parseQuantityAndUnit(qtyStr: string) {
   if (!qtyStr) return { quantity: 1, unit: 'un' };
   
+  const lowerQty = qtyStr.toLowerCase();
+  if (lowerQty.includes('a gosto') || lowerQty.includes('agosto') || lowerQty.includes('q.b') || lowerQty.includes('qb')) {
+    return { quantity: 0, unit: 'a gosto' };
+  }
+  
   const numMatch = qtyStr.match(/^([\d\/\.\,\s]+)(.*)$/);
   if (!numMatch) {
     return { quantity: 1, unit: qtyStr.trim() || 'un' };
@@ -226,10 +231,11 @@ dishAlchemistsRouter.post('/recipes', authenticateFirebase, async (req: any, res
 
         const foodItem = await prisma.globalFoodItem.upsert({
           where: { name },
-          update: {},
+          update: { group: group !== 'Outros' ? group : undefined },
           create: {
             name,
-            category: group,
+            category: 'Outros',
+            group: group,
             source: 'CUSTOM'
           }
         });
@@ -293,6 +299,7 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
     const {
       title,
       description,
+      image,
       momento,
       tipo_prato,
       base_alimento,
@@ -325,6 +332,7 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
       data: {
         title,
         description,
+        image,
         momento: Array.isArray(momento) ? momento : undefined,
         tipo_prato: Array.isArray(tipo_prato) ? tipo_prato : undefined,
         base_alimento: Array.isArray(base_alimento) ? base_alimento : undefined,
@@ -365,10 +373,11 @@ dishAlchemistsRouter.put('/recipes/:id', authenticateFirebase, async (req: any, 
 
         const foodItem = await prisma.globalFoodItem.upsert({
           where: { name },
-          update: {},
+          update: { group: group !== 'Outros' ? group : undefined },
           create: {
             name,
-            category: group,
+            category: 'Outros',
+            group: group,
             source: 'CUSTOM'
           }
         });

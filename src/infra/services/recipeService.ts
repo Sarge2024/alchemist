@@ -196,7 +196,7 @@ const mapRecipeResponse = (recipe: any): any => {
       ? recipe.ingredients.map((ing: any) => ({
           name: ing.name,
           quantity: ing.quantity ? `${ing.quantity} ${ing.unit || ''}`.trim() : '',
-          group: ing.preparationMode || ing.category || 'Geral',
+          group: ing.group || 'Geral',
           grossWeight: ing.grossWeight,
           cleanWeight: ing.cleanWeight,
           cookedWeight: ing.cookedWeight,

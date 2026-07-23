@@ -82,6 +82,7 @@ model GlobalFoodItem {
   name                     String             @unique
   category                 String?
   subcategory              String?
+  group                    String?
   source                   String             @default("CUSTOM")
   externalId               String?
   calories                 Float              @default(0)

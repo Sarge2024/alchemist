@@ -9,6 +9,11 @@ import * as path from 'path';
 function parseQuantityAndUnit(qtyStr: string) {
   if (!qtyStr) return { quantity: 1, unit: 'un' };
   
+  const lowerQty = qtyStr.toLowerCase();
+  if (lowerQty.includes('a gosto') || lowerQty.includes('agosto') || lowerQty.includes('q.b') || lowerQty.includes('qb')) {
+    return { quantity: 0, unit: 'a gosto' };
+  }
+  
   // Match numbers like 1, 1.5, 1/2, 100
   const numMatch = qtyStr.match(/^([\d\/\.\,\s]+)(.*)$/);
   if (!numMatch) {
@@ -150,123 +155,123 @@ async function sync() {
   
   let successCount = 0;
   
-  // Processamento concorrente controlado (lotes de 10)
+  // Processamento sequencial robusto para evitar conflitos de concorrência
   const recipes = recipesSnapshot.docs;
-  const batchSize = 10;
+  let recipeIndex = 0;
   
-  for (let i = 0; i < recipes.length; i += batchSize) {
-    const batch = recipes.slice(i, i + batchSize);
+  for (const doc of recipes) {
+    recipeIndex++;
+    const rData = doc.data();
+    const firestoreId = doc.id;
     
-    await Promise.all(batch.map(async (doc) => {
-      const rData = doc.data();
-      const firestoreId = doc.id;
-      
-      try {
-        // Determinar o ownerId correto
-        let pgOwnerId = defaultUserId;
-        if (rData.ownerId) {
-          const mappedId = uidToPgIdMap.get(rData.ownerId);
-          if (mappedId) {
-            pgOwnerId = mappedId;
-          } else {
-            const foundUser = await prisma.user.findUnique({ where: { uid: rData.ownerId } });
-            if (foundUser) {
-              pgOwnerId = foundUser.id;
-              uidToPgIdMap.set(rData.ownerId, foundUser.id);
-            }
+    try {
+      // Determinar o ownerId correto
+      let pgOwnerId = defaultUserId;
+      if (rData.ownerId) {
+        const mappedId = uidToPgIdMap.get(rData.ownerId);
+        if (mappedId) {
+          pgOwnerId = mappedId;
+        } else {
+          const foundUser = await prisma.user.findUnique({ where: { uid: rData.ownerId } });
+          if (foundUser) {
+            pgOwnerId = foundUser.id;
+            uidToPgIdMap.set(rData.ownerId, foundUser.id);
           }
         }
+      }
 
-        // Converter timestamps
-        const createdAt = rData.createdAt?.toDate ? rData.createdAt.toDate() : new Date();
-        const updatedAt = rData.updatedAt?.toDate ? rData.updatedAt.toDate() : new Date();
+      // Converter timestamps
+      const createdAt = rData.createdAt?.toDate ? rData.createdAt.toDate() : new Date();
+      const updatedAt = rData.updatedAt?.toDate ? rData.updatedAt.toDate() : new Date();
 
-        // Criar receita no PostgreSQL
-        const createdRecipe = await prisma.recipe.create({
-          data: {
-            id: firestoreId,
-            title: rData.title || 'Receita sem título',
-            description: rData.description || null,
-            image: rData.image || null,
-            momento: Array.isArray(rData.momento) ? rData.momento : [],
-            tipo_prato: Array.isArray(rData.tipo_prato) ? rData.tipo_prato : [],
-            base_alimento: Array.isArray(rData.base_alimento) ? rData.base_alimento : [],
-            origem: rData.origem || null,
-            time: rData.time || null,
-            prepTime: rData.prepTime || null,
-            dietType: rData.dietType || null,
-            servings: rData.servings || null,
-            difficulty: rData.difficulty || null,
-            custo_estimado: rData.custo_estimado || null,
-            instructions: Array.isArray(rData.instructions) ? rData.instructions : [],
-            rating: typeof rData.rating === 'number' ? rData.rating : 4.5,
-            reviewsCount: typeof rData.reviewsCount === 'number' ? rData.reviewsCount : 0,
-            isClassic: typeof rData.isClassic === 'boolean' ? rData.isClassic : false,
-            slug: rData.slug || null,
-            ownerId: pgOwnerId,
-            createdAt,
-            updatedAt
+      // Criar receita no PostgreSQL
+      const createdRecipe = await prisma.recipe.create({
+        data: {
+          id: firestoreId,
+          title: rData.title || 'Receita sem título',
+          description: rData.description || null,
+          image: rData.image || null,
+          momento: Array.isArray(rData.momento) ? rData.momento : [],
+          tipo_prato: Array.isArray(rData.tipo_prato) ? rData.tipo_prato : [],
+          base_alimento: Array.isArray(rData.base_alimento) ? rData.base_alimento : [],
+          origem: rData.origem || null,
+          time: rData.time || null,
+          prepTime: rData.prepTime || null,
+          dietType: rData.dietType || null,
+          servings: rData.servings || null,
+          difficulty: rData.difficulty || null,
+          custo_estimado: rData.custo_estimado || null,
+          instructions: Array.isArray(rData.instructions) ? rData.instructions : [],
+          rating: typeof rData.rating === 'number' ? rData.rating : 4.5,
+          reviewsCount: typeof rData.reviewsCount === 'number' ? rData.reviewsCount : 0,
+          isClassic: typeof rData.isClassic === 'boolean' ? rData.isClassic : false,
+          slug: rData.slug || null,
+          ownerId: pgOwnerId,
+          createdAt,
+          updatedAt
+        }
+      });
+
+      // Processar ingredientes
+      if (Array.isArray(rData.ingredients)) {
+        for (const ing of rData.ingredients) {
+          let ingName = '';
+          let qtyStr = '';
+          let group = 'Outros';
+
+          if (typeof ing === 'string') {
+            ingName = ing.trim();
+          } else if (ing && typeof ing === 'object') {
+            ingName = (ing.name || '').trim();
+            qtyStr = ing.quantity || '';
+            group = ing.group || 'Outros';
           }
-        });
 
-        // Processar ingredientes
-        if (Array.isArray(rData.ingredients)) {
-          for (const ing of rData.ingredients) {
-            let ingName = '';
-            let qtyStr = '';
-            let group = 'Outros';
+          if (!ingName) continue;
+          const normName = ingName.toLowerCase().trim();
 
-            if (typeof ing === 'string') {
-              ingName = ing.trim();
-            } else if (ing && typeof ing === 'object') {
-              ingName = (ing.name || '').trim();
-              qtyStr = ing.quantity || '';
-              group = ing.group || 'Outros';
-            }
-
-            if (!ingName) continue;
-            const normName = ingName.toLowerCase().trim();
-
-            // Usar cache em memória ou criar no DB
-            let foodItemId = foodItemCache.get(normName);
-            if (!foodItemId) {
-              const foodItem = await prisma.globalFoodItem.upsert({
-                where: { name: ingName },
-                update: {},
-                create: {
-                  name: ingName,
-                  category: group,
-                  source: 'CUSTOM',
-                  baseQuantity: 100,
-                  baseUnit: 'g'
-                }
-              });
-              foodItemId = foodItem.id;
-              foodItemCache.set(normName, foodItemId);
-            }
-
-            // Parse quantity and unit
-            const { quantity, unit } = parseQuantityAndUnit(qtyStr);
-
-            // Criar RecipeIngredient
-            await prisma.recipeIngredient.create({
-              data: {
-                recipeId: createdRecipe.id,
-                foodItemId,
-                quantity,
-                unit
+          // Usar cache em memória ou criar no DB
+          let foodItemId = foodItemCache.get(normName);
+          if (!foodItemId) {
+            const foodItem = await prisma.globalFoodItem.upsert({
+              where: { name: ingName },
+              update: { group: group !== 'Outros' ? group : undefined },
+              create: {
+                name: ingName,
+                category: 'Outros',
+                group: group,
+                source: 'CUSTOM',
+                baseQuantity: 100,
+                baseUnit: 'g'
               }
             });
+            foodItemId = foodItem.id;
+            foodItemCache.set(normName, foodItemId);
           }
-        }
 
-        successCount++;
-      } catch (recipeError) {
-        console.error(`Erro ao migrar receita "${rData.title}" (ID: ${firestoreId}):`, recipeError);
+          // Parse quantity and unit
+          const { quantity, unit } = parseQuantityAndUnit(qtyStr);
+
+          // Criar RecipeIngredient
+          await prisma.recipeIngredient.create({
+            data: {
+              recipeId: createdRecipe.id,
+              foodItemId,
+              quantity,
+              unit
+            }
+          });
+        }
       }
-    }));
+
+      successCount++;
+    } catch (recipeError) {
+      console.error(`Erro ao migrar receita "${rData.title}" (ID: ${firestoreId}):`, recipeError);
+    }
     
-    console.log(`Lote processado: ${Math.min(i + batchSize, recipes.length)} / ${recipes.length} receitas...`);
+    if (recipeIndex % 10 === 0 || recipeIndex === recipes.length) {
+      console.log(`Processado: ${recipeIndex} / ${recipes.length} receitas...`);
+    }
   }
 
   console.log(`\nSincronização concluída com sucesso!`);

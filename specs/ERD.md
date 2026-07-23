@@ -74,6 +74,7 @@ MESTRE_ALQUIMISTA MESTRE_ALQUIMISTA
     String name 
     String category "❓"
     String subcategory "❓"
+    String group "❓"
     String source 
     String externalId "❓"
     Float calories 

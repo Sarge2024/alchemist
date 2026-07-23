@@ -82,6 +82,7 @@ export function formatRecipeResponse(recipe: any) {
     ingredients: recipe.recipeIngredients.map((ri: any) => ({
       id: ri.foodItem.id,
       name: ri.foodItem.name,
+      group: ri.foodItem.group || '',
       category: ri.foodItem.category || '',
       subcategory: ri.foodItem.subcategory || '',
       quantity: ri.quantity,
